@@ -65,14 +65,14 @@ const CHOFERES = [
 // datos repartidos en el tiempo y en varios estados. En un uso real
 // esto lo hace el operador desde la interfaz.
 const TICKETS = [
-  { placa: 'ABC-756', dni: '45678912', origen: 'Lima', destino: 'Arequipa', motivo: 'VENTA', descripcionMercancia: 'Repuestos industriales', pesoBrutoKg: 8200, diasAtras: 24, estado: 'ENTREGADO', horasTransito: 3, horasEntrega: 19 },
+  { placa: 'ABC-756', dni: '45678912', origen: 'Lima', destino: 'Arequipa', motivo: 'VENTA', descripcionMercancia: 'Repuestos y autopartes', pesoBrutoKg: 8200, diasAtras: 24, estado: 'ENTREGADO', horasTransito: 3, horasEntrega: 19 },
   { placa: 'CDF-903', dni: '47001122', origen: 'Lima', destino: 'Trujillo', motivo: 'TRASLADO_ENTRE_ESTABLECIMIENTOS', descripcionMercancia: 'Materiales de construcción', pesoBrutoKg: 15000, diasAtras: 21, estado: 'ENTREGADO', horasTransito: 2, horasEntrega: 11 },
-  { placa: 'D2W-118', dni: '43980017', origen: 'Arequipa', destino: 'Cusco', motivo: 'VENTA', descripcionMercancia: 'Alimentos envasados', pesoBrutoKg: 6400, diasAtras: 18, estado: 'ENTREGADO', horasTransito: 4, horasEntrega: 26 },
-  { placa: 'F7K-402', dni: '46512388', origen: 'Lima', destino: 'Ica', motivo: 'VENTA', descripcionMercancia: 'Repuestos industriales', pesoBrutoKg: 3100, diasAtras: 14, estado: 'ENTREGADO', horasTransito: 2, horasEntrega: 9 },
+  { placa: 'D2W-118', dni: '43980017', origen: 'Arequipa', destino: 'Cusco', motivo: 'VENTA', descripcionMercancia: 'Abarrotes y consumo masivo', pesoBrutoKg: 6400, diasAtras: 18, estado: 'ENTREGADO', horasTransito: 4, horasEntrega: 26 },
+  { placa: 'F7K-402', dni: '46512388', origen: 'Lima', destino: 'Ica', motivo: 'VENTA', descripcionMercancia: 'Repuestos y autopartes', pesoBrutoKg: 3100, diasAtras: 14, estado: 'ENTREGADO', horasTransito: 2, horasEntrega: 9 },
   { placa: 'ABC-756', dni: '45678912', origen: 'Lima', destino: 'Chiclayo', motivo: 'TRASLADO_ENTRE_ESTABLECIMIENTOS', descripcionMercancia: 'Materiales de construcción', pesoBrutoKg: 12800, diasAtras: 10, estado: 'ENTREGADO', horasTransito: 3, horasEntrega: 22 },
   { placa: 'CDF-903', dni: '47001122', origen: 'Lima', destino: 'Huancayo', motivo: 'VENTA', descripcionMercancia: 'Bebidas', pesoBrutoKg: 9700, diasAtras: 6, estado: 'EN_TRANSITO', horasTransito: 3 },
-  { placa: 'D2W-118', dni: '43980017', origen: 'Lima', destino: 'Piura', motivo: 'VENTA', descripcionMercancia: 'Alimentos envasados', pesoBrutoKg: 5200, diasAtras: 3, estado: 'EN_TRANSITO', horasTransito: 5 },
-  { placa: 'F7K-402', dni: '46512388', origen: 'Lima', destino: 'Arequipa', motivo: 'VENTA', descripcionMercancia: 'Repuestos industriales', pesoBrutoKg: 4300, diasAtras: 1, estado: 'GENERADO' }
+  { placa: 'D2W-118', dni: '43980017', origen: 'Lima', destino: 'Piura', motivo: 'VENTA', descripcionMercancia: 'Abarrotes y consumo masivo', pesoBrutoKg: 5200, diasAtras: 3, estado: 'EN_TRANSITO', horasTransito: 5 },
+  { placa: 'F7K-402', dni: '46512388', origen: 'Lima', destino: 'Arequipa', motivo: 'VENTA', descripcionMercancia: 'Repuestos y autopartes', pesoBrutoKg: 4300, diasAtras: 1, estado: 'GENERADO' }
 ];
 
 const dias = (n) => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10);

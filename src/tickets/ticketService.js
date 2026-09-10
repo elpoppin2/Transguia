@@ -10,6 +10,8 @@
  * los repositorios de unidades y choferes, para validar que existan y
  * pertenezcan a la empresa antes de crear el ticket.
  */
+const { MERCANCIAS, normalizarMercancia } = require('./mercancias');
+
 const MOTIVOS_VALIDOS = ['VENTA', 'TRASLADO_ENTRE_ESTABLECIMIENTOS', 'OTROS'];
 const ESTADOS_OPERATIVOS = ['GENERADO', 'EN_TRANSITO', 'ENTREGADO', 'ANULADO'];
 
@@ -192,13 +194,21 @@ function validarDatosTraslado(d) {
     throw new Error('pesoBrutoKg debe ser un número mayor a 0');
   }
 
+  // La mercancía debe ser una del catálogo fijo (ver src/tickets/mercancias.js).
+  const mercancia = normalizarMercancia(d.descripcionMercancia);
+  if (!mercancia) {
+    throw new Error(
+      `descripcionMercancia debe ser una del catálogo: ${MERCANCIAS.join(', ')}`
+    );
+  }
+
   return {
     empresaId: String(d.empresaId).trim(),
     unidadId: String(d.unidadId).trim(),
     choferId: String(d.choferId).trim(),
     origen: String(d.origen).trim(),
     destino: String(d.destino).trim(),
-    descripcionMercancia: String(d.descripcionMercancia).trim(),
+    descripcionMercancia: mercancia,
     pesoBrutoKg: peso,
     motivo: normalizarMotivo(d.motivo)
   };
@@ -228,4 +238,4 @@ function quitarTildes(texto) {
   return texto.normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
-module.exports = { TicketService, MOTIVOS_VALIDOS, ESTADOS_OPERATIVOS };
+module.exports = { TicketService, MOTIVOS_VALIDOS, ESTADOS_OPERATIVOS, MERCANCIAS };

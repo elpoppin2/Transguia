@@ -115,21 +115,23 @@ const RUTAS = [
   ['Chiclayo', 'Piura', 3], ['Cusco', 'Puno', 7]
 ];
 
-// [descripción, pesoMín, pesoMáx]  (kg; el tope legal general es 48 000)
+// [descripción del catálogo (ver src/tickets/mercancias.js), pesoMín, pesoMáx]
+// en kg; el tope legal general de una combinación vehicular es 48 000.
 const MATERIALES = [
-  ['Repuestos industriales', 1500, 9000],
+  ['Repuestos y autopartes', 1500, 9000],
   ['Materiales de construcción', 8000, 26000],
-  ['Alimentos envasados', 3000, 14000],
+  ['Abarrotes y consumo masivo', 2500, 14000],
   ['Bebidas', 5000, 18000],
-  ['Productos de consumo masivo', 2500, 12000],
-  ['Maquinaria agrícola', 6000, 20000],
+  ['Maquinaria y equipos', 6000, 20000],
   ['Textiles y confecciones', 800, 6000],
-  ['Cemento en bolsas', 12000, 28000],
+  ['Cemento y agregados', 12000, 28000],
   ['Concentrado de minerales', 10000, 30000],
-  ['Electrodomésticos', 1500, 9000],
+  ['Electrodomésticos y línea blanca', 1500, 9000],
   ['Frutas y verduras', 2000, 10000],
-  ['Papel y cartón', 1200, 7000],
-  ['Insumos químicos', 3000, 13000]
+  ['Papel, cartón y editorial', 1200, 7000],
+  ['Insumos y productos químicos', 3000, 13000],
+  ['Productos agrícolas a granel', 8000, 28000],
+  ['Combustibles y lubricantes', 6000, 20000]
 ];
 const MOTIVOS = [
   'VENTA', 'VENTA', 'VENTA', 'VENTA',

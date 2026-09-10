@@ -377,6 +377,23 @@ paths:
               schema: { type: array, items: { $ref: "#/components/schemas/Vencimiento" } }
         "401": { $ref: "#/components/responses/NoAutenticado" }
 
+  /api/catalogos/mercancias:
+    get:
+      tags: [Tickets]
+      summary: Catálogo fijo de mercancías para el desplegable de "Mercancía"
+      responses:
+        "200":
+          description: Lista de mercancías admitidas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mercancias:
+                    type: array
+                    items: { $ref: "#/components/schemas/Mercancia" }
+        "401": { $ref: "#/components/responses/NoAutenticado" }
+
   /api/tickets:
     get:
       tags: [Tickets]
@@ -500,6 +517,33 @@ components:
       description: Código del Anexo IV del RNV (DS 058-2003-MTC).
       enum: [C2, C2R2, C2R3, C3, C3R2, C3R3, C4, T2S1, T2S2, T2S3, T3S1, T3S2, T3S3]
     MotivoTraslado: { type: string, enum: [VENTA, TRASLADO_ENTRE_ESTABLECIMIENTOS, OTROS] }
+    Mercancia:
+      type: string
+      description: >
+        Catálogo fijo de TransGuía (no lo exige SUNAT; estandariza el
+        dashboard). Se acepta sin distinguir mayúsculas ni espacios de más
+        y se guarda en su forma canónica. Fuente: GET /api/catalogos/mercancias.
+      enum:
+        - Abarrotes y consumo masivo
+        - Bebidas
+        - Alimentos perecibles refrigerados
+        - Frutas y verduras
+        - Materiales de construcción
+        - Cemento y agregados
+        - Fierro, acero y metales
+        - Maquinaria y equipos
+        - Repuestos y autopartes
+        - Electrodomésticos y línea blanca
+        - Textiles y confecciones
+        - Productos plásticos y envases
+        - Papel, cartón y editorial
+        - Insumos y productos químicos
+        - Concentrado de minerales
+        - Combustibles y lubricantes
+        - Productos agrícolas a granel
+        - Madera y derivados
+        - Mudanza y menaje doméstico
+        - Otros bienes
     EstadoOperativo: { type: string, enum: [GENERADO, EN_TRANSITO, ENTREGADO, ANULADO] }
     EstadoSunat: { type: string, enum: [ENVIANDO, ACEPTADO, RECHAZADO, OBSERVADO] }
     TipoDocumentoUnidad: { type: string, enum: [SOAT, REVISION_TECNICA, TARJETA_CIRCULACION, PERMISO_OPERACION, OTRO] }
@@ -721,7 +765,7 @@ components:
           oneOf:
             - $ref: "#/components/schemas/MotivoTraslado"
             - type: string
-        descripcionMercancia: { type: string, example: "Repuestos industriales" }
+        descripcionMercancia: { $ref: "#/components/schemas/Mercancia" }
         pesoBrutoKg: { type: number, exclusiveMinimum: 0, example: 8200 }
 
     Ticket:
@@ -739,7 +783,7 @@ components:
         origen: { type: string }
         destino: { type: string }
         motivo: { $ref: "#/components/schemas/MotivoTraslado" }
-        descripcionMercancia: { type: string }
+        descripcionMercancia: { $ref: "#/components/schemas/Mercancia" }
         pesoBrutoKg: { type: number }
         estadoOperativo: { $ref: "#/components/schemas/EstadoOperativo" }
         estadoSunat: { $ref: "#/components/schemas/EstadoSunat" }

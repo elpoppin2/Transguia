@@ -89,7 +89,7 @@ const enDias = (n) => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10
   const ticket = await new Promise((resolve, reject) => {
     ticketService.crearTicket({
       empresaId: empresa.id, unidadId: unidad.id, choferId: chofer.id,
-      origen: 'Lima', destino: 'Ica', descripcionMercancia: 'Cajas', pesoBrutoKg: 3000
+      origen: 'Lima', destino: 'Ica', descripcionMercancia: 'Otros bienes', pesoBrutoKg: 3000
     }, resolve).catch(reject);
   });
   console.log('[GRE recibió choferLicencia =]', licenciaVista,

@@ -60,7 +60,7 @@ console.log(`Proveedor de GRE activo: ${process.env.GRE_PROVIDER}\n`);
       origen: 'Lima',
       destino: 'Arequipa',
       motivo: 'Venta',
-      descripcionMercancia: 'Repuestos industriales',
+      descripcionMercancia: 'Repuestos y autopartes',
       pesoBrutoKg: 8200
     },
     {

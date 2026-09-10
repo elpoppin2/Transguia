@@ -284,7 +284,7 @@
             <option value="TRASLADO_ENTRE_ESTABLECIMIENTOS">Traslado entre establecimientos</option>
             <option value="OTROS">Otros</option>
           </select></div>
-          <div><label>Mercancía</label><input id="tMercancia" placeholder="Repuestos industriales" /></div>
+          <div><label>Mercancía</label><select id="tMercancia"></select></div>
           <div><label>Peso bruto (kg)</label><input id="tPeso" type="number" placeholder="8200" /></div>
         </div>
         <div class="fila" style="margin-top:12px">
@@ -592,7 +592,17 @@ async function borrarDoc(tipo, id, docId) {
 }
 
 // ---------- tickets ----------
+// Catálogo fijo de mercancías (una sola vez). Fuente: GET /api/catalogos/mercancias.
+async function cargarMercancias() {
+  if (el("tMercancia").options.length) return;
+  try {
+    const { mercancias } = await api("/api/catalogos/mercancias");
+    el("tMercancia").innerHTML = mercancias.map((m) => `<option>${escapar(m)}</option>`).join("");
+  } catch (_) { /* si falla, el desplegable queda vacío y crearTicket avisa */ }
+}
+
 async function cargarTickets() {
+  await cargarMercancias();
   const tickets = await api("/api/tickets");
   const tb = el("tbTickets"); tb.innerHTML = "";
   el("vacioTickets").hidden = tickets.length > 0;
@@ -624,10 +634,10 @@ async function crearTicket() {
     const t = await api("/api/tickets", { method: "POST", body: JSON.stringify({
       unidadId: el("tUnidad").value, choferId: el("tChofer").value,
       origen: el("tOrigen").value.trim(), destino: el("tDestino").value.trim(),
-      motivo: el("tMotivo").value, descripcionMercancia: el("tMercancia").value.trim(),
+      motivo: el("tMotivo").value, descripcionMercancia: el("tMercancia").value,
       pesoBrutoKg: Number(el("tPeso").value)
     }) });
-    ["tOrigen","tDestino","tMercancia","tPeso"].forEach((id) => { el(id).value = ""; });
+    ["tOrigen","tDestino","tPeso"].forEach((id) => { el(id).value = ""; });
     info.textContent = `Ticket ${t.codigoInterno} creado. Emitiendo GRE…`;
     await cargarTickets();
     for (let i = 0; i < 16; i++) {
