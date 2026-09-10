@@ -1,0 +1,596 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>TransGuía — Prototipo</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f4f5f7;
+    --panel: #ffffff;
+    --panel-2: #fafbfc;
+    --texto: #1c2430;
+    --texto-suave: #5b6673;
+    --borde: #dde1e6;
+    --primario: #1f6feb;
+    --primario-texto: #ffffff;
+    --ok-bg: #e6f4ea; --ok-tx: #1a7f37;
+    --warn-bg: #fff4e5; --warn-tx: #9a6700;
+    --err-bg: #fde8e8; --err-tx: #b42318;
+    --info-bg: #e8f0fe; --info-tx: #1f4fa8;
+    --radio: 10px;
+    --sombra: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.1);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f141a;
+      --panel: #172029;
+      --panel-2: #1c2732;
+      --texto: #e6edf3;
+      --texto-suave: #9aa7b4;
+      --borde: #2a3742;
+      --primario: #4c8dff;
+      --ok-bg: #10281a; --ok-tx: #57d68a;
+      --warn-bg: #2b2110; --warn-tx: #e2b341;
+      --err-bg: #2c1616; --err-tx: #f4a29a;
+      --info-bg: #131f33; --info-tx: #8bb4ff;
+      --sombra: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--texto);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  header {
+    background: var(--panel);
+    border-bottom: 1px solid var(--borde);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  header h1 { font-size: 17px; margin: 0; letter-spacing: .3px; }
+  header .sp { flex: 1; }
+  header .quien { color: var(--texto-suave); font-size: 13px; }
+  main { max-width: 1040px; margin: 0 auto; padding: 20px; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--borde);
+    border-radius: var(--radio);
+    box-shadow: var(--sombra);
+    padding: 18px;
+    margin-bottom: 18px;
+  }
+  h2 { font-size: 15px; margin: 0 0 14px; }
+  h2 .sub { color: var(--texto-suave); font-weight: 400; font-size: 13px; }
+  label { display: block; font-size: 13px; color: var(--texto-suave); margin: 0 0 4px; }
+  input, select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--borde);
+    border-radius: 8px;
+    background: var(--panel-2);
+    color: var(--texto);
+    font: inherit;
+  }
+  input:focus, select:focus { outline: 2px solid var(--primario); outline-offset: -1px; }
+  .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+  .fila { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+  button {
+    padding: 8px 14px;
+    border: 1px solid var(--primario);
+    border-radius: 8px;
+    background: var(--primario);
+    color: var(--primario-texto);
+    font: inherit;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  button.sec { background: transparent; color: var(--primario); }
+  button.tenue { background: transparent; color: var(--texto-suave); border-color: var(--borde); }
+  button:disabled { opacity: .5; cursor: default; }
+  button.chico { padding: 4px 9px; font-size: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--borde); }
+  th { color: var(--texto-suave); font-weight: 500; }
+  .tabla-scroll { overflow-x: auto; }
+  .pill {
+    display: inline-block; padding: 2px 8px; border-radius: 999px;
+    font-size: 12px; font-weight: 500; white-space: nowrap;
+  }
+  .pill.ok { background: var(--ok-bg); color: var(--ok-tx); }
+  .pill.warn { background: var(--warn-bg); color: var(--warn-tx); }
+  .pill.err { background: var(--err-bg); color: var(--err-tx); }
+  .pill.info { background: var(--info-bg); color: var(--info-tx); }
+  .pill.gris { background: var(--panel-2); color: var(--texto-suave); border: 1px solid var(--borde); }
+  .tabs { display: flex; gap: 4px; margin-bottom: 16px; flex-wrap: wrap; }
+  .tabs button {
+    background: transparent; color: var(--texto-suave);
+    border: 1px solid transparent; border-radius: 8px;
+  }
+  .tabs button.activa { background: var(--panel); color: var(--texto); border-color: var(--borde); }
+  .aviso {
+    padding: 10px 12px; border-radius: 8px; font-size: 13.5px; margin-bottom: 14px;
+    background: var(--err-bg); color: var(--err-tx);
+  }
+  .aviso.ok { background: var(--ok-bg); color: var(--ok-tx); }
+  .vacio { color: var(--texto-suave); font-size: 13.5px; padding: 10px 0; }
+  .muted { color: var(--texto-suave); font-size: 12.5px; }
+  .config { font-size: 12.5px; color: var(--texto-suave); display: flex; gap: 8px; align-items: center; }
+  .config input { width: 260px; padding: 4px 8px; font-size: 12.5px; }
+  code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; font-size: 12.5px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>TransGuía</h1>
+  <span class="quien" id="quien"></span>
+  <span class="sp"></span>
+  <span class="config">
+    API <input id="apiUrl" spellcheck="false" />
+  </span>
+  <button class="tenue chico" id="btnSalir" hidden>Cerrar sesión</button>
+</header>
+
+<main>
+  <div id="zonaAviso"></div>
+
+  <!-- ==================== LOGIN ==================== -->
+  <section class="panel" id="panelLogin">
+    <h2>Ingresar <span class="sub">— usa el usuario que sembraste con <code>node sembrar-datos.js</code></span></h2>
+    <div class="grid">
+      <div>
+        <label>Usuario</label>
+        <input id="loginUser" autocomplete="username" value="andina" />
+      </div>
+      <div>
+        <label>Contraseña</label>
+        <input id="loginPass" type="password" autocomplete="current-password" value="demo2026seguro" />
+      </div>
+    </div>
+    <div class="fila" style="margin-top:12px">
+      <button id="btnLogin">Ingresar</button>
+      <button class="sec" id="btnMostrarRegistro">Registrar un usuario nuevo</button>
+    </div>
+
+    <div id="bloqueRegistro" hidden style="margin-top:16px; border-top:1px solid var(--borde); padding-top:16px">
+      <h2>Registrar usuario <span class="sub">— necesitas el UUID completo de una empresa ya creada (lo imprime <code>sembrar-datos.js</code>)</span></h2>
+      <div class="grid">
+        <div><label>Empresa (UUID completo)</label><input id="regEmpresa" placeholder="00000000-0000-0000-0000-000000000000" /></div>
+        <div><label>Usuario</label><input id="regUser" /></div>
+        <div><label>Contraseña (mín. 8)</label><input id="regPass" type="password" /></div>
+        <div><label>Nombre completo</label><input id="regNombre" /></div>
+        <div>
+          <label>Rol</label>
+          <select id="regRol"><option value="admin_empresa">admin_empresa</option><option value="operador">operador</option></select>
+        </div>
+      </div>
+      <div class="fila" style="margin-top:12px"><button id="btnRegistro">Crear usuario</button></div>
+    </div>
+  </section>
+
+  <!-- ==================== APP ==================== -->
+  <div id="app" hidden>
+    <div class="tabs">
+      <button data-tab="unidades" class="activa">Unidades</button>
+      <button data-tab="choferes">Choferes</button>
+      <button data-tab="tickets">Tickets de traslado</button>
+    </div>
+
+    <!-- UNIDADES -->
+    <section class="panel" data-vista="unidades">
+      <h2>Registrar unidad</h2>
+      <div class="grid">
+        <div><label>Placa</label><input id="uPlaca" placeholder="ABC-123" /></div>
+        <div><label>Marca</label><input id="uMarca" placeholder="Volvo" /></div>
+        <div><label>Modelo</label><input id="uModelo" placeholder="FH 460" /></div>
+        <div><label>Año fabricación</label><input id="uAnio" type="number" placeholder="2021" /></div>
+        <div>
+          <label>Categoría MTC</label>
+          <select id="uCategoria"><option>N1</option><option>N2</option><option selected>N3</option></select>
+        </div>
+        <div><label>Config. vehicular</label><select id="uConfig"></select></div>
+      </div>
+      <div class="fila" style="margin-top:12px"><button id="btnCrearUnidad">Guardar unidad</button></div>
+      <div class="tabla-scroll" style="margin-top:16px">
+        <table>
+          <thead><tr><th>Placa</th><th>Vehículo</th><th>Categoría</th><th>Config.</th><th>Estado</th><th></th></tr></thead>
+          <tbody id="tbUnidades"></tbody>
+        </table>
+      </div>
+      <div class="vacio" id="vacioUnidades" hidden>Todavía no hay unidades registradas.</div>
+    </section>
+
+    <!-- CHOFERES -->
+    <section class="panel" data-vista="choferes" hidden>
+      <h2>Registrar chofer</h2>
+      <div class="grid">
+        <div><label>DNI (8 dígitos)</label><input id="cDni" placeholder="45678912" /></div>
+        <div><label>Nombres</label><input id="cNombres" placeholder="Juan Carlos" /></div>
+        <div><label>Apellidos</label><input id="cApellidos" placeholder="Quispe Mamani" /></div>
+      </div>
+      <div class="fila" style="margin-top:12px"><button id="btnCrearChofer">Guardar chofer</button></div>
+      <div class="tabla-scroll" style="margin-top:16px">
+        <table>
+          <thead><tr><th>DNI</th><th>Nombre</th><th>Estado</th><th></th></tr></thead>
+          <tbody id="tbChoferes"></tbody>
+        </table>
+      </div>
+      <div class="vacio" id="vacioChoferes" hidden>Todavía no hay choferes registrados.</div>
+    </section>
+
+    <!-- TICKETS -->
+    <section class="panel" data-vista="tickets" hidden>
+      <h2>Nuevo ticket de traslado <span class="sub">— elige una unidad y un chofer ya registrados</span></h2>
+      <div class="grid">
+        <div><label>Unidad</label><select id="tUnidad"></select></div>
+        <div><label>Chofer</label><select id="tChofer"></select></div>
+        <div><label>Origen</label><input id="tOrigen" placeholder="Lima" /></div>
+        <div><label>Destino</label><input id="tDestino" placeholder="Arequipa" /></div>
+        <div>
+          <label>Motivo</label>
+          <select id="tMotivo">
+            <option value="VENTA">Venta</option>
+            <option value="TRASLADO_ENTRE_ESTABLECIMIENTOS">Traslado entre establecimientos</option>
+            <option value="OTROS">Otros</option>
+          </select>
+        </div>
+        <div><label>Mercancía</label><input id="tMercancia" placeholder="Repuestos industriales" /></div>
+        <div><label>Peso bruto (kg)</label><input id="tPeso" type="number" placeholder="8200" /></div>
+      </div>
+      <div class="fila" style="margin-top:12px">
+        <button id="btnCrearTicket">Generar ticket y emitir GRE</button>
+        <span class="muted" id="tEstadoEmision"></span>
+      </div>
+      <div class="tabla-scroll" style="margin-top:16px">
+        <table>
+          <thead><tr>
+            <th>Código</th><th>Ruta</th><th>Unidad</th><th>Chofer</th>
+            <th>Peso</th><th>GRE</th><th>Estado oper.</th><th>Acciones</th>
+          </tr></thead>
+          <tbody id="tbTickets"></tbody>
+        </table>
+      </div>
+      <div class="vacio" id="vacioTickets" hidden>Todavía no hay tickets.</div>
+    </section>
+  </div>
+</main>
+
+<script>
+"use strict";
+
+const CONFIG_VEHICULAR = ["C2","C2R2","C2R3","C3","C3R2","C3R3","C4","T2S1","T2S2","T2S3","T3S1","T3S2","T3S3"];
+
+const estado = {
+  api: localStorage.getItem("transguia.api") || "http://localhost:3001",
+  sesion: JSON.parse(localStorage.getItem("transguia.sesion") || "null"),
+  unidades: [],
+  choferes: []
+};
+
+const $ = (sel) => document.querySelector(sel);
+const el = (id) => document.getElementById(id);
+
+// ---------- utilidades ----------
+function guardarSesion(s) {
+  estado.sesion = s;
+  localStorage.setItem("transguia.sesion", JSON.stringify(s));
+}
+function cerrarSesion() {
+  estado.sesion = null;
+  localStorage.removeItem("transguia.sesion");
+  render();
+}
+function aviso(mensaje, tipo = "err") {
+  const z = el("zonaAviso");
+  z.innerHTML = "";
+  if (!mensaje) return;
+  const d = document.createElement("div");
+  d.className = "aviso" + (tipo === "ok" ? " ok" : "");
+  d.textContent = mensaje;
+  z.appendChild(d);
+  if (tipo === "ok") setTimeout(() => { if (z.contains(d)) d.remove(); }, 4000);
+}
+async function api(ruta, opciones = {}) {
+  const resp = await fetch(estado.api + ruta, {
+    ...opciones,
+    headers: { "Content-Type": "application/json", ...(opciones.headers || {}) }
+  });
+  let cuerpo = null;
+  try { cuerpo = await resp.json(); } catch (_) { /* sin cuerpo */ }
+  if (!resp.ok) {
+    throw new Error((cuerpo && cuerpo.error) || `Error ${resp.status} en ${ruta}`);
+  }
+  return cuerpo;
+}
+const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function pillGre(estadoSunat) {
+  const map = {
+    ACEPTADO: "ok", ENVIANDO: "warn", RECHAZADO: "err", OBSERVADO: "warn"
+  };
+  return `<span class="pill ${map[estadoSunat] || "gris"}">${estadoSunat || "—"}</span>`;
+}
+function pillOperativo(e) {
+  const map = { GENERADO: "info", EN_TRANSITO: "warn", ENTREGADO: "ok", ANULADO: "gris" };
+  return `<span class="pill ${map[e] || "gris"}">${(e || "").replace("_", " ")}</span>`;
+}
+
+// ---------- render principal ----------
+function render() {
+  el("apiUrl").value = estado.api;
+  const logueado = !!(estado.sesion && estado.sesion.empresaId);
+  el("panelLogin").hidden = logueado;
+  el("app").hidden = !logueado;
+  el("btnSalir").hidden = !logueado;
+  el("quien").textContent = logueado
+    ? `${estado.sesion.nombreCompleto || estado.sesion.username} · empresa ${estado.sesion.empresaId.slice(0, 8)}…`
+    : "";
+  if (logueado) recargarTodo();
+}
+
+function mostrarVista(nombre) {
+  document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("activa", b.dataset.tab === nombre));
+  document.querySelectorAll("[data-vista]").forEach((v) => { v.hidden = v.dataset.vista !== nombre; });
+}
+
+// ---------- carga de datos ----------
+async function recargarTodo() {
+  await Promise.all([cargarUnidades(), cargarChoferes()]);
+  await cargarTickets();
+}
+
+async function cargarUnidades() {
+  try {
+    estado.unidades = await api(`/api/unidades?empresaId=${estado.sesion.empresaId}`);
+  } catch (e) { aviso(e.message); return; }
+  const tb = el("tbUnidades");
+  tb.innerHTML = "";
+  el("vacioUnidades").hidden = estado.unidades.length > 0;
+  for (const u of estado.unidades) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><strong>${u.placa}</strong></td>
+      <td>${u.marca} ${u.modelo}${u.anioFabricacion ? " · " + u.anioFabricacion : ""}</td>
+      <td>${u.categoriaMtc}</td>
+      <td>${u.configuracionVehicular}</td>
+      <td>${u.activo ? '<span class="pill ok">activa</span>' : '<span class="pill gris">inactiva</span>'}</td>
+      <td>${u.activo ? `<button class="tenue chico" data-desactivar-unidad="${u.id}">Desactivar</button>` : ""}</td>`;
+    tb.appendChild(tr);
+  }
+  // selects de tickets
+  const sel = el("tUnidad");
+  sel.innerHTML = estado.unidades.filter((u) => u.activo)
+    .map((u) => `<option value="${u.id}">${u.placa} — ${u.marca} ${u.modelo} (${u.configuracionVehicular})</option>`).join("")
+    || `<option value="">(registra una unidad primero)</option>`;
+}
+
+async function cargarChoferes() {
+  try {
+    estado.choferes = await api(`/api/choferes?empresaId=${estado.sesion.empresaId}`);
+  } catch (e) { aviso(e.message); return; }
+  const tb = el("tbChoferes");
+  tb.innerHTML = "";
+  el("vacioChoferes").hidden = estado.choferes.length > 0;
+  for (const c of estado.choferes) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${c.dni}</td>
+      <td>${c.apellidos}, ${c.nombres}</td>
+      <td>${c.activo ? '<span class="pill ok">activo</span>' : '<span class="pill gris">inactivo</span>'}</td>
+      <td>${c.activo ? `<button class="tenue chico" data-desactivar-chofer="${c.id}">Desactivar</button>` : ""}</td>`;
+    tb.appendChild(tr);
+  }
+  const sel = el("tChofer");
+  sel.innerHTML = estado.choferes.filter((c) => c.activo)
+    .map((c) => `<option value="${c.id}">${c.apellidos}, ${c.nombres} — ${c.dni}</option>`).join("")
+    || `<option value="">(registra un chofer primero)</option>`;
+}
+
+async function cargarTickets() {
+  let tickets;
+  try {
+    tickets = await api(`/api/tickets?empresaId=${estado.sesion.empresaId}`);
+  } catch (e) { aviso(e.message); return; }
+  const tb = el("tbTickets");
+  tb.innerHTML = "";
+  el("vacioTickets").hidden = tickets.length > 0;
+  for (const t of tickets) {
+    const tr = document.createElement("tr");
+    const puedeAvanzar = t.estadoSunat === "ACEPTADO" && t.estadoOperativo !== "ANULADO";
+    const acciones = [];
+    if (puedeAvanzar && t.estadoOperativo === "GENERADO")
+      acciones.push(`<button class="chico" data-avanzar="${t.id}" data-a="EN_TRANSITO">Despachar</button>`);
+    if (puedeAvanzar && t.estadoOperativo === "EN_TRANSITO")
+      acciones.push(`<button class="chico" data-avanzar="${t.id}" data-a="ENTREGADO">Marcar entregado</button>`);
+    if (t.estadoOperativo !== "ANULADO" && t.estadoOperativo !== "ENTREGADO")
+      acciones.push(`<button class="tenue chico" data-avanzar="${t.id}" data-a="ANULADO">Anular</button>`);
+    tr.innerHTML = `
+      <td><strong>${t.codigoInterno}</strong></td>
+      <td>${t.origen} → ${t.destino}</td>
+      <td>${t.placa}</td>
+      <td>${t.choferNombres}</td>
+      <td>${Number(t.pesoBrutoKg).toLocaleString("es-PE")} kg</td>
+      <td>${pillGre(t.estadoSunat)}${t.serieCorrelativoGre ? `<div class="muted">${t.serieCorrelativoGre}</div>` : ""}${t.motivoRechazo ? `<div class="muted">${t.motivoRechazo}</div>` : ""}</td>
+      <td>${pillOperativo(t.estadoOperativo)}</td>
+      <td>${acciones.join(" ") || "—"}</td>`;
+    tb.appendChild(tr);
+  }
+}
+
+// ---------- acciones ----------
+async function login() {
+  aviso("");
+  try {
+    const u = await api("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ username: el("loginUser").value.trim(), password: el("loginPass").value })
+    });
+    guardarSesion(u);
+    render();
+  } catch (e) { aviso(e.message); }
+}
+
+async function registrar() {
+  aviso("");
+  try {
+    await api("/api/auth/registro", {
+      method: "POST",
+      body: JSON.stringify({
+        empresaId: el("regEmpresa").value.trim(),
+        username: el("regUser").value.trim(),
+        password: el("regPass").value,
+        nombreCompleto: el("regNombre").value.trim(),
+        rol: el("regRol").value
+      })
+    });
+    aviso("Usuario creado. Ya puedes ingresar.", "ok");
+    el("bloqueRegistro").hidden = true;
+  } catch (e) { aviso(e.message); }
+}
+
+async function crearUnidad() {
+  aviso("");
+  try {
+    await api("/api/unidades", {
+      method: "POST",
+      body: JSON.stringify({
+        empresaId: estado.sesion.empresaId,
+        placa: el("uPlaca").value.trim(),
+        marca: el("uMarca").value.trim(),
+        modelo: el("uModelo").value.trim(),
+        anioFabricacion: el("uAnio").value ? Number(el("uAnio").value) : null,
+        categoriaMtc: el("uCategoria").value,
+        configuracionVehicular: el("uConfig").value
+      })
+    });
+    ["uPlaca","uMarca","uModelo","uAnio"].forEach((id) => { el(id).value = ""; });
+    aviso("Unidad registrada.", "ok");
+    await cargarUnidades();
+  } catch (e) { aviso(e.message); }
+}
+
+async function crearChofer() {
+  aviso("");
+  try {
+    await api("/api/choferes", {
+      method: "POST",
+      body: JSON.stringify({
+        empresaId: estado.sesion.empresaId,
+        dni: el("cDni").value.trim(),
+        nombres: el("cNombres").value.trim(),
+        apellidos: el("cApellidos").value.trim()
+      })
+    });
+    ["cDni","cNombres","cApellidos"].forEach((id) => { el(id).value = ""; });
+    aviso("Chofer registrado.", "ok");
+    await cargarChoferes();
+  } catch (e) { aviso(e.message); }
+}
+
+async function crearTicket() {
+  aviso("");
+  const btn = el("btnCrearTicket");
+  const info = el("tEstadoEmision");
+  btn.disabled = true;
+  info.textContent = "Generando ticket…";
+  try {
+    const ticket = await api("/api/tickets", {
+      method: "POST",
+      body: JSON.stringify({
+        empresaId: estado.sesion.empresaId,
+        unidadId: el("tUnidad").value,
+        choferId: el("tChofer").value,
+        origen: el("tOrigen").value.trim(),
+        destino: el("tDestino").value.trim(),
+        motivo: el("tMotivo").value,
+        descripcionMercancia: el("tMercancia").value.trim(),
+        pesoBrutoKg: Number(el("tPeso").value)
+      })
+    });
+    ["tOrigen","tDestino","tMercancia","tPeso"].forEach((id) => { el(id).value = ""; });
+    // La emisión de la GRE es asíncrona: consultamos el ticket hasta que
+    // deje de estar "ENVIANDO" (máximo ~8 s).
+    info.textContent = `Ticket ${ticket.codigoInterno} creado. Emitiendo GRE…`;
+    await cargarTickets();
+    for (let i = 0; i < 16; i++) {
+      await esperar(500);
+      const t = await api(`/api/tickets/${ticket.id}`);
+      if (t.estadoSunat !== "ENVIANDO") {
+        info.textContent = t.estadoSunat === "ACEPTADO"
+          ? `GRE aceptada: ${t.serieCorrelativoGre}`
+          : `GRE ${t.estadoSunat}: ${t.motivoRechazo || ""}`;
+        break;
+      }
+    }
+    await cargarTickets();
+  } catch (e) {
+    aviso(e.message);
+    info.textContent = "";
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function avanzar(id, nuevoEstado) {
+  aviso("");
+  try {
+    await api(`/api/tickets/${id}/avanzar`, {
+      method: "POST",
+      body: JSON.stringify({ estadoOperativo: nuevoEstado })
+    });
+    await cargarTickets();
+  } catch (e) { aviso(e.message); }
+}
+
+async function desactivar(tipo, id) {
+  aviso("");
+  try {
+    await api(`/api/${tipo}/${id}/desactivar`, { method: "POST" });
+    if (tipo === "unidades") await cargarUnidades(); else await cargarChoferes();
+  } catch (e) { aviso(e.message); }
+}
+
+// ---------- enganche de eventos ----------
+el("uConfig").innerHTML = CONFIG_VEHICULAR.map((c) => `<option>${c}</option>`).join("");
+
+el("apiUrl").addEventListener("change", (e) => {
+  estado.api = e.target.value.trim().replace(/\/$/, "");
+  localStorage.setItem("transguia.api", estado.api);
+  render();
+});
+el("btnSalir").addEventListener("click", cerrarSesion);
+el("btnLogin").addEventListener("click", login);
+el("loginPass").addEventListener("keydown", (e) => { if (e.key === "Enter") login(); });
+el("btnMostrarRegistro").addEventListener("click", () => {
+  el("bloqueRegistro").hidden = !el("bloqueRegistro").hidden;
+});
+el("btnRegistro").addEventListener("click", registrar);
+el("btnCrearUnidad").addEventListener("click", crearUnidad);
+el("btnCrearChofer").addEventListener("click", crearChofer);
+el("btnCrearTicket").addEventListener("click", crearTicket);
+
+document.querySelectorAll(".tabs button").forEach((b) => {
+  b.addEventListener("click", () => mostrarVista(b.dataset.tab));
+});
+
+document.body.addEventListener("click", (e) => {
+  const t = e.target;
+  if (t.dataset.avanzar) {
+    const q = t.dataset.a === "ANULADO" ? "¿Anular este ticket? No se puede deshacer." : null;
+    if (q && !confirm(q)) return;
+    avanzar(t.dataset.avanzar, t.dataset.a);
+  }
+  if (t.dataset.desactivarUnidad) desactivar("unidades", t.dataset.desactivarUnidad);
+  if (t.dataset.desactivarChofer) desactivar("choferes", t.dataset.desactivarChofer);
+});
+
+render();
+</script>
+</body>
+</html>

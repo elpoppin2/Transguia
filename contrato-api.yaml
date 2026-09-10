@@ -1,0 +1,407 @@
+openapi: 3.1.0
+
+info:
+  title: TransGuía — API
+  version: "0.1.0"
+  description: >
+    Contrato de la API del backend de TransGuía: autenticación, registro de
+    unidades y choferes según normativa del MTC, y tickets de traslado
+    vinculados a la GRE-Transportista de SUNAT.
+
+    La emisión de la GRE es asíncrona: al crear un ticket se devuelve de
+    inmediato con `estadoSunat: "ENVIANDO"`; consulta `GET /api/tickets/{id}`
+    hasta que cambie a `ACEPTADO`, `RECHAZADO` u `OBSERVADO`.
+
+    El proveedor de emisión se elige con la variable de entorno
+    `GRE_PROVIDER` (`demo` | `pse` | `directo`) y no afecta a este contrato.
+
+servers:
+  - url: http://localhost:3001
+    description: Desarrollo local
+
+tags:
+  - name: Autenticación
+  - name: Unidades
+  - name: Choferes
+  - name: Tickets
+
+paths:
+  /api/auth/registro:
+    post:
+      tags: [Autenticación]
+      summary: Registrar un usuario en una empresa existente
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RegistroUsuario" }
+      responses:
+        "201":
+          description: Usuario creado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UsuarioPublico" }
+        "400": { $ref: "#/components/responses/ErrorValidacion" }
+
+  /api/auth/login:
+    post:
+      tags: [Autenticación]
+      summary: Validar credenciales
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string, example: andina }
+                password: { type: string, format: password, example: demo2026seguro }
+      responses:
+        "200":
+          description: Credenciales válidas
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Sesion" }
+        "401":
+          description: Usuario o contraseña incorrectos
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /api/unidades:
+    get:
+      tags: [Unidades]
+      summary: Listar las unidades de una empresa
+      parameters:
+        - name: empresaId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Lista de unidades (ordenadas por placa)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Unidad" }
+        "400": { $ref: "#/components/responses/ErrorValidacion" }
+    post:
+      tags: [Unidades]
+      summary: Registrar una unidad
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NuevaUnidad" }
+      responses:
+        "201":
+          description: Unidad registrada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Unidad" }
+        "400": { $ref: "#/components/responses/ErrorValidacion" }
+
+  /api/unidades/{id}/desactivar:
+    post:
+      tags: [Unidades]
+      summary: Dar de baja lógica una unidad (no se borra; queda inactiva)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Unidad desactivada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Unidad" }
+        "400": { $ref: "#/components/responses/ErrorValidacion" }
+
+  /api/choferes:
+    get:
+      tags: [Choferes]
+      summary: Listar los choferes de una empresa
+      parameters:
+        - name: empresaId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Lista de choferes (ordenados por apellidos)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Chofer" }
+        "400": { $ref: "#/components/responses/ErrorValidacion" }
+    post:
+      tags: [Choferes]
+      summary: Registrar un chofer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NuevoChofer" }
+      responses:
+        "201":
+          description: Chofer registrado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Chofer" }
+        "400": { $ref: "#/components/responses/ErrorValidacion" }
+
+  /api/choferes/{id}/desactivar:
+    post:
+      tags: [Choferes]
+      summary: Dar de baja lógica un chofer
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Chofer desactivado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Chofer" }
+        "400": { $ref: "#/components/responses/ErrorValidacion" }
+
+  /api/tickets:
+    get:
+      tags: [Tickets]
+      summary: Listar los tickets de una empresa
+      parameters:
+        - name: empresaId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Lista de tickets (más recientes primero)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Ticket" }
+        "400": { $ref: "#/components/responses/ErrorValidacion" }
+    post:
+      tags: [Tickets]
+      summary: Crear un ticket de traslado y disparar la emisión de la GRE
+      description: >
+        La unidad y el chofer deben estar registrados, pertenecer a la
+        empresa y estar activos. La respuesta llega antes de que SUNAT
+        conteste: el ticket vuelve con `estadoSunat: "ENVIANDO"`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NuevoTicket" }
+      responses:
+        "201":
+          description: Ticket creado (emisión de GRE en curso)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Ticket" }
+        "400": { $ref: "#/components/responses/ErrorValidacion" }
+
+  /api/tickets/{id}:
+    get:
+      tags: [Tickets]
+      summary: Detalle de un ticket (incluye el estado actual de su GRE)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Ticket encontrado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Ticket" }
+        "404":
+          description: Ticket no encontrado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /api/tickets/{id}/avanzar:
+    post:
+      tags: [Tickets]
+      summary: Cambiar el estado operativo del ticket
+      description: >
+        Solo se puede pasar a `EN_TRANSITO` o `ENTREGADO` si la GRE fue
+        `ACEPTADO`. `ANULADO` se permite siempre (salvo que ya esté anulado).
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [estadoOperativo]
+              properties:
+                estadoOperativo:
+                  $ref: "#/components/schemas/EstadoOperativo"
+      responses:
+        "200":
+          description: Estado actualizado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Ticket" }
+        "400": { $ref: "#/components/responses/ErrorValidacion" }
+
+components:
+  responses:
+    ErrorValidacion:
+      description: Datos inválidos o regla de negocio no cumplida
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error: { type: string, example: "Faltan campos obligatorios: origen, destino" }
+
+    RolUsuario:
+      type: string
+      enum: [admin_empresa, operador]
+
+    CategoriaMtc:
+      type: string
+      enum: [N1, N2, N3]
+      description: Categoría de vehículo de carga según el RNV.
+
+    ConfiguracionVehicular:
+      type: string
+      description: Código del Anexo IV del RNV (DS 058-2003-MTC).
+      enum: [C2, C2R2, C2R3, C3, C3R2, C3R3, C4, T2S1, T2S2, T2S3, T3S1, T3S2, T3S3]
+
+    MotivoTraslado:
+      type: string
+      enum: [VENTA, TRASLADO_ENTRE_ESTABLECIMIENTOS, OTROS]
+
+    EstadoOperativo:
+      type: string
+      enum: [GENERADO, EN_TRANSITO, ENTREGADO, ANULADO]
+
+    EstadoSunat:
+      type: string
+      enum: [ENVIANDO, ACEPTADO, RECHAZADO, OBSERVADO]
+
+    RegistroUsuario:
+      type: object
+      required: [empresaId, username, password, nombreCompleto]
+      properties:
+        empresaId: { type: string, format: uuid }
+        username: { type: string, example: andina }
+        password: { type: string, format: password, minLength: 8 }
+        nombreCompleto: { type: string, example: "María Andina" }
+        rol: { $ref: "#/components/schemas/RolUsuario" }
+
+    UsuarioPublico:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        username: { type: string }
+        nombreCompleto: { type: string }
+        rol: { $ref: "#/components/schemas/RolUsuario" }
+
+    Sesion:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        empresaId: { type: string, format: uuid }
+        username: { type: string }
+        nombreCompleto: { type: string }
+        rol: { $ref: "#/components/schemas/RolUsuario" }
+
+    NuevaUnidad:
+      type: object
+      required: [empresaId, placa, marca, modelo, categoriaMtc, configuracionVehicular]
+      properties:
+        empresaId: { type: string, format: uuid }
+        placa:
+          type: string
+          description: 3 letras + 3 dígitos, con o sin guion. Se normaliza a "ABC-123".
+          example: ABC-756
+        marca: { type: string, example: Volvo }
+        modelo: { type: string, example: "FH 460" }
+        anioFabricacion:
+          type: [integer, "null"]
+          minimum: 1970
+          example: 2021
+        categoriaMtc: { $ref: "#/components/schemas/CategoriaMtc" }
+        configuracionVehicular: { $ref: "#/components/schemas/ConfiguracionVehicular" }
+
+    Unidad:
+      allOf:
+        - $ref: "#/components/schemas/NuevaUnidad"
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            activo: { type: boolean }
+            creadoEn: { type: string, format: date-time }
+
+    NuevoChofer:
+      type: object
+      required: [empresaId, dni, nombres, apellidos]
+      properties:
+        empresaId: { type: string, format: uuid }
+        dni:
+          type: string
+          pattern: "^[0-9]{8}$"
+          example: "45678912"
+        nombres: { type: string, example: "Luis Alberto" }
+        apellidos: { type: string, example: "Quispe Mamani" }
+
+    Chofer:
+      allOf:
+        - $ref: "#/components/schemas/NuevoChofer"
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            activo: { type: boolean }
+            creadoEn: { type: string, format: date-time }
+
+    NuevoTicket:
+      type: object
+      required: [empresaId, unidadId, choferId, origen, destino, descripcionMercancia, pesoBrutoKg]
+      properties:
+        empresaId: { type: string, format: uuid }
+        unidadId: { type: string, format: uuid }
+        choferId: { type: string, format: uuid }
+        origen: { type: string, example: Lima }
+        destino: { type: string, example: Arequipa }
+        motivo:
+          $ref: "#/components/schemas/MotivoTraslado"
+          description: Texto libre también aceptado; se traduce al enum (vacío → VENTA).
+        descripcionMercancia: { type: string, example: "Repuestos industriales" }
+        pesoBrutoKg: { type: number, exclusiveMinimum: 0, example: 8200 }
+
+    Ticket:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        codigoInterno: { type: string, example: TCK-000001 }
+        empresaId: { type: string, format: uuid }
+        unidadId: { type: string, format: uuid }
+        choferId: { type: string, format: uuid }
+        placa: { type: string, example: ABC-756 }
+        configuracionVehicular: { $ref: "#/components/schemas/ConfiguracionVehicular" }
+        choferDni: { type: string, example: "45678912" }
+        choferNombres: { type: string, example: "Luis Alberto Quispe Mamani" }
+        origen: { type: string }
+        destino: { type: string }
+        motivo: { $ref: "#/components/schemas/MotivoTraslado" }
+        descripcionMercancia: { type: string }
+        pesoBrutoKg: { type: number }
+        estadoOperativo: { $ref: "#/components/schemas/EstadoOperativo" }
+        estadoSunat: { $ref: "#/components/schemas/EstadoSunat" }
+        serieCorrelativoGre:
+          type: [string, "null"]
+          example: T001-000160
+        motivoRechazo:
+          type: [string, "null"]
+        fechaTraslado: { type: [string, "null"], format: date-time }
+        fechaEntrega: { type: [string, "null"], format: date-time }
+        creadoEn: { type: string, format: date-time }
