@@ -91,10 +91,10 @@ erDiagram
         uuid empresa_id FK
         uuid unidad_id FK
         uuid chofer_id FK
-        text origen
-        text destino
+        text origen "centro de origen (catálogo fijo)"
+        text destino "destino (catálogo fijo)"
         enum motivo "VENTA | TRASLADO_ENTRE_ESTABLECIMIENTOS | OTROS"
-        text descripcion_mercancia
+        text descripcion_mercancia "mercancía (catálogo fijo)"
         numeric peso_bruto_kg
         enum estado_operativo "GENERADO | EN_TRANSITO | ENTREGADO | ANULADO"
         uuid creado_por FK "hoy NULL (falta sesión)"
@@ -309,9 +309,9 @@ El contrato formal está en `contrato-api.yaml` (OpenAPI 3.1, pegable en
 
 | Método y ruta | Para qué sirve | Entrada | Salida |
 |---|---|---|---|
-| `GET /api/catalogos/mercancias` | Lista fija de mercancías para el desplegable de "Mercancía". Fuente única de verdad (el front no la duplica). Definida en `src/tickets/mercancias.js`. | — | `{ "mercancias": ["Abarrotes y consumo masivo", …] }` |
+| `GET /api/catalogos` | Listas fijas para los desplegables del ticket: mercancía, centro de origen y destino. Fuente única de verdad (el front no las duplica). Definidas en `src/tickets/catalogos.js`. | — | `{ "mercancias": [...], "centrosOrigen": [...], "destinos": [...] }` |
 | `GET /api/tickets` | Listar los tickets de mi empresa, del más nuevo al más viejo, con el estado de su GRE y los datos de unidad y chofer. | — | Arreglo de tickets |
-| `POST /api/tickets` | **Generar un ticket y disparar la GRE.** Verifica que la unidad y el chofer sean de mi empresa y estén activos. Traduce el `motivo` libre al valor oficial. `descripcionMercancia` debe ser una del catálogo (`GET /api/catalogos/mercancias`); se acepta sin distinguir mayúsculas/espacios y se guarda canónica. `creadoPor` sale del token. Responde con `estadoSunat: "ENVIANDO"` — la GRE se resuelve en segundo plano (1–2 s con el simulador). | `unidadId`, `choferId`, `origen`, `destino`, `motivo` (opc.), `descripcionMercancia`, `pesoBrutoKg` | El ticket creado (`codigoInterno` tipo `TCK-000001`) |
+| `POST /api/tickets` | **Generar un ticket y disparar la GRE.** Verifica que la unidad y el chofer sean de mi empresa y estén activos. Traduce el `motivo` libre al valor oficial. `descripcionMercancia`, `origen` (centro de origen) y `destino` deben ser valores del catálogo (`GET /api/catalogos`); se aceptan sin distinguir mayúsculas/tildes/espacios y se guardan canónicos. `creadoPor` sale del token. Responde con `estadoSunat: "ENVIANDO"` — la GRE se resuelve en segundo plano (1–2 s con el simulador). | `unidadId`, `choferId`, `origen`, `destino`, `motivo` (opc.), `descripcionMercancia`, `pesoBrutoKg` | El ticket creado (`codigoInterno` tipo `TCK-000001`) |
 | `GET /api/tickets/:id` | Ver un ticket con el estado actualizado de su GRE. El frontend lo consulta en bucle tras crear, hasta que deja de estar `ENVIANDO`. | `id` en la URL | El ticket, o 404 |
 | `POST /api/tickets/:id/avanzar` | Cambiar el estado operativo: `EN_TRANSITO`, `ENTREGADO` o `ANULADO`. Solo se avanza si la GRE fue **ACEPTADA**; anular se permite salvo que ya esté anulado. Marca `fechaTraslado` / `fechaEntrega` y deja registro (con el usuario) en `historial_estado_ticket`. | `id` en la URL, `{ "estadoOperativo": "EN_TRANSITO" }` | El ticket actualizado |
 
@@ -325,7 +325,7 @@ El contrato formal está en `contrato-api.yaml` (OpenAPI 3.1, pegable en
   "unidadId": "uuid",           "choferId": "uuid",
   "placa": "ABC-756",           "configuracionVehicular": "T3S3",
   "choferDni": "45678912",      "choferNombres": "Luis Alberto Quispe Mamani",
-  "origen": "Lima",             "destino": "Arequipa",
+  "origen": "Quri",             "destino": "Atocongo",   // centro de origen y destino, del catálogo
   "motivo": "VENTA",            "descripcionMercancia": "Repuestos y autopartes",
   "pesoBrutoKg": 8200,
   "estadoOperativo": "GENERADO",          // GENERADO | EN_TRANSITO | ENTREGADO | ANULADO

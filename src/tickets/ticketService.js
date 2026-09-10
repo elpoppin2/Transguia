@@ -10,7 +10,7 @@
  * los repositorios de unidades y choferes, para validar que existan y
  * pertenezcan a la empresa antes de crear el ticket.
  */
-const { MERCANCIAS, normalizarMercancia } = require('./mercancias');
+const { MERCANCIAS, CENTROS_ORIGEN, DESTINOS, normalizarContra } = require('./catalogos');
 
 const MOTIVOS_VALIDOS = ['VENTA', 'TRASLADO_ENTRE_ESTABLECIMIENTOS', 'OTROS'];
 const ESTADOS_OPERATIVOS = ['GENERADO', 'EN_TRANSITO', 'ENTREGADO', 'ANULADO'];
@@ -194,20 +194,28 @@ function validarDatosTraslado(d) {
     throw new Error('pesoBrutoKg debe ser un número mayor a 0');
   }
 
-  // La mercancía debe ser una del catálogo fijo (ver src/tickets/mercancias.js).
-  const mercancia = normalizarMercancia(d.descripcionMercancia);
+  // Mercancía, centro de origen y destino salen de catálogos fijos
+  // (ver src/tickets/catalogos.js). Se aceptan sin distinguir
+  // mayúsculas/tildes/espacios y se guardan en su forma canónica.
+  const mercancia = normalizarContra(MERCANCIAS, d.descripcionMercancia);
   if (!mercancia) {
-    throw new Error(
-      `descripcionMercancia debe ser una del catálogo: ${MERCANCIAS.join(', ')}`
-    );
+    throw new Error(`descripcionMercancia debe ser una del catálogo: ${MERCANCIAS.join(', ')}`);
+  }
+  const origen = normalizarContra(CENTROS_ORIGEN, d.origen);
+  if (!origen) {
+    throw new Error(`origen debe ser un centro de origen del catálogo: ${CENTROS_ORIGEN.join(', ')}`);
+  }
+  const destino = normalizarContra(DESTINOS, d.destino);
+  if (!destino) {
+    throw new Error(`destino debe ser uno del catálogo: ${DESTINOS.join(', ')}`);
   }
 
   return {
     empresaId: String(d.empresaId).trim(),
     unidadId: String(d.unidadId).trim(),
     choferId: String(d.choferId).trim(),
-    origen: String(d.origen).trim(),
-    destino: String(d.destino).trim(),
+    origen,
+    destino,
     descripcionMercancia: mercancia,
     pesoBrutoKg: peso,
     motivo: normalizarMotivo(d.motivo)
@@ -238,4 +246,4 @@ function quitarTildes(texto) {
   return texto.normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
-module.exports = { TicketService, MOTIVOS_VALIDOS, ESTADOS_OPERATIVOS, MERCANCIAS };
+module.exports = { TicketService, MOTIVOS_VALIDOS, ESTADOS_OPERATIVOS, MERCANCIAS, CENTROS_ORIGEN, DESTINOS };

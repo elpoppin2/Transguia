@@ -71,11 +71,11 @@ function esperarEmision(ticketService, datos) {
     empresaId: empresa.id,
     unidadId: unidad.id,
     choferId: chofer.id,
-    origen: 'Lima',
-    destino: 'Cusco',
+    origen: 'Quri',
+    destino: 'Condorcocha',
     motivo: 'Traslado entre establecimientos',
-    descripcionMercancia: 'Maquinaria y equipos',
-    pesoBrutoKg: 5400
+    descripcionMercancia: 'Caliza Roca Fuerte',
+    pesoBrutoKg: 27400
   });
   console.log('[ticket creado en Supabase, de verdad]', {
     codigoInterno: ticket.codigoInterno,
@@ -105,7 +105,7 @@ function esperarEmision(ticketService, datos) {
       empresaId: empresa.id,
       unidadId: '00000000-0000-0000-0000-000000000000',
       choferId: chofer.id,
-      origen: 'A', destino: 'B', descripcionMercancia: 'Otros bienes', pesoBrutoKg: 1
+      origen: 'Quri', destino: 'Atocongo', descripcionMercancia: 'Carbón Trujillo', pesoBrutoKg: 1
     });
     console.log('[ERROR] debió rechazar la unidad inexistente');
   } catch (error) {
@@ -124,7 +124,7 @@ function esperarEmision(ticketService, datos) {
     empresaId: empresa.id,
     unidadId: unidad.id,
     choferId: chofer.id,
-    origen: 'Lima', destino: 'Piura', descripcionMercancia: 'Otros bienes', pesoBrutoKg: 3000
+    origen: 'Atipax', destino: 'Muelle Conchán', descripcionMercancia: 'Silice de Terceros', pesoBrutoKg: 3000
   });
   console.log('[ticket con GRE rechazada]', ticketRechazado.codigoInterno, '-', ticketRechazado.estadoSunat);
   try {

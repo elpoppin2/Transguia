@@ -277,8 +277,8 @@
         <div class="grid">
           <div><label>Unidad</label><select id="tUnidad"></select></div>
           <div><label>Chofer</label><select id="tChofer"></select></div>
-          <div><label>Origen</label><input id="tOrigen" placeholder="Lima" /></div>
-          <div><label>Destino</label><input id="tDestino" placeholder="Arequipa" /></div>
+          <div><label>Centro de origen</label><select id="tOrigen"></select></div>
+          <div><label>Destino</label><select id="tDestino"></select></div>
           <div><label>Motivo</label><select id="tMotivo">
             <option value="VENTA">Venta</option>
             <option value="TRASLADO_ENTRE_ESTABLECIMIENTOS">Traslado entre establecimientos</option>
@@ -592,17 +592,20 @@ async function borrarDoc(tipo, id, docId) {
 }
 
 // ---------- tickets ----------
-// Catálogo fijo de mercancías (una sola vez). Fuente: GET /api/catalogos/mercancias.
-async function cargarMercancias() {
+// Catálogos fijos del ticket (una sola vez). Fuente: GET /api/catalogos.
+async function cargarCatalogos() {
   if (el("tMercancia").options.length) return;
   try {
-    const { mercancias } = await api("/api/catalogos/mercancias");
-    el("tMercancia").innerHTML = mercancias.map((m) => `<option>${escapar(m)}</option>`).join("");
-  } catch (_) { /* si falla, el desplegable queda vacío y crearTicket avisa */ }
+    const c = await api("/api/catalogos");
+    const opciones = (arr) => arr.map((v) => `<option>${escapar(v)}</option>`).join("");
+    el("tMercancia").innerHTML = opciones(c.mercancias);
+    el("tOrigen").innerHTML = opciones(c.centrosOrigen);
+    el("tDestino").innerHTML = opciones(c.destinos);
+  } catch (_) { /* si falla, los desplegables quedan vacíos y crearTicket avisa */ }
 }
 
 async function cargarTickets() {
-  await cargarMercancias();
+  await cargarCatalogos();
   const tickets = await api("/api/tickets");
   const tb = el("tbTickets"); tb.innerHTML = "";
   el("vacioTickets").hidden = tickets.length > 0;
@@ -633,11 +636,11 @@ async function crearTicket() {
   try {
     const t = await api("/api/tickets", { method: "POST", body: JSON.stringify({
       unidadId: el("tUnidad").value, choferId: el("tChofer").value,
-      origen: el("tOrigen").value.trim(), destino: el("tDestino").value.trim(),
+      origen: el("tOrigen").value, destino: el("tDestino").value,
       motivo: el("tMotivo").value, descripcionMercancia: el("tMercancia").value,
       pesoBrutoKg: Number(el("tPeso").value)
     }) });
-    ["tOrigen","tDestino","tPeso"].forEach((id) => { el(id).value = ""; });
+    el("tPeso").value = "";
     info.textContent = `Ticket ${t.codigoInterno} creado. Emitiendo GRE…`;
     await cargarTickets();
     for (let i = 0; i < 16; i++) {

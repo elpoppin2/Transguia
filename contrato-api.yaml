@@ -377,13 +377,14 @@ paths:
               schema: { type: array, items: { $ref: "#/components/schemas/Vencimiento" } }
         "401": { $ref: "#/components/responses/NoAutenticado" }
 
-  /api/catalogos/mercancias:
+  /api/catalogos:
     get:
       tags: [Tickets]
-      summary: Catálogo fijo de mercancías para el desplegable de "Mercancía"
+      summary: Catálogos fijos para los desplegables del ticket
+      description: Mercancía, centro de origen y destino admitidos al crear un ticket.
       responses:
         "200":
-          description: Lista de mercancías admitidas
+          description: Las tres listas
           content:
             application/json:
               schema:
@@ -392,6 +393,12 @@ paths:
                   mercancias:
                     type: array
                     items: { $ref: "#/components/schemas/Mercancia" }
+                  centrosOrigen:
+                    type: array
+                    items: { $ref: "#/components/schemas/CentroOrigen" }
+                  destinos:
+                    type: array
+                    items: { $ref: "#/components/schemas/Destino" }
         "401": { $ref: "#/components/responses/NoAutenticado" }
 
   /api/tickets:
@@ -517,33 +524,25 @@ components:
       description: Código del Anexo IV del RNV (DS 058-2003-MTC).
       enum: [C2, C2R2, C2R3, C3, C3R2, C3R3, C4, T2S1, T2S2, T2S3, T3S1, T3S2, T3S3]
     MotivoTraslado: { type: string, enum: [VENTA, TRASLADO_ENTRE_ESTABLECIMIENTOS, OTROS] }
+    # Catálogos fijos de TransGuía (no los exige SUNAT; estandarizan el
+    # dashboard). Se aceptan sin distinguir mayúsculas/tildes/espacios de
+    # más y se guardan en su forma canónica. Fuente: GET /api/catalogos.
     Mercancia:
       type: string
-      description: >
-        Catálogo fijo de TransGuía (no lo exige SUNAT; estandariza el
-        dashboard). Se acepta sin distinguir mayúsculas ni espacios de más
-        y se guarda en su forma canónica. Fuente: GET /api/catalogos/mercancias.
       enum:
-        - Abarrotes y consumo masivo
-        - Bebidas
-        - Alimentos perecibles refrigerados
-        - Frutas y verduras
-        - Materiales de construcción
-        - Cemento y agregados
-        - Fierro, acero y metales
-        - Maquinaria y equipos
-        - Repuestos y autopartes
-        - Electrodomésticos y línea blanca
-        - Textiles y confecciones
-        - Productos plásticos y envases
-        - Papel, cartón y editorial
-        - Insumos y productos químicos
-        - Concentrado de minerales
-        - Combustibles y lubricantes
-        - Productos agrícolas a granel
-        - Madera y derivados
-        - Mudanza y menaje doméstico
-        - Otros bienes
+        - Carbón Trujillo
+        - Caliza Roca Fuerte
+        - Silice de Terceros
+        - Puzolana Terceros
+        - Puzolana Ayacucho
+    CentroOrigen:
+      type: string
+      description: Patio/centro desde donde sale la carga (campo "origen" del ticket).
+      enum: [Quri, Transmilsa, Atipax, Juscamaita]
+    Destino:
+      type: string
+      description: Planta o punto de entrega (campo "destino" del ticket).
+      enum: [Atocongo, Condorcocha, Muelle Conchán]
     EstadoOperativo: { type: string, enum: [GENERADO, EN_TRANSITO, ENTREGADO, ANULADO] }
     EstadoSunat: { type: string, enum: [ENVIANDO, ACEPTADO, RECHAZADO, OBSERVADO] }
     TipoDocumentoUnidad: { type: string, enum: [SOAT, REVISION_TECNICA, TARJETA_CIRCULACION, PERMISO_OPERACION, OTRO] }
@@ -644,7 +643,7 @@ components:
           items:
             type: object
             properties:
-              material: { type: string, example: "Repuestos industriales" }
+              material: { $ref: "#/components/schemas/Mercancia" }
               toneladas: { type: number, example: 24.6 }
               traslados: { type: integer }
         tiempoFinalizacion:
@@ -758,8 +757,8 @@ components:
       properties:
         unidadId: { type: string, format: uuid }
         choferId: { type: string, format: uuid }
-        origen: { type: string, example: Lima }
-        destino: { type: string, example: Arequipa }
+        origen: { $ref: "#/components/schemas/CentroOrigen" }
+        destino: { $ref: "#/components/schemas/Destino" }
         motivo:
           description: "Texto libre también aceptado; se traduce al enum (vacío → VENTA)."
           oneOf:
@@ -780,8 +779,8 @@ components:
         configuracionVehicular: { $ref: "#/components/schemas/ConfiguracionVehicular" }
         choferDni: { type: string, example: "45678912" }
         choferNombres: { type: string, example: "Luis Alberto Quispe Mamani" }
-        origen: { type: string }
-        destino: { type: string }
+        origen: { $ref: "#/components/schemas/CentroOrigen" }
+        destino: { $ref: "#/components/schemas/Destino" }
         motivo: { $ref: "#/components/schemas/MotivoTraslado" }
         descripcionMercancia: { $ref: "#/components/schemas/Mercancia" }
         pesoBrutoKg: { type: number }

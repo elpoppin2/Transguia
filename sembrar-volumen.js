@@ -1,9 +1,9 @@
 // Ejecutar con:  node sembrar-volumen.js
 //
 // Agranda la demo: suma flota, choferes, documentos y MUCHOS tickets de
-// traslado repartidos en los últimos ~90 días, en varios estados y con
-// materiales variados, para que el dashboard y los listados del
-// prototipo se vean con volumen realista.
+// traslado repartidos en los últimos ~90 días, en varios estados y
+// combinando los catálogos del ticket (mercancía / centro de origen /
+// destino), para que el dashboard y los listados se vean con volumen.
 //
 // Requiere que antes se haya corrido `node sembrar-datos.js` (usa las dos
 // empresas de demo: "Transportes Andina S.A.C." y "Logística del Sur E.I.R.L.").
@@ -104,39 +104,29 @@ const CHOFERES_DELSUR = [
   ['72610666', 'Fausto', 'Fernández Toledo']
 ];
 
-// [origen, destino, horas de manejo aproximadas de ida]
-const RUTAS = [
-  ['Lima', 'Arequipa', 16], ['Lima', 'Trujillo', 9], ['Lima', 'Chiclayo', 12],
-  ['Lima', 'Piura', 15], ['Lima', 'Ica', 5], ['Lima', 'Huancayo', 7],
-  ['Lima', 'Cusco', 20], ['Lima', 'Tacna', 18], ['Lima', 'Chimbote', 6],
-  ['Lima', 'Cajamarca', 14], ['Lima', 'Pucallpa', 18], ['Lima', 'Huaraz', 8],
-  ['Lima', 'Ayacucho', 9], ['Arequipa', 'Cusco', 9], ['Arequipa', 'Tacna', 5],
-  ['Arequipa', 'Juliaca', 5], ['Trujillo', 'Chiclayo', 3], ['Trujillo', 'Cajamarca', 6],
-  ['Chiclayo', 'Piura', 3], ['Cusco', 'Puno', 7]
+// Catálogos del ticket (ver src/tickets/catalogos.js).
+const CENTROS_ORIGEN = ['Quri', 'Transmilsa', 'Atipax', 'Juscamaita'];
+
+// [destino, horas de viaje aproximadas]
+const DESTINOS = [
+  ['Atocongo', 3],
+  ['Muelle Conchán', 3],
+  ['Condorcocha', 8]
 ];
 
-// [descripción del catálogo (ver src/tickets/mercancias.js), pesoMín, pesoMáx]
-// en kg; el tope legal general de una combinación vehicular es 48 000.
+// [mercancía del catálogo, pesoMín, pesoMáx] en kg. Son materiales a
+// granel: viajan pesados (el tope legal general de una combinación es 48 000).
 const MATERIALES = [
-  ['Repuestos y autopartes', 1500, 9000],
-  ['Materiales de construcción', 8000, 26000],
-  ['Abarrotes y consumo masivo', 2500, 14000],
-  ['Bebidas', 5000, 18000],
-  ['Maquinaria y equipos', 6000, 20000],
-  ['Textiles y confecciones', 800, 6000],
-  ['Cemento y agregados', 12000, 28000],
-  ['Concentrado de minerales', 10000, 30000],
-  ['Electrodomésticos y línea blanca', 1500, 9000],
-  ['Frutas y verduras', 2000, 10000],
-  ['Papel, cartón y editorial', 1200, 7000],
-  ['Insumos y productos químicos', 3000, 13000],
-  ['Productos agrícolas a granel', 8000, 28000],
-  ['Combustibles y lubricantes', 6000, 20000]
+  ['Carbón Trujillo', 22000, 30000],
+  ['Caliza Roca Fuerte', 24000, 32000],
+  ['Silice de Terceros', 20000, 28000],
+  ['Puzolana Terceros', 22000, 30000],
+  ['Puzolana Ayacucho', 22000, 30000]
 ];
 const MOTIVOS = [
-  'VENTA', 'VENTA', 'VENTA', 'VENTA',
   'TRASLADO_ENTRE_ESTABLECIMIENTOS', 'TRASLADO_ENTRE_ESTABLECIMIENTOS',
-  'OTROS'
+  'TRASLADO_ENTRE_ESTABLECIMIENTOS', 'TRASLADO_ENTRE_ESTABLECIMIENTOS',
+  'VENTA', 'OTROS'
 ];
 
 // Objetivo de tickets por empresa (total tras correr el script).
@@ -245,7 +235,8 @@ async function generarTickets(ctx, empresaId, ruc, adminId) {
 
   let hechos = 0;
   for (let i = 0; i < faltan; i++) {
-    const [origen, destino, horasRuta] = elegir(RUTAS);
+    const origen = elegir(CENTROS_ORIGEN);
+    const [destino, horasRuta] = elegir(DESTINOS);
     const [material, pMin, pMax] = elegir(MATERIALES);
     const unidad = elegir(unidades);
     const chofer = elegir(choferes);

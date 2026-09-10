@@ -28,7 +28,7 @@ const { DocumentosService } = require('./documentos/documentosService');
 const { DocumentosRepositorioPostgres } = require('./documentos/documentosRepoPostgres');
 const { TicketService } = require('./tickets/ticketService');
 const { TicketsRepositorioPostgres } = require('./tickets/ticketsRepoPostgres');
-const { MERCANCIAS } = require('./tickets/mercancias');
+const { MERCANCIAS, CENTROS_ORIGEN, DESTINOS } = require('./tickets/catalogos');
 
 // En serverless (Vercel) la función se apaga apenas responde, así que la
 // emisión de la GRE debe terminar ANTES de contestar, no en segundo
@@ -230,11 +230,11 @@ app.get('/api/vencimientos', requiereSesion, h(async (req, res) => {
 }));
 
 // ==================== CATÁLOGOS ====================
-// Listas fijas que el front usa para armar desplegables. Fuente única de
-// verdad en el backend (así el front no las duplica).
+// Listas fijas que el front usa para armar los desplegables del ticket.
+// Fuente única de verdad en el backend (así el front no las duplica).
 
-app.get('/api/catalogos/mercancias', requiereSesion, (req, res) => {
-  res.json({ mercancias: MERCANCIAS });
+app.get('/api/catalogos', requiereSesion, (req, res) => {
+  res.json({ mercancias: MERCANCIAS, centrosOrigen: CENTROS_ORIGEN, destinos: DESTINOS });
 });
 
 // ==================== TICKETS ====================

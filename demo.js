@@ -57,21 +57,21 @@ console.log(`Proveedor de GRE activo: ${process.env.GRE_PROVIDER}\n`);
       empresaId: EMPRESA_ID,
       unidadId: unidad1.id,
       choferId: chofer1.id,
-      origen: 'Lima',
-      destino: 'Arequipa',
-      motivo: 'Venta',
-      descripcionMercancia: 'Repuestos y autopartes',
-      pesoBrutoKg: 8200
+      origen: 'Quri',
+      destino: 'Atocongo',
+      motivo: 'Traslado entre establecimientos',
+      descripcionMercancia: 'Caliza Roca Fuerte',
+      pesoBrutoKg: 28200
     },
     {
       empresaId: EMPRESA_ID,
       unidadId: unidad2.id,
       choferId: chofer2.id,
-      origen: 'Lima',
-      destino: 'Trujillo',
+      origen: 'Transmilsa',
+      destino: 'Condorcocha',
       motivo: 'Traslado entre establecimientos',
-      descripcionMercancia: 'Materiales de construcción',
-      pesoBrutoKg: 15000
+      descripcionMercancia: 'Puzolana Ayacucho',
+      pesoBrutoKg: 30500
     }
   ];
 
