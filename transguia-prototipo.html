@@ -224,7 +224,12 @@
     <section class="panel" data-vista="empresas" hidden>
       <h2>Solicitudes de registro de unidades <span class="sub">— el admin de la empresa carga la unidad; acá se libera o se rechaza</span></h2>
       <div id="tbSolicitudes"></div>
-      <div class="vacio" id="vacioSolicitudes" hidden>No hay solicitudes pendientes.</div>
+      <div class="vacio" id="vacioSolicitudes" hidden>No hay solicitudes de unidades pendientes.</div>
+    </section>
+    <section class="panel" data-vista="empresas" hidden>
+      <h2>Solicitudes de registro de choferes <span class="sub">— igual que unidades: el admin carga, la plataforma libera</span></h2>
+      <div id="tbSolChoferes"></div>
+      <div class="vacio" id="vacioSolChoferes" hidden>No hay solicitudes de choferes pendientes.</div>
     </section>
     <section class="panel" data-vista="empresas" hidden>
       <h2>Nueva empresa <span class="sub">— se crea junto con su primer administrador</span></h2>
@@ -325,17 +330,42 @@
     <!-- CHOFERES -->
     <section class="panel" data-vista="choferes" hidden>
       <div class="solo-admin">
-        <h2>Registrar chofer</h2>
+        <h2>Registrar chofer <span class="sub">— solo Tipo de documento, N° de documento, Primer nombre y Apellido paterno son obligatorios</span></h2>
+
+        <h3 class="grupo">Identidad</h3>
         <div class="grid">
-          <div><label>DNI (8 dígitos)</label><input id="cDni" placeholder="45678912" /></div>
-          <div><label>Nombres</label><input id="cNombres" placeholder="Juan Carlos" /></div>
-          <div><label>Apellidos</label><input id="cApellidos" placeholder="Quispe Mamani" /></div>
+          <div><label>Tipo de documento *</label><select id="cTipoDoc"></select></div>
+          <div><label>N° de documento *</label>
+            <div class="conbtn"><input id="cDni" inputmode="numeric" placeholder="45678912" />
+            <button type="button" class="sec chico" id="cBtnDni">Traer datos</button></div></div>
+          <div><label>Apellido paterno *</label><input id="cApPaterno" placeholder="se completa con el DNI" /></div>
+          <div><label>Apellido materno</label><input id="cApMaterno" placeholder="se completa con el DNI" /></div>
+          <div><label>Primer nombre *</label><input id="cNombre1" placeholder="se completa con el DNI" /></div>
+          <div><label>Segundo nombre</label><input id="cNombre2" placeholder="se completa con el DNI" /></div>
         </div>
-        <div class="fila" style="margin-top:12px"><button id="btnCrearChofer">Guardar chofer</button></div>
+
+        <h3 class="grupo">Contacto y domicilio</h3>
+        <div class="grid">
+          <div><label>Celular</label><input id="cCelular" inputmode="numeric" placeholder="987654321" /></div>
+          <div><label>Departamento</label><select id="cDepartamento"></select></div>
+          <div><label>Provincia</label><input id="cProvincia" /></div>
+          <div><label>Distrito</label><input id="cDistrito" /></div>
+          <div><label>Dirección</label><input id="cDireccion" /></div>
+        </div>
+
+        <h3 class="grupo">Brevete <span class="sub">— se registra como documento "Licencia de conducir"</span></h3>
+        <div class="grid">
+          <div><label>N° de brevete</label><input id="cBrevete" /></div>
+          <div><label>Clase - categoría</label><select id="cClaseCat"></select></div>
+          <div><label>Fecha de expedición</label><input id="cFechaExp" type="date" /></div>
+          <div><label>Fecha de revalidación</label><input id="cFechaReval" type="date" /></div>
+        </div>
+
+        <div class="fila" style="margin-top:14px"><button id="btnCrearChofer">Guardar chofer</button></div>
       </div>
       <div class="tabla-scroll" style="margin-top:16px">
         <table>
-          <thead><tr><th>DNI</th><th>Nombre</th><th>Estado</th><th>Documentos</th></tr></thead>
+          <thead><tr><th>Documento</th><th>Nombre</th><th>Celular</th><th>Estado</th><th></th></tr></thead>
           <tbody id="tbChoferes"></tbody>
         </table>
       </div>
@@ -544,7 +574,7 @@ function mostrarVista(nombre) {
   if (bloqueado) return;
 
   if (nombre === "dashboard") cargarDashboard();
-  else if (nombre === "empresas") { cargarPlataforma(); cargarSolicitudes(); }
+  else if (nombre === "empresas") { cargarPlataforma(); cargarSolicitudes(); cargarSolicitudesChoferes(); }
   else if (nombre === "unidades") cargarUnidades().catch((e) => aviso(e.message));
   else if (nombre === "choferes") cargarChoferes().catch((e) => aviso(e.message));
   else if (nombre === "tickets") cargarTickets().catch((e) => aviso(e.message));
@@ -783,28 +813,188 @@ async function rechazarSol(id) {
 }
 
 // ---------- choferes ----------
+function nombreChofer(c) {
+  return [c.apellidos, c.nombres].filter(Boolean).join(", ") ||
+    [c.apellidoPaterno, c.apellidoMaterno, c.primerNombre].filter(Boolean).join(" ") || "—";
+}
+
+// Campos editables de la ficha de chofer (form de corrección del admin y
+// de revisión del superadmin). El alta nueva es HTML estático: si se
+// agrega/quita un campo, tocar también ese <section> y crearChofer().
+const FICHA_SPEC_CHOFER = [
+  { k: "tipoDocIdentidad", label: "Tipo de documento", t: "sel", cat: "tiposDocIdentidad" },
+  { k: "dni", label: "N° de documento", t: "text" },
+  { k: "apellidoPaterno", label: "Apellido paterno", t: "text" },
+  { k: "apellidoMaterno", label: "Apellido materno", t: "text" },
+  { k: "primerNombre", label: "Primer nombre", t: "text" },
+  { k: "segundoNombre", label: "Segundo nombre", t: "text" },
+  { k: "celular", label: "Celular", t: "text" },
+  { k: "departamento", label: "Departamento", t: "sel", cat: "departamentos" },
+  { k: "provincia", label: "Provincia", t: "text" },
+  { k: "distrito", label: "Distrito", t: "text" },
+  { k: "direccion", label: "Dirección", t: "text" }
+];
+
+function camposChoferHTML(pfx, c) {
+  const cats = estado.catalogos || {};
+  const uno = (s) => {
+    const id = `${pfx}-${s.k}`;
+    const v = c[s.k];
+    if (s.t === "sel") {
+      const lista = cats[s.cat] || [];
+      const cur = v == null ? "" : String(v);
+      return `<div><label>${s.label}</label><select id="${id}"><option value="">—</option>${
+        lista.map((o) => `<option${String(o) === cur ? " selected" : ""}>${escapar(o)}</option>`).join("")}</select></div>`;
+    }
+    return `<div><label>${s.label}</label><input id="${id}" value="${v == null ? "" : escapar(v)}" /></div>`;
+  };
+  return `<div class="grid">${FICHA_SPEC_CHOFER.map(uno).join("")}</div>`;
+}
+function leerCamposChofer(pfx) {
+  const o = {};
+  for (const s of FICHA_SPEC_CHOFER) {
+    const e = el(`${pfx}-${s.k}`);
+    if (!e) continue;
+    const raw = String(e.value).trim();
+    if (raw === "") continue;
+    o[s.k] = raw;
+  }
+  return o;
+}
+function fichaChoferHTML(c) {
+  const ubic = [c.distrito, c.provincia, c.departamento].filter(Boolean).join(", ");
+  const filas = [
+    ["Documento", [c.tipoDocIdentidad, c.dni].filter(Boolean).join(" ")],
+    ["Apellidos", [c.apellidoPaterno, c.apellidoMaterno].filter(Boolean).join(" ")],
+    ["Nombres", [c.primerNombre, c.segundoNombre].filter(Boolean).join(" ")],
+    ["Celular", c.celular], ["Ubicación", ubic], ["Dirección", c.direccion]
+  ].filter(([, v]) => v !== null && v !== undefined && v !== "");
+  return `<div class="ficha">${filas.map(([k, v]) =>
+    `<div><span>${k}</span><strong>${escapar(String(v))}</strong></div>`).join("")}</div>`;
+}
+function toggleFichaChofer(id) {
+  const fila = document.querySelector(`[data-ficha-chofer="${id}"]`);
+  if (!fila) return;
+  fila.hidden = !fila.hidden;
+  if (!fila.hidden) el(`fichaC-${id}`).innerHTML = fichaChoferHTML(estado.choferes.find((c) => c.id === id) || {});
+}
+function toggleEditChofer(id) {
+  const fila = document.querySelector(`[data-edit-chofer="${id}"]`);
+  if (!fila) return;
+  fila.hidden = !fila.hidden;
+  if (!fila.hidden) {
+    const c = estado.choferes.find((x) => x.id === id) || {};
+    el(`editC-${id}`).innerHTML =
+      (c.motivoRechazo ? `<div class="aviso">Motivo del rechazo: ${escapar(c.motivoRechazo)}</div>` : "") +
+      camposChoferHTML(`edc-${id}`, c) +
+      `<div class="fila" style="margin-top:10px"><button class="chico" data-reenviar-chofer="${id}">Corregir y reenviar</button></div>`;
+  }
+}
+async function reenviarChofer(id) {
+  try {
+    await api(`/api/choferes/${id}`, { method: "PUT", body: JSON.stringify(leerCamposChofer(`edc-${id}`)) });
+    aviso("Solicitud corregida y reenviada. Queda pendiente de aprobación.", "ok");
+    await cargarChoferes();
+  } catch (e) { aviso(e.message); }
+}
+
 async function cargarChoferes() {
+  await cargarCatalogos();
   estado.choferes = await api("/api/choferes");
   const tb = el("tbChoferes"); tb.innerHTML = "";
   el("vacioChoferes").hidden = estado.choferes.length > 0;
   for (const c of estado.choferes) {
+    const aprobado = c.estadoRegistro === "APROBADA";
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${escapar(c.dni)}</td>
-      <td>${escapar(c.apellidos)}, ${escapar(c.nombres)}</td>
-      <td>${c.activo ? '<span class="pill ok">activo</span>' : '<span class="pill gris">inactivo</span>'}
-          ${c.activo && esAdmin() ? `<button class="tenue chico" data-desactivar="choferes:${c.id}">Desactivar</button>` : ""}</td>
-      <td><button class="sec chico" data-docs="chofer:${c.id}">Ver / agregar</button></td>`;
+      <td><strong>${escapar([c.tipoDocIdentidad, c.dni].filter(Boolean).join(" "))}</strong></td>
+      <td>${escapar(nombreChofer(c))}</td>
+      <td>${escapar(c.celular || "—")}</td>
+      <td>${pillEstadoRegistro(c)}
+          ${aprobado && !c.activo ? ' <span class="pill gris">inactivo</span>' : ""}
+          ${aprobado && c.activo && esAdmin() ? `<button class="tenue chico" data-desactivar="choferes:${c.id}">Desactivar</button>` : ""}</td>
+      <td class="fila" style="gap:6px">
+        <button class="sec chico" data-ficha-chofer="${c.id}">Ficha</button>
+        ${c.estadoRegistro === "RECHAZADA" && esAdmin() ? `<button class="sec chico" data-editar-chofer="${c.id}">Corregir</button>` : ""}
+        <button class="sec chico" data-docs="chofer:${c.id}">Documentos</button></td>`;
     tb.appendChild(tr);
+    const trFicha = document.createElement("tr");
+    trFicha.hidden = true; trFicha.dataset.fichaChofer = c.id;
+    trFicha.innerHTML = `<td colspan="5"><div class="sub-panel" id="fichaC-${c.id}">…</div></td>`;
+    tb.appendChild(trFicha);
+    const trEdit = document.createElement("tr");
+    trEdit.hidden = true; trEdit.dataset.editChofer = c.id;
+    trEdit.innerHTML = `<td colspan="5"><div class="sub-panel" id="editC-${c.id}">…</div></td>`;
+    tb.appendChild(trEdit);
     const trDoc = document.createElement("tr");
     trDoc.hidden = true; trDoc.dataset.docsRow = "chofer:" + c.id;
-    trDoc.innerHTML = `<td colspan="4"><div class="sub-panel" id="docs-chofer-${c.id}">…</div></td>`;
+    trDoc.innerHTML = `<td colspan="5"><div class="sub-panel" id="docs-chofer-${c.id}">…</div></td>`;
     tb.appendChild(trDoc);
   }
   const sel = el("tChofer");
-  sel.innerHTML = estado.choferes.filter((c) => c.activo)
-    .map((c) => `<option value="${c.id}">${escapar(c.apellidos)}, ${escapar(c.nombres)} — ${escapar(c.dni)}</option>`).join("")
-    || `<option value="">(registra un chofer primero)</option>`;
+  const usables = estado.choferes.filter((c) => c.activo && c.estadoRegistro === "APROBADA");
+  sel.innerHTML = usables
+    .map((c) => `<option value="${c.id}">${escapar(nombreChofer(c))} — ${escapar(c.dni)}</option>`).join("")
+    || `<option value="">(no hay choferes aprobados todavía)</option>`;
+}
+
+// ---------- solicitudes de choferes (superadmin) ----------
+async function cargarSolicitudesChoferes() {
+  if (!esSuper()) return;
+  await cargarCatalogos();
+  let pend = [];
+  try { pend = await api("/api/choferes/pendientes"); } catch (e) { aviso(e.message); return; }
+  estado.solChoferes = pend;
+  el("vacioSolChoferes").hidden = pend.length > 0;
+  el("tbSolChoferes").innerHTML = pend.length ? `<div class="tabla-scroll"><table>
+    <thead><tr><th>Empresa</th><th>Documento</th><th>Nombre</th><th>Celular</th><th></th></tr></thead>
+    <tbody>${pend.map((c) => `
+      <tr>
+        <td>${escapar(c.empresaRazonSocial || "—")}</td>
+        <td><strong>${escapar([c.tipoDocIdentidad, c.dni].filter(Boolean).join(" "))}</strong></td>
+        <td>${escapar(nombreChofer(c))}</td>
+        <td>${escapar(c.celular || "—")}</td>
+        <td class="fila" style="gap:6px">
+          <button class="sec chico" data-revisar-solc="${c.id}">Revisar / editar</button>
+          <button class="chico" data-aprobar-solc="${c.id}">Liberar</button>
+          <button class="tenue chico" data-rechazar-solc="${c.id}">Rechazar</button></td>
+      </tr>
+      <tr hidden data-solc-row="${c.id}"><td colspan="5"><div class="sub-panel" id="solc-${c.id}">…</div></td></tr>`).join("")}
+    </tbody></table></div>` : "";
+}
+function toggleRevisarSolC(id) {
+  const fila = document.querySelector(`[data-solc-row="${id}"]`);
+  if (!fila) return;
+  fila.hidden = !fila.hidden;
+  if (!fila.hidden) {
+    const c = (estado.solChoferes || []).find((x) => x.id === id) || {};
+    el(`solc-${id}`).innerHTML =
+      `<p class="muted">${escapar(nombreChofer(c))} — corregí lo que haga falta antes de liberar.</p>` +
+      camposChoferHTML(`solc-${id}`, c) +
+      `<div class="fila" style="margin-top:10px">
+        <button class="sec chico" data-guardar-solc="${id}">Guardar cambios</button>
+        <button class="chico" data-liberar-solc="${id}">Guardar y liberar</button>
+      </div>`;
+  }
+}
+async function guardarSolC(id, liberar) {
+  try {
+    if (el(`solc-${id}-dni`)) {
+      await api(`/api/choferes/${id}`, { method: "PUT", body: JSON.stringify(leerCamposChofer(`solc-${id}`)) });
+    }
+    if (liberar) await api(`/api/choferes/${id}/aprobar`, { method: "POST" });
+    aviso(liberar ? "Solicitud liberada. El chofer ya se puede usar." : "Cambios guardados.", "ok");
+    await cargarSolicitudesChoferes();
+  } catch (e) { aviso(e.message); }
+}
+async function rechazarSolC(id) {
+  const motivo = prompt("Motivo del rechazo (lo verá el admin de la empresa):");
+  if (motivo == null || !motivo.trim()) return;
+  try {
+    await api(`/api/choferes/${id}/rechazar`, { method: "POST", body: JSON.stringify({ motivo }) });
+    aviso("Solicitud rechazada.", "ok");
+    await cargarSolicitudesChoferes();
+  } catch (e) { aviso(e.message); }
 }
 
 // ---------- documentos ----------
@@ -886,6 +1076,9 @@ async function cargarCatalogos() {
     fill("uTipoVehiculo", c.tiposVehiculo, true);
     fill("uFormaApertura", c.formasApertura, true);
     ["uRodadaDel", "uRodadaC1", "uRodadaC2"].forEach((id) => fill(id, c.tiposRodada, true));
+    fill("cTipoDoc", c.tiposDocIdentidad);
+    fill("cDepartamento", c.departamentos, true);
+    fill("cClaseCat", c.categoriasLicencia, true);
     catalogosCargados = true;
   } catch (_) { /* si falla, los desplegables quedan vacíos y el guardado avisa */ }
 }
@@ -1021,13 +1214,43 @@ async function traerPorDni() {
     aviso("Ubicación del transportista traída de RENIEC.", "ok");
   } catch (e) { aviso(e.message); }
 }
+const CAMPOS_CHOFER = [
+  "cDni","cApPaterno","cApMaterno","cNombre1","cNombre2","cCelular","cProvincia","cDistrito","cDireccion",
+  "cDepartamento","cClaseCat","cBrevete","cFechaExp","cFechaReval"
+];
 async function crearChofer() {
+  const b = el("btnCrearChofer");
+  const txt = (id) => el(id).value.trim() || undefined;
+  b.disabled = true;
   try {
-    await api("/api/choferes", { method: "POST", body: JSON.stringify({
-      dni: el("cDni").value.trim(), nombres: el("cNombres").value.trim(), apellidos: el("cApellidos").value.trim()
+    const r = await api("/api/choferes", { method: "POST", body: JSON.stringify({
+      tipoDocIdentidad: el("cTipoDoc").value,
+      dni: el("cDni").value.trim(),
+      apellidoPaterno: txt("cApPaterno"), apellidoMaterno: txt("cApMaterno"),
+      primerNombre: txt("cNombre1"), segundoNombre: txt("cNombre2"),
+      celular: txt("cCelular"), departamento: txt("cDepartamento"),
+      provincia: txt("cProvincia"), distrito: txt("cDistrito"), direccion: txt("cDireccion"),
+      brevete: txt("cBrevete"), claseCategoria: txt("cClaseCat"),
+      fechaExpedicion: txt("cFechaExp"), fechaRevalidacion: txt("cFechaReval")
     }) });
-    ["cDni","cNombres","cApellidos"].forEach((id) => { el(id).value = ""; });
-    aviso("Chofer registrado.", "ok"); await cargarChoferes();
+    CAMPOS_CHOFER.forEach((id) => { if (el(id)) el(id).value = ""; });
+    const base = "Solicitud enviada. El chofer queda pendiente de que la plataforma lo libere.";
+    aviso(r.avisos && r.avisos.length ? base + " Además: " + r.avisos.join(" · ") : base, "ok");
+    await cargarChoferes();
+  } catch (e) { aviso(e.message); }
+  finally { b.disabled = false; }
+}
+async function traerPorDniChofer() {
+  const dni = el("cDni").value.trim();
+  if (!/^\d{8}$/.test(dni)) { aviso("Para traer datos de RENIEC ingresá un DNI de 8 dígitos."); return; }
+  try {
+    const r = await api(`/api/consulta/dni/${dni}`);
+    if (!r.configurado) { aviso("La consulta automática de DNI todavía no está conectada; completá nombres y apellidos a mano."); return; }
+    el("cApPaterno").value = r.apellidoPaterno || "";
+    el("cApMaterno").value = r.apellidoMaterno || "";
+    el("cNombre1").value = r.primerNombre || "";
+    el("cNombre2").value = r.segundoNombre || "";
+    aviso("Datos del chofer traídos de RENIEC.", "ok");
   } catch (e) { aviso(e.message); }
 }
 async function crearUsuario() {
@@ -1203,8 +1426,8 @@ async function cargarPlataforma() {
     el("statsGlobal").innerHTML =
       stat(resumen.empresas, "Empresas") +
       stat(resumen.unidadesActivas, "Unidades activas") +
-      stat(resumen.unidadesPendientes ?? 0, "Solicitudes pend.", true) +
       stat(resumen.choferesActivos, "Choferes activos") +
+      stat((resumen.unidadesPendientes ?? 0) + (resumen.choferesPendientes ?? 0), "Solicitudes pend.", true) +
       stat(resumen.tickets, "Tickets") +
       stat(resumen.ticketsEnTransito, "En tránsito") +
       stat(resumen.documentosVencidos, "Docs vencidos", true);
@@ -1219,7 +1442,7 @@ async function cargarPlataforma() {
         <td><strong>${escapar(e.razonSocial)}</strong></td>
         <td>${escapar(e.ruc)}</td>
         <td>${e.unidadesActivas}${e.unidadesPendientes > 0 ? ` <span class="pill warn">${e.unidadesPendientes} pend.</span>` : ""}</td>
-        <td>${e.choferesActivos}</td>
+        <td>${e.choferesActivos}${e.choferesPendientes > 0 ? ` <span class="pill warn">${e.choferesPendientes} pend.</span>` : ""}</td>
         <td>${e.tickets}</td>
         <td>${e.ticketsEnTransito}</td>
         <td>${e.documentosVencidos > 0 ? `<span class="pill err">${e.documentosVencidos}</span>` : "0"}</td>
@@ -1258,6 +1481,7 @@ el("loginPass").addEventListener("keydown", (e) => { if (e.key === "Enter") logi
 el("btnCrearUnidad").addEventListener("click", crearUnidad);
 el("uBtnRuc").addEventListener("click", traerPorRuc);
 el("uBtnDni").addEventListener("click", traerPorDni);
+el("cBtnDni").addEventListener("click", traerPorDniChofer);
 el("btnCrearChofer").addEventListener("click", crearChofer);
 el("btnCrearTicket").addEventListener("click", crearTicket);
 el("btnCrearUsuario").addEventListener("click", crearUsuario);
@@ -1287,6 +1511,14 @@ document.body.addEventListener("click", (e) => {
   if (t.dataset.guardarSol) guardarSol(t.dataset.guardarSol, false);
   if (t.dataset.liberarSol) guardarSol(t.dataset.liberarSol, true);
   if (t.dataset.rechazarSol) rechazarSol(t.dataset.rechazarSol);
+  if (t.dataset.fichaChofer) toggleFichaChofer(t.dataset.fichaChofer);
+  if (t.dataset.editarChofer) toggleEditChofer(t.dataset.editarChofer);
+  if (t.dataset.reenviarChofer) reenviarChofer(t.dataset.reenviarChofer);
+  if (t.dataset.revisarSolc) toggleRevisarSolC(t.dataset.revisarSolc);
+  if (t.dataset.aprobarSolc) guardarSolC(t.dataset.aprobarSolc, true);
+  if (t.dataset.guardarSolc) guardarSolC(t.dataset.guardarSolc, false);
+  if (t.dataset.liberarSolc) guardarSolC(t.dataset.liberarSolc, true);
+  if (t.dataset.rechazarSolc) rechazarSolC(t.dataset.rechazarSolc);
   if (t.dataset.docs) toggleDocs(t.dataset.docs);
   if (t.dataset.docAdd) agregarDoc(t.dataset.docAdd);
   if (t.dataset.docDel) { const [tp, id, docId] = t.dataset.docDel.split(":"); borrarDoc(tp, id, docId); }

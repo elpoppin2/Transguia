@@ -28,21 +28,39 @@ class ChoferesRepositorioMemoria {
     return this.choferes.get(id) || null;
   }
 
-  async crearChofer({ empresaId, dni, nombres, apellidos }) {
-    if (await this.buscarPorDni(empresaId, dni)) {
-      throw new Error('Ya existe un chofer con ese DNI en esta empresa');
+  async crearChofer(datos) {
+    if (await this.buscarPorDni(datos.empresaId, datos.dni)) {
+      throw new Error('Ya existe un chofer con ese documento en esta empresa');
     }
     const chofer = {
       id: crypto.randomUUID(),
-      empresaId,
-      dni,
-      nombres,
-      apellidos,
       activo: true,
-      creadoEn: new Date().toISOString()
+      creadoEn: new Date().toISOString(),
+      ...datos
     };
     this.choferes.set(chofer.id, chofer);
     return chofer;
+  }
+
+  async actualizar(id, datos) {
+    const chofer = this.choferes.get(id);
+    if (!chofer) throw new Error('El chofer indicado no existe');
+    for (const [k, v] of Object.entries(datos)) {
+      if (k === 'empresaId' || v === undefined) continue;
+      chofer[k] = v;
+    }
+    return chofer;
+  }
+
+  async cambiarEstadoRegistro(id, estadoRegistro, { motivoRechazo = null, revisadoPor = null } = {}) {
+    const chofer = this.choferes.get(id);
+    if (!chofer) throw new Error('El chofer indicado no existe');
+    Object.assign(chofer, { estadoRegistro, motivoRechazo, revisadoPor, revisadoEn: new Date().toISOString() });
+    return chofer;
+  }
+
+  async listarPendientes() {
+    return Array.from(this.choferes.values()).filter((c) => c.estadoRegistro === 'PENDIENTE');
   }
 
   async cambiarActivo(id, activo) {

@@ -56,7 +56,41 @@ const PASOS = [
   `alter table unidades alter column estado_registro set not null`,
   `alter table unidades add column if not exists motivo_rechazo text`,
   `alter table unidades add column if not exists revisado_por uuid`,
-  `alter table unidades add column if not exists revisado_en timestamptz`
+  `alter table unidades add column if not exists revisado_en timestamptz`,
+
+  // --- Choferes: ficha ampliada + aprobación de la plataforma ---
+  // El "dni" pasa a ser el número de documento de identidad de cualquier
+  // tipo (DNI / carné de extranjería / pasaporte), así que se ensancha.
+  `alter table choferes alter column dni type varchar(15) using trim(dni)`,
+  `alter table choferes alter column nombres drop not null`,
+  `alter table choferes alter column apellidos drop not null`,
+  `alter table choferes add column if not exists tipo_doc_identidad text`,
+  `update choferes set tipo_doc_identidad = 'DNI' where tipo_doc_identidad is null`,
+  `alter table choferes alter column tipo_doc_identidad set default 'DNI'`,
+  `alter table choferes alter column tipo_doc_identidad set not null`,
+  `alter table choferes add column if not exists apellido_paterno text`,
+  `alter table choferes add column if not exists apellido_materno text`,
+  `alter table choferes add column if not exists primer_nombre text`,
+  `alter table choferes add column if not exists segundo_nombre text`,
+  // Parte el nombre viejo (nombres/apellidos) en las 4 columnas nuevas.
+  `update choferes set
+     apellido_paterno = split_part(apellidos, ' ', 1),
+     apellido_materno = nullif(btrim(substr(apellidos, length(split_part(apellidos, ' ', 1)) + 2)), ''),
+     primer_nombre    = split_part(nombres, ' ', 1),
+     segundo_nombre   = nullif(btrim(substr(nombres, length(split_part(nombres, ' ', 1)) + 2)), '')
+   where apellido_paterno is null and coalesce(apellidos, nombres) is not null`,
+  `alter table choferes add column if not exists celular text`,
+  `alter table choferes add column if not exists departamento text`,
+  `alter table choferes add column if not exists provincia text`,
+  `alter table choferes add column if not exists distrito text`,
+  `alter table choferes add column if not exists direccion text`,
+  `alter table choferes add column if not exists estado_registro text`,
+  `update choferes set estado_registro = 'APROBADA' where estado_registro is null`,
+  `alter table choferes alter column estado_registro set default 'PENDIENTE'`,
+  `alter table choferes alter column estado_registro set not null`,
+  `alter table choferes add column if not exists motivo_rechazo text`,
+  `alter table choferes add column if not exists revisado_por uuid`,
+  `alter table choferes add column if not exists revisado_en timestamptz`
 ];
 
 let listo = null;

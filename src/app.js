@@ -30,6 +30,7 @@ const { TicketService } = require('./tickets/ticketService');
 const { TicketsRepositorioPostgres } = require('./tickets/ticketsRepoPostgres');
 const { MERCANCIAS, CENTROS_ORIGEN, DESTINOS } = require('./tickets/catalogos');
 const { TIPOS_VEHICULO, TIPOS_RODADA, FORMAS_APERTURA } = require('./unidades/catalogosUnidad');
+const { TIPOS_DOC_IDENTIDAD, DEPARTAMENTOS, CATEGORIAS_LICENCIA } = require('./choferes/catalogosChofer');
 const { consultarRuc, consultarDni } = require('./consulta/consultaIdentidad');
 
 // En serverless (Vercel) la función se apaga apenas responde, así que la
@@ -244,8 +245,48 @@ app.get('/api/choferes', requiereSesion, h(async (req, res) => {
 }));
 
 app.post('/api/choferes', requiereSesion, requiereRol('admin_empresa'), h(async (req, res) => {
-  const chofer = await choferesService.registrarChofer({ ...req.body, empresaId: req.sesion.empresaId });
-  res.status(201).json(chofer);
+  const empresaId = req.sesion.empresaId;
+  // El brevete no es columna del chofer: va como documento LICENCIA_CONDUCIR.
+  const { brevete, claseCategoria, fechaExpedicion, fechaRevalidacion, ...datosChofer } = req.body || {};
+  const chofer = await choferesService.registrarChofer({ ...datosChofer, empresaId });
+
+  const avisos = [];
+  if (fechaRevalidacion || brevete || claseCategoria) {
+    if (!fechaRevalidacion) {
+      avisos.push('Brevete: falta la fecha de revalidación, no se guardó');
+    } else {
+      try {
+        await documentosService.agregarAChofer(empresaId, chofer.id, {
+          tipoDocumento: 'LICENCIA_CONDUCIR',
+          numeroDocumento: brevete || null,
+          categoriaLicencia: claseCategoria || undefined,
+          fechaEmision: fechaExpedicion || undefined,
+          fechaVencimiento: fechaRevalidacion
+        });
+      } catch (e) {
+        avisos.push(`Brevete: ${e.message}`);
+      }
+    }
+  }
+  res.status(201).json(avisos.length ? { ...chofer, avisos } : chofer);
+}));
+
+// Solicitudes de registro de choferes pendientes (superadmin). Antes de
+// las rutas con :id para que "pendientes" no se tome como id.
+app.get('/api/choferes/pendientes', requiereSesion, requiereRol('superadmin'), h(async (req, res) => {
+  res.json(await choferesService.listarPendientes());
+}));
+
+app.put('/api/choferes/:id', requiereSesion, requiereRol('admin_empresa', 'superadmin'), h(async (req, res) => {
+  res.json(await choferesService.editarChofer(req.params.id, req.body || {}, req.sesion));
+}));
+
+app.post('/api/choferes/:id/aprobar', requiereSesion, requiereRol('superadmin'), h(async (req, res) => {
+  res.json(await choferesService.aprobarChofer(req.params.id, req.sesion));
+}));
+
+app.post('/api/choferes/:id/rechazar', requiereSesion, requiereRol('superadmin'), h(async (req, res) => {
+  res.json(await choferesService.rechazarChofer(req.params.id, (req.body || {}).motivo, req.sesion));
 }));
 
 app.post('/api/choferes/:id/desactivar', requiereSesion, requiereRol('admin_empresa'), h(async (req, res) => {
@@ -283,7 +324,10 @@ app.get('/api/catalogos', requiereSesion, (req, res) => {
     destinos: DESTINOS,
     tiposVehiculo: TIPOS_VEHICULO,
     tiposRodada: TIPOS_RODADA,
-    formasApertura: FORMAS_APERTURA
+    formasApertura: FORMAS_APERTURA,
+    tiposDocIdentidad: TIPOS_DOC_IDENTIDAD,
+    departamentos: DEPARTAMENTOS,
+    categoriasLicencia: CATEGORIAS_LICENCIA
   });
 });
 

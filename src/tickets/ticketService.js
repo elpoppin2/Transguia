@@ -75,6 +75,9 @@ class TicketService {
     if (chofer.activo === false) {
       throw new Error('El chofer indicado está inactivo; reactívalo antes de usarlo');
     }
+    if (chofer.estadoRegistro && chofer.estadoRegistro !== 'APROBADA') {
+      throw new Error('El chofer todavía no fue liberado por la plataforma; no se puede usar para traslados');
+    }
 
     const ticket = await this.repo.crear({
       empresaId: limpio.empresaId,

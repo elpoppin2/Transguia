@@ -19,7 +19,10 @@ class EmpresasRepositorioPostgres {
            where u.empresa_id = e.id and u.activo and u.estado_registro = 'APROBADA') as "unidadesActivas",
         (select count(*)::int from unidades u
            where u.empresa_id = e.id and u.estado_registro = 'PENDIENTE')            as "unidadesPendientes",
-        (select count(*)::int from choferes c where c.empresa_id = e.id and c.activo) as "choferesActivos",
+        (select count(*)::int from choferes c
+           where c.empresa_id = e.id and c.activo and c.estado_registro = 'APROBADA') as "choferesActivos",
+        (select count(*)::int from choferes c
+           where c.empresa_id = e.id and c.estado_registro = 'PENDIENTE')            as "choferesPendientes",
         (select count(*)::int from tickets_traslado t where t.empresa_id = e.id)      as "tickets",
         (select count(*)::int from tickets_traslado t
            where t.empresa_id = e.id and t.estado_operativo = 'EN_TRANSITO')          as "ticketsEnTransito",
@@ -58,7 +61,8 @@ class EmpresasRepositorioPostgres {
         (select count(*)::int from empresas)                                       as "empresas",
         (select count(*)::int from unidades where activo and estado_registro = 'APROBADA') as "unidadesActivas",
         (select count(*)::int from unidades where estado_registro = 'PENDIENTE')    as "unidadesPendientes",
-        (select count(*)::int from choferes where activo)                          as "choferesActivos",
+        (select count(*)::int from choferes where activo and estado_registro = 'APROBADA') as "choferesActivos",
+        (select count(*)::int from choferes where estado_registro = 'PENDIENTE')    as "choferesPendientes",
         (select count(*)::int from tickets_traslado)                               as "tickets",
         (select count(*)::int from tickets_traslado where estado_operativo = 'GENERADO')     as "ticketsGenerados",
         (select count(*)::int from tickets_traslado where estado_operativo = 'EN_TRANSITO')  as "ticketsEnTransito",

@@ -60,6 +60,7 @@ function esperarEmision(ticketService, datos) {
     dni: ('4' + s + '0').slice(0, 8),
     nombres: 'Pedro', apellidos: 'Rojas Díaz'
   });
+  await pool.query("update choferes set estado_registro = 'APROBADA' where id = $1", [chofer.id]);
   console.log('[unidad de prueba]', unidad.placa, '  [chofer de prueba]', chofer.dni);
 
   const ticketService = new TicketService({

@@ -30,7 +30,14 @@ const { ChoferesRepositorioPostgres } = require('./src/choferes/choferesRepoPost
     nombres: 'Juan Carlos',
     apellidos: 'Quispe Mamani'
   });
-  console.log('[chofer creado en Supabase, de verdad]', creado);
+  console.log('[chofer creado en Supabase, de verdad] estado_registro =', creado.estadoRegistro,
+    creado.estadoRegistro === 'PENDIENTE' ? '[OK: nace pendiente]' : '[ERROR: debió nacer pendiente]');
+
+  const rechazado = await choferes.rechazarChofer(creado.id, 'Falta el brevete', { usuarioId: null });
+  console.log('[rechazado]', rechazado.estadoRegistro, '-', rechazado.motivoRechazo);
+  const aprobado = await choferes.aprobarChofer(creado.id, { usuarioId: null });
+  console.log('[liberado]', aprobado.estadoRegistro,
+    aprobado.estadoRegistro === 'APROBADA' && !aprobado.motivoRechazo ? '[OK]' : '[ERROR]');
 
   const lista = await choferes.listarChoferes(empresa.id);
   console.log(`[choferes de la empresa: ${lista.length}]`);

@@ -106,12 +106,28 @@ erDiagram
     choferes {
         uuid id PK
         uuid empresa_id FK
-        char dni "8 dígitos"
-        text nombres
-        text apellidos
+        text tipo_doc_identidad "DNI | CE | PASAPORTE"
+        varchar dni "nº de documento (obligatorio)"
+        text apellido_paterno "obligatorio · autocompletable por DNI"
+        text apellido_materno "autocompletable por DNI"
+        text primer_nombre "obligatorio · autocompletable por DNI"
+        text segundo_nombre "autocompletable por DNI"
+        text nombres "nombre para mostrar (lo arma el servicio)"
+        text apellidos "idem"
+        text celular
+        text departamento "lista · provincia y distrito: texto libre por ahora"
+        text provincia
+        text distrito
+        text direccion
+        text estado_registro "PENDIENTE | APROBADA | RECHAZADA"
+        text motivo_rechazo
+        uuid revisado_por
+        timestamptz revisado_en
         bool activo "baja lógica"
         timestamptz creado_en
     }
+    %% El brevete (nº, clase-categoría, expedición, revalidación) va en
+    %% documentos_chofer como LICENCIA_CONDUCIR. Aprobación igual que unidades.
 
     tickets_traslado {
         uuid id PK
@@ -313,8 +329,12 @@ El contrato formal está en `contrato-api.yaml` (OpenAPI 3.1, pegable en
 
 | Método y ruta | Para qué sirve | Entrada | Salida |
 |---|---|---|---|
-| `GET /api/choferes` | Listar los choferes de mi empresa, por apellido. | — | Arreglo de choferes |
-| `POST /api/choferes` **(admin)** | Registrar un chofer. Valida DNI de 8 dígitos, único en la empresa. | `dni`, `nombres`, `apellidos` | El chofer creado |
+| `GET /api/choferes` | Listar los choferes de mi empresa (todos, con su `estadoRegistro`), por apellido. | — | Arreglo de choferes |
+| `POST /api/choferes` **(admin)** | Registrar un chofer con su ficha (identidad en 4 partes, contacto, domicilio). **Nace `PENDIENTE`** — no sirve para tickets hasta que el superadmin lo libere. **Obligatorios: `tipoDocIdentidad`, `dni` (nº doc), `primerNombre`, `apellidoPaterno`.** `brevete`/`claseCategoria`/`fechaExpedicion`/`fechaRevalidacion` se guardan como documento LICENCIA_CONDUCIR. | ver `NuevoChofer` en `contrato-api.yaml` | El chofer creado (con `avisos` si el brevete quedó mal) |
+| `GET /api/choferes/pendientes` **(superadmin)** | Solicitudes `PENDIENTE` de todas las empresas, con `empresaRazonSocial`. | — | Arreglo de choferes |
+| `PUT /api/choferes/:id` **(admin / superadmin)** | Editar la ficha. Mismas reglas que `PUT /api/unidades/:id`. | campos de ficha | El chofer actualizado |
+| `POST /api/choferes/:id/aprobar` **(superadmin)** | Libera la solicitud: `estadoRegistro = APROBADA`. | `id` en la URL | El chofer actualizado |
+| `POST /api/choferes/:id/rechazar` **(superadmin)** | Rechaza con `motivo` obligatorio: `estadoRegistro = RECHAZADA`. | `{ "motivo": "…" }` | El chofer actualizado |
 | `POST /api/choferes/:id/desactivar` **(admin)** | Baja lógica del chofer. | `id` en la URL | El chofer actualizado |
 
 ### Documentos (con vencimiento)
@@ -341,8 +361,8 @@ El contrato formal está en `contrato-api.yaml` (OpenAPI 3.1, pegable en
 
 | Método y ruta | Para qué sirve | Entrada | Salida |
 |---|---|---|---|
-| `GET /api/catalogos` | Listas para los desplegables. Del **ticket** (cerradas, se validan): `mercancias`, `centrosOrigen`, `destinos` — en `src/tickets/catalogos.js`. De la **unidad** (solo sugerencias): `tiposVehiculo`, `tiposRodada`, `formasApertura` — en `src/unidades/catalogosUnidad.js`. | — | `{ mercancias, centrosOrigen, destinos, tiposVehiculo, tiposRodada, formasApertura }` |
-| `GET /api/consulta/ruc/:ruc` · `GET /api/consulta/dni/:dni` | Autocompletar datos del dueño (SUNAT) y ubicación del transportista (RENIEC). **Todavía sin proveedor**: responde `{ configurado: false }`. El enganche está en `src/consulta/consultaIdentidad.js`. | RUC/DNI en la URL | `{ configurado: false }` o los datos |
+| `GET /api/catalogos` | Listas para los desplegables. Del **ticket** (cerradas, se validan): `mercancias`, `centrosOrigen`, `destinos` — en `src/tickets/catalogos.js`. Sugerencias (no se validan): de la **unidad** `tiposVehiculo`/`tiposRodada`/`formasApertura` (`src/unidades/catalogosUnidad.js`), del **chofer** `tiposDocIdentidad`/`departamentos`/`categoriasLicencia` (`src/choferes/catalogosChofer.js`). | — | objeto con todas las listas |
+| `GET /api/consulta/ruc/:ruc` · `GET /api/consulta/dni/:dni` | Autocompletar: por RUC el nombre y dirección del dueño (SUNAT); por DNI los 4 campos del nombre del chofer y la ubicación (RENIEC). **Todavía sin proveedor**: responde `{ configurado: false }`. Enganche en `src/consulta/consultaIdentidad.js`. | RUC/DNI en la URL | `{ configurado: false }` o los datos |
 | `GET /api/tickets` | Listar los tickets de mi empresa, del más nuevo al más viejo, con el estado de su GRE y los datos de unidad y chofer. | — | Arreglo de tickets |
 | `POST /api/tickets` | **Generar un ticket y disparar la GRE.** Verifica que la unidad y el chofer sean de mi empresa y estén activos. Traduce el `motivo` libre al valor oficial. `descripcionMercancia`, `origen` (centro de origen) y `destino` deben ser valores del catálogo (`GET /api/catalogos`); se aceptan sin distinguir mayúsculas/tildes/espacios y se guardan canónicos. `creadoPor` sale del token. Responde con `estadoSunat: "ENVIANDO"` — la GRE se resuelve en segundo plano (1–2 s con el simulador). | `unidadId`, `choferId`, `origen`, `destino`, `motivo` (opc.), `descripcionMercancia`, `pesoBrutoKg` | El ticket creado (`codigoInterno` tipo `TCK-000001`) |
 | `GET /api/tickets/:id` | Ver un ticket con el estado actualizado de su GRE. El frontend lo consulta en bucle tras crear, hasta que deja de estar `ENVIANDO`. | `id` en la URL | El ticket, o 404 |

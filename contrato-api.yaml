@@ -377,6 +377,13 @@ paths:
     post:
       tags: [Choferes]
       summary: Registrar un chofer *(admin)*
+      description: >
+        Nace en `estadoRegistro: "PENDIENTE"` y no se puede usar para
+        tickets hasta que el superadmin lo libere. Obligatorios:
+        tipoDocIdentidad, dni (nº de documento), primerNombre y
+        apellidoPaterno. Si vienen brevete/claseCategoria/fechaExpedicion/
+        fechaRevalidacion, se guardan como documento LICENCIA_CONDUCIR
+        (si algo falla, el chofer igual se crea y la respuesta trae `avisos`).
       requestBody:
         required: true
         content:
@@ -384,7 +391,75 @@ paths:
             schema: { $ref: "#/components/schemas/NuevoChofer" }
       responses:
         "201":
-          description: Chofer registrado
+          description: Solicitud registrada (queda PENDIENTE)
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/Chofer" } }
+        "400": { $ref: "#/components/responses/ErrorValidacion" }
+        "403": { $ref: "#/components/responses/SinPermiso" }
+
+  /api/choferes/pendientes:
+    get:
+      tags: [Choferes]
+      summary: Solicitudes de registro de choferes pendientes *(superadmin)*
+      responses:
+        "200":
+          description: Choferes en estado PENDIENTE (con `empresaRazonSocial`)
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Chofer" } }
+        "403": { $ref: "#/components/responses/SinPermiso" }
+
+  /api/choferes/{id}:
+    put:
+      tags: [Choferes]
+      summary: Editar la ficha de un chofer *(admin o superadmin)*
+      description: >
+        admin_empresa: su chofer y solo si está PENDIENTE o RECHAZADA (si
+        estaba rechazada, al guardar vuelve a PENDIENTE). superadmin:
+        cualquiera, sin cambiar el estado. No toca el brevete (va por
+        documentos).
+      parameters: [{ $ref: "#/components/parameters/IdPath" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NuevoChofer" }
+      responses:
+        "200":
+          description: Chofer actualizado
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/Chofer" } }
+        "400": { $ref: "#/components/responses/ErrorValidacion" }
+        "403": { $ref: "#/components/responses/SinPermiso" }
+
+  /api/choferes/{id}/aprobar:
+    post:
+      tags: [Choferes]
+      summary: Liberar una solicitud de registro de chofer *(superadmin)*
+      parameters: [{ $ref: "#/components/parameters/IdPath" }]
+      responses:
+        "200":
+          description: Chofer aprobado
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/Chofer" } }
+        "403": { $ref: "#/components/responses/SinPermiso" }
+
+  /api/choferes/{id}/rechazar:
+    post:
+      tags: [Choferes]
+      summary: Rechazar una solicitud de registro de chofer con un motivo *(superadmin)*
+      parameters: [{ $ref: "#/components/parameters/IdPath" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [motivo]
+              properties: { motivo: { type: string, example: "Falta el brevete" } }
+      responses:
+        "200":
+          description: Chofer rechazado
           content:
             application/json: { schema: { $ref: "#/components/schemas/Chofer" } }
         "400": { $ref: "#/components/responses/ErrorValidacion" }
@@ -467,11 +542,11 @@ paths:
   /api/catalogos:
     get:
       tags: [Tickets]
-      summary: Listas para los desplegables del ticket y del registro de unidad
+      summary: Listas para los desplegables del ticket, la unidad y el chofer
       description: >
         mercancias/centrosOrigen/destinos son cerrados (el ticket los
-        valida). tiposVehiculo/tiposRodada/formasApertura son solo
-        sugerencias para el formulario de unidad (no se validan).
+        valida). El resto son sugerencias para los formularios de unidad y
+        chofer (no se validan).
       responses:
         "200":
           description: Las listas
@@ -492,6 +567,9 @@ paths:
                   tiposVehiculo: { type: array, items: { type: string } }
                   tiposRodada: { type: array, items: { type: string } }
                   formasApertura: { type: array, items: { type: string } }
+                  tiposDocIdentidad: { type: array, items: { type: string }, example: [DNI, CE, PASAPORTE] }
+                  departamentos: { type: array, items: { type: string } }
+                  categoriasLicencia: { type: array, items: { $ref: "#/components/schemas/CategoriaLicencia" } }
 
   /api/consulta/ruc/{ruc}:
     get:
@@ -851,7 +929,7 @@ components:
         nroCitv: { type: string }
         vigenciaCitv: { type: string, format: date }
 
-    EstadoRegistroUnidad:
+    EstadoRegistro:
       type: string
       description: >
         PENDIENTE: la cargó el admin, falta que la plataforma la libere.
@@ -875,7 +953,7 @@ components:
             empresaId: { type: string, format: uuid }
             activo: { type: boolean }
             creadoEn: { type: string, format: date-time }
-            estadoRegistro: { $ref: "#/components/schemas/EstadoRegistroUnidad" }
+            estadoRegistro: { $ref: "#/components/schemas/EstadoRegistro" }
             motivoRechazo: { type: [string, "null"] }
             revisadoPor: { type: [string, "null"], format: uuid }
             revisadoEn: { type: [string, "null"], format: date-time }
@@ -884,21 +962,55 @@ components:
 
     NuevoChofer:
       type: object
-      required: [dni, nombres, apellidos]
+      description: >
+        Obligatorios: tipoDocIdentidad, dni, primerNombre, apellidoPaterno.
+        `departamento` sale de GET /api/catalogos → departamentos;
+        provincia/distrito todavía son texto libre. Los 4 campos de nombre
+        se pueden autocompletar por DNI (RENIEC) más adelante. Como compat
+        se aceptan `nombres`/`apellidos` sueltos y el servicio los parte.
+        brevete/claseCategoria/fechaExpedicion/fechaRevalidacion NO se
+        guardan en el chofer: van como documento LICENCIA_CONDUCIR.
+      required: [tipoDocIdentidad, dni, primerNombre, apellidoPaterno]
       properties:
-        dni: { type: string, pattern: "^[0-9]{8}$", example: "45678912" }
-        nombres: { type: string, example: "Luis Alberto" }
-        apellidos: { type: string, example: "Quispe Mamani" }
+        tipoDocIdentidad: { type: string, enum: [DNI, CE, PASAPORTE] }
+        dni: { type: string, description: "N° de documento. DNI = 8 dígitos; CE/pasaporte = 6-15 alfanumérico", example: "45678912" }
+        apellidoPaterno: { type: string }
+        apellidoMaterno: { type: string }
+        primerNombre: { type: string }
+        segundoNombre: { type: string }
+        celular: { type: string }
+        departamento: { type: string }
+        provincia: { type: string }
+        distrito: { type: string }
+        direccion: { type: string }
+        brevete: { type: string, description: "N° de licencia; se guarda como documento" }
+        claseCategoria: { $ref: "#/components/schemas/CategoriaLicencia" }
+        fechaExpedicion: { type: string, format: date }
+        fechaRevalidacion: { type: string, format: date }
 
     Chofer:
+      description: >
+        Como NuevoChofer (sin los 4 campos de brevete, que viven en
+        documentos_chofer) más id, empresaId, activo, creadoEn, el estado
+        de aprobación y `nombres`/`apellidos` (el nombre "para mostrar" que
+        arma el servicio). En GET /api/choferes/pendientes trae también
+        `empresaRazonSocial`; en un alta con brevete mal cargado, `avisos`.
       allOf:
         - $ref: "#/components/schemas/NuevoChofer"
         - type: object
           properties:
             id: { type: string, format: uuid }
             empresaId: { type: string, format: uuid }
+            nombres: { type: string }
+            apellidos: { type: string }
             activo: { type: boolean }
             creadoEn: { type: string, format: date-time }
+            estadoRegistro: { $ref: "#/components/schemas/EstadoRegistro" }
+            motivoRechazo: { type: [string, "null"] }
+            revisadoPor: { type: [string, "null"], format: uuid }
+            revisadoEn: { type: [string, "null"], format: date-time }
+            empresaRazonSocial: { type: string }
+            avisos: { type: array, items: { type: string } }
 
     NuevoDocumentoUnidad:
       type: object

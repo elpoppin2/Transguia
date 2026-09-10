@@ -259,17 +259,20 @@ function esperarEmision(ticketService, datos) {
     }
   }
 
-  // La flota de demo ya viene "liberada" por la plataforma (si no, no se
-  // podría emitir ningún ticket de demo).
-  const apr = await pool.query(
+  // La flota y los choferes de demo ya vienen "liberados" por la
+  // plataforma (si no, no se podría emitir ningún ticket de demo).
+  const idsDemo = `(select id from empresas where ruc = any($1))`;
+  const aprU = await pool.query(
     `update unidades set estado_registro = 'APROBADA'
-     where estado_registro <> 'APROBADA'
-       and empresa_id in (select id from empresas where ruc = any($1))`,
-    [[EMPRESA.ruc, EMPRESA_2.ruc]]
-  );
-  if (apr.rowCount) console.log(`unidades marcadas como aprobadas: ${apr.rowCount}`);
+     where estado_registro <> 'APROBADA' and empresa_id in ${idsDemo}`, [[EMPRESA.ruc, EMPRESA_2.ruc]]);
+  const aprC = await pool.query(
+    `update choferes set estado_registro = 'APROBADA'
+     where estado_registro <> 'APROBADA' and empresa_id in ${idsDemo}`, [[EMPRESA.ruc, EMPRESA_2.ruc]]);
+  if (aprU.rowCount || aprC.rowCount) {
+    console.log(`liberadas: ${aprU.rowCount} unidad(es), ${aprC.rowCount} chofer(es)`);
+  }
 
-  // Una solicitud que queda PENDIENTE, para que el superadmin tenga algo
+  // Solicitudes que quedan PENDIENTES, para que el superadmin tenga algo
   // que revisar/liberar en la demo.
   if (!(await unidadesRepo.buscarPorPlaca('PEN-001'))) {
     await unidades.registrarUnidad({
@@ -277,6 +280,15 @@ function esperarEmision(ticketService, datos) {
       marca: 'Scania', anioFabricacion: 2023, tipoVehiculo: 'Volquete', nroEjes: 4
     });
     console.log('solicitud de unidad pendiente creada: PEN-001');
+  }
+  if (!(await choferesRepo.buscarPorDni(empresaId, '76543210'))) {
+    await choferes.registrarChofer({
+      empresaId, tipoDocIdentidad: 'DNI', dni: '76543210',
+      apellidoPaterno: 'Zúñiga', apellidoMaterno: 'Palomino',
+      primerNombre: 'Aldo', segundoNombre: 'Martín',
+      celular: '987654321', departamento: 'Lima', provincia: 'Lima', distrito: 'Ate'
+    });
+    console.log('solicitud de chofer pendiente creada: DNI 76543210');
   }
 
   console.log('\nListo. Ingresá en http://localhost:3001');

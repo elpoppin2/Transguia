@@ -27,7 +27,9 @@ async function consultarRuc(ruc) {
 /**
  * @returns {Promise<
  *   | { configurado: false }
- *   | { configurado: true, dni: string, nombres: string, apellidos: string,
+ *   | { configurado: true, dni: string,
+ *       apellidoPaterno: string, apellidoMaterno: string,
+ *       primerNombre: string, segundoNombre: string|null,
  *       departamento: string|null, provincia: string|null, distrito: string|null }
  * >}
  */

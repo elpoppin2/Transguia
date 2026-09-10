@@ -50,6 +50,7 @@ const enDias = (n) => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10
   const chofer = await choferes.registrarChofer({
     empresaId: empresa.id, dni: ('5' + s + '0').slice(0, 8), nombres: 'Ana', apellidos: 'Ríos Paz'
   });
+  await pool.query("update choferes set estado_registro = 'APROBADA' where id = $1", [chofer.id]);
   console.log('[unidad]', unidad.placa, ' [chofer]', chofer.dni);
 
   // Documentos: SOAT de la unidad (vence en 10 días) y licencia del chofer (en 40).

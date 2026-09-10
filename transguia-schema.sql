@@ -152,13 +152,38 @@ create index idx_documentos_unidad_unidad on documentos_unidad(unidad_id);
 create table choferes (
   id uuid primary key default gen_random_uuid(),
   empresa_id uuid not null references empresas(id) on delete cascade,
-  dni char(8) not null,
-  nombres text not null,
-  apellidos text not null,
+
+  -- Documento de identidad: `dni` guarda el número de cualquier tipo.
+  tipo_doc_identidad text not null default 'DNI',   -- DNI | CE | PASAPORTE
+  dni varchar(15) not null,
+
+  -- Nombre en partes; `nombres`/`apellidos` quedan como el nombre "para
+  -- mostrar" que arma el servicio a partir de las partes.
+  apellido_paterno text,
+  apellido_materno text,
+  primer_nombre text,
+  segundo_nombre text,
+  nombres text,
+  apellidos text,
+
+  celular text,
+  departamento text,
+  provincia text,
+  distrito text,
+  direccion text,
+
+  -- Aprobación de la plataforma (igual que unidades).
+  estado_registro text not null default 'PENDIENTE',   -- PENDIENTE | APROBADA | RECHAZADA
+  motivo_rechazo text,
+  revisado_por uuid,
+  revisado_en timestamptz,
+
   activo boolean not null default true,
   creado_en timestamptz not null default now(),
   unique (empresa_id, dni)
 );
+-- El brevete (nº licencia, clase-categoría, expedición, revalidación) va
+-- en documentos_chofer como LICENCIA_CONDUCIR, no como columnas de acá.
 create index idx_choferes_empresa on choferes(empresa_id);
 
 create table documentos_chofer (
