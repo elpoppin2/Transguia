@@ -8,54 +8,61 @@ proveedor después sin tocar el resto del sistema.
 
 ```
 src/
-  gre/
-    EmisorGRE.js               contrato común (interfaz)
-    EmisorGREDemo.js           simulador, funciona sin credenciales (por defecto)
-    EmisorGREPSE.js            plantilla para un PSE homologado (Nubefact, EFACT...)
-    EmisorGREDirectoSunat.js   esqueleto de integración directa con SUNAT (sin terminar, ver más abajo)
-    crearEmisorGRE.js          fábrica: lee GRE_PROVIDER y devuelve la implementación correcta
-  tickets/
-    ticketService.js           crea tickets y coordina el estado con el emisor, sin conocerlo
-demo.js                        prueba de consola, sin dependencias
-server.js                      API mínima (Express) para conectar el prototipo web
+  auth/        registro/login, hash de contraseña, token de sesión (HMAC), middleware de rol
+  unidades/    alta/listado/baja de vehículos + validaciones del MTC
+  choferes/    alta/listado/baja de choferes
+  documentos/  papeles con vencimiento (SOAT, licencias...) + vista de vencimientos
+  tickets/     ticketService (orquesta) + repos memoria/postgres
+  gre/         interfaz EmisorGRE + implementaciones (demo / pse / directo)
+  db/          pool de conexión a Postgres + helper de transacciones
+  app.js       arma la app Express (rutas + servicios), sin listen
+server.js                 levanta la app como proceso normal (local / Render / Railway)
+api/index.js              entrada para Vercel (misma app, serverless)
+transguia-prototipo.html  interfaz de una sola página, conectada a la API
+sembrar-datos.js          carga una demo completa en la base
+crear-empresa.js          crea una empresa nueva + su primer admin
+probar-todo.js            corre todos los scripts de prueba (npm run probar)
+contrato-api.yaml         contrato OpenAPI 3.1
+MODELO-DE-DATOS-Y-API.md  diagrama de entidades + explicación de endpoints
+DESPLIEGUE.md             cómo subirlo a Render / Railway
 ```
 
-## Probar la demo (sin instalar nada)
-
-```
-node demo.js
-```
-
-Crea dos tickets de ejemplo, simula el envío a SUNAT con una demora y
-un porcentaje de rechazo aleatorio, y muestra por consola cómo cambia
-el estado del ticket cuando la GRE queda aceptada o rechazada.
-
-## Levantar la API (para conectarla al prototipo web)
+## Arrancar en local
 
 ```
 npm install
-npm start
+cp .env.example .env      # y completar DATABASE_URL y SESSION_SECRET
+npm start                 # API en http://localhost:3001
+npm run sembrar           # empresa + usuario andina/demo2026seguro + datos de demo
 ```
 
-Expone (todo contra la base de datos real de Supabase):
+Después, abrir `transguia-prototipo.html` en el navegador e ingresar con
+`andina` / `demo2026seguro`.
 
-- `POST /api/auth/registro` · `POST /api/auth/login`
-- `GET/POST /api/unidades` · `POST /api/unidades/:id/desactivar`
-- `GET/POST /api/choferes` · `POST /api/choferes/:id/desactivar`
-- `POST /api/tickets` — crea un ticket (body: `empresaId`, `unidadId`,
-  `choferId`, `origen`, `destino`, `motivo?`, `descripcionMercancia`,
-  `pesoBrutoKg`) y dispara la emisión de la GRE
-- `GET /api/tickets?empresaId=...` — lista los tickets de una empresa
-- `GET /api/tickets/:id` — detalle de un ticket
-- `POST /api/tickets/:id/avanzar` — cambia el estado operativo (body
-  `{ estadoOperativo }`: `EN_TRANSITO`, `ENTREGADO`, `ANULADO`)
+```
+npm run probar            # corre todas las pruebas contra la base real
+npm run demo              # demo de consola, todo en memoria, sin base ni credenciales
+```
 
-Ver `PROGRESS.md` para el estado detallado del proyecto.
+## API (resumen)
 
-El prototipo `transguia-prototipo.html` genera los tickets en el
-propio navegador (para poder demostrarlo sin backend). Conectarlo a
-esta API es cuestión de reemplazar esas funciones por `fetch()` a
-estos endpoints — con gusto lo armamos si quieres dar ese siguiente paso.
+Público: `GET /api/health`, `POST /api/auth/login`. Todo lo demás exige
+`Authorization: Bearer <token>` (el token lo da el login, dura 12 h). El
+`empresaId` sale del token. Rutas de configuración: solo rol
+`admin_empresa`.
+
+- **Auth:** `POST /api/auth/login`, `POST /api/auth/registro` *(admin)*
+- **Unidades:** `GET/POST /api/unidades`, `POST /api/unidades/:id/desactivar`,
+  `GET/POST/DELETE /api/unidades/:id/documentos[/:docId]`
+- **Choferes:** `GET/POST /api/choferes`, `POST /api/choferes/:id/desactivar`,
+  `GET/POST/DELETE /api/choferes/:id/documentos[/:docId]`
+- **Vencimientos:** `GET /api/vencimientos?dias=30`
+- **Tickets:** `GET/POST /api/tickets`, `GET /api/tickets/:id`,
+  `POST /api/tickets/:id/avanzar`
+
+El detalle completo (cuerpos, respuestas, roles) está en
+`contrato-api.yaml` y `MODELO-DE-DATOS-Y-API.md`. Estado del proyecto en
+`PROGRESS.md`.
 
 ## Cambiar de proveedor
 
@@ -85,10 +92,11 @@ peruana para los pasos 2 y 3 en vez de construir el XML a mano.
 
 ## Siguiente paso sugerido
 
-La persistencia ya está: usuarios, unidades, choferes y tickets viven en
-Postgres (Supabase). El siguiente paso es conectar
-`transguia-prototipo.html` a esta API en vez de simular todo en el
-navegador. Detalle en `PROGRESS.md`.
+Todo el código está: persistencia real, autenticación con roles,
+documentos y vencimientos, prototipo conectado, y adaptado para
+**Vercel** (`api/index.js` + `vercel.json`). El siguiente paso es
+**desplegarlo** — ver `DESPLIEGUE.md`. Después: contratar un PSE /
+certificado para la GRE real, y pilotear.
 
 `demo.js` sigue corriendo todo en memoria a propósito, para poder
 mostrarlo sin base de datos ni credenciales.

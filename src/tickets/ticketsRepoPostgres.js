@@ -40,6 +40,7 @@ const SELECT_VISTA = `
     e.motivo_rechazo                  as "motivoRechazo",
     t.fecha_traslado                  as "fechaTraslado",
     t.fecha_entrega                   as "fechaEntrega",
+    t.creado_por                      as "creadoPor",
     t.creado_en                       as "creadoEn"
   from tickets_traslado t
   join unidades u on u.id = t.unidad_id
@@ -62,7 +63,7 @@ class TicketsRepositorioPostgres {
     await pool.query(`create sequence if not exists ${SECUENCIA_CODIGO}`);
   }
 
-  async crear({ empresaId, unidad, chofer, origen, destino, motivo, descripcionMercancia, pesoBrutoKg, proveedorGre }) {
+  async crear({ empresaId, unidad, chofer, origen, destino, motivo, descripcionMercancia, pesoBrutoKg, proveedorGre, creadoPor }) {
     let ticketId;
     try {
       ticketId = await enTransaccion(async (cli) => {
@@ -72,17 +73,17 @@ class TicketsRepositorioPostgres {
         const { rows } = await cli.query(
           `insert into tickets_traslado
              (codigo_interno, empresa_id, unidad_id, chofer_id, origen, destino,
-              motivo, descripcion_mercancia, peso_bruto_kg)
-           values ($1, $2, $3, $4, $5, $6, $7::motivo_traslado, $8, $9)
+              motivo, descripcion_mercancia, peso_bruto_kg, creado_por)
+           values ($1, $2, $3, $4, $5, $6, $7::motivo_traslado, $8, $9, $10)
            returning id`,
-          [codigoInterno, empresaId, unidad.id, chofer.id, origen, destino, motivo, descripcionMercancia, pesoBrutoKg]
+          [codigoInterno, empresaId, unidad.id, chofer.id, origen, destino, motivo, descripcionMercancia, pesoBrutoKg, creadoPor ?? null]
         );
         ticketId = rows[0].id;
 
         await cli.query(
           `insert into historial_estado_ticket (ticket_id, estado_anterior, estado_nuevo, usuario_id)
-           values ($1, null, 'GENERADO'::estado_operativo_ticket, null)`,
-          [ticketId]
+           values ($1, null, 'GENERADO'::estado_operativo_ticket, $2)`,
+          [ticketId, creadoPor ?? null]
         );
 
         await cli.query(

@@ -33,6 +33,14 @@ const BORRAR_EMPRESA = process.argv.includes('--empresa');
   const borrados = await pool.query('delete from tickets_traslado where empresa_id = $1', [empresaId]);
   console.log(`tickets borrados: ${borrados.rowCount}`);
 
+  const du = await pool.query(
+    'delete from documentos_unidad where unidad_id in (select id from unidades where empresa_id = $1)', [empresaId]
+  );
+  const dc = await pool.query(
+    'delete from documentos_chofer where chofer_id in (select id from choferes where empresa_id = $1)', [empresaId]
+  );
+  console.log(`documentos borrados: ${du.rowCount + dc.rowCount}`);
+
   const u = await pool.query('delete from unidades where empresa_id = $1', [empresaId]);
   console.log(`unidades borradas: ${u.rowCount}`);
 

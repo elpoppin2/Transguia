@@ -16,7 +16,7 @@ class TicketsRepositorioMemoria {
     this.correlativo = 1;
   }
 
-  async crear({ empresaId, unidad, chofer, origen, destino, motivo, descripcionMercancia, pesoBrutoKg, proveedorGre }) {
+  async crear({ empresaId, unidad, chofer, origen, destino, motivo, descripcionMercancia, pesoBrutoKg, proveedorGre, creadoPor }) {
     const id = crypto.randomUUID();
     const ahora = new Date().toISOString();
     const registro = {
@@ -40,9 +40,10 @@ class TicketsRepositorioMemoria {
       motivoRechazo: null,
       fechaTraslado: null,
       fechaEntrega: null,
+      creadoPor: creadoPor ?? null,
       creadoEn: ahora,
       _proveedorGre: proveedorGre,
-      _historial: [{ estadoAnterior: null, estadoNuevo: 'GENERADO', usuarioId: null, creadoEn: ahora }]
+      _historial: [{ estadoAnterior: null, estadoNuevo: 'GENERADO', usuarioId: creadoPor ?? null, creadoEn: ahora }]
     };
     this.correlativo += 1;
     this.tickets.set(id, registro);

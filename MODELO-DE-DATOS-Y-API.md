@@ -185,10 +185,10 @@ En palabras simples:
 | `choferes` | Sí — alta / listado / baja lógica |
 | `tickets_traslado` | Sí — alta / listado / detalle / cambio de estado |
 | `emisiones_gre` | Sí — la escribe `ticketsRepoPostgres` al emitir la GRE |
-| `historial_estado_ticket` | Sí — se escribe en cada cambio de estado |
-| `documentos_unidad` | **Todavía no** — pendiente (paso futuro) |
-| `documentos_chofer` | **Todavía no** — pendiente. Por eso el ticket manda `choferLicencia: null` al emisor de GRE |
-| `vencimientos_proximos` (vista) | **Todavía no** — une los dos `documentos_*` para alertar vencimientos |
+| `historial_estado_ticket` | Sí — se escribe en cada cambio de estado; `usuario_id` = quién lo hizo |
+| `documentos_unidad` | Sí — alta / listado / borrado (SOAT, revisión técnica…) |
+| `documentos_chofer` | Sí — alta / listado / borrado. La licencia vigente se manda en la GRE |
+| `vencimientos_proximos` (vista) | Sí — la usa `GET /api/vencimientos` |
 
 ### Ciclo de vida de un ticket
 
@@ -214,47 +214,79 @@ stateDiagram-v2
 ## 2. Endpoints de la API
 
 Base local: **`http://localhost:3001`**. Todas las respuestas son JSON.
-Los errores llegan como `{ "error": "mensaje entendible" }` con código HTTP 400
-(datos inválidos), 401 (login incorrecto) o 404 (no encontrado).
+Los errores llegan como `{ "error": "mensaje entendible" }` con código HTTP
+400 (datos inválidos), 401 (sin token / expirado), 403 (rol sin permiso)
+o 404 (no encontrado).
 
 El contrato formal está en `contrato-api.yaml` (OpenAPI 3.1, pegable en
 <https://editor.swagger.io>).
 
-### Autenticación
+### Cómo funciona la seguridad
+
+- **Público:** solo `GET /api/health` y `POST /api/auth/login`.
+- Todo lo demás exige la cabecera **`Authorization: Bearer <token>`**. El
+  token lo devuelve el login y dura **12 horas**.
+- El **`empresaId` sale del token**, nunca del cliente: no se manda en la
+  URL ni en el cuerpo. Un usuario jamás ve datos de otra empresa.
+- Rutas marcadas **(admin)**: devuelven **403** si el rol es `operador`.
+
+### Sistema y autenticación
 
 | Método y ruta | Para qué sirve | Entrada | Salida |
 |---|---|---|---|
-| `POST /api/auth/registro` | Crear un usuario dentro de una empresa que **ya existe**. | `empresaId` (UUID), `username`, `password` (mín. 8), `nombreCompleto`, `rol` opcional (`admin_empresa` / `operador`; por defecto `operador`) | El usuario creado (sin la contraseña) |
-| `POST /api/auth/login` | Validar usuario y contraseña para entrar al sistema. | `username`, `password` | `{ id, empresaId, username, nombreCompleto, rol }` — el `empresaId` es lo que el frontend usa después para todo lo demás |
+| `GET /api/health` | Ping del servicio (para el hosting). Público. | — | `{ ok, servicio, gre }` |
+| `POST /api/auth/login` | Ingresar. Público. | `username`, `password` | `{ id, empresaId, username, nombreCompleto, rol, token, expiraEnMs }` |
+| `POST /api/auth/registro` **(admin)** | Crear un usuario en **mi misma empresa**. | `username`, `password` (mín. 8), `nombreCompleto`, `rol` opcional (por defecto `operador`) | El usuario creado (sin contraseña) |
 
-> Nota: la contraseña se guarda como *hash* scrypt, nunca en texto plano. Todavía no
-> hay "sesión" real (token/cookie): el frontend simplemente se queda con el
-> `empresaId` que devuelve el login.
+> La contraseña se guarda como *hash* scrypt. El token va firmado con
+> HMAC-SHA256 (secreto `SESSION_SECRET`, ver `.env`) y no lleva nada
+> sensible. Es *stateless*: no hay tabla de sesiones, así que funciona
+> igual aunque el servidor se reinicie.
 
 ### Unidades (vehículos de carga)
 
 | Método y ruta | Para qué sirve | Entrada | Salida |
 |---|---|---|---|
-| `GET /api/unidades?empresaId=<UUID>` | Listar todas las unidades de una empresa (activas e inactivas), ordenadas por placa. | `empresaId` en la URL | Arreglo de unidades |
-| `POST /api/unidades` | Registrar una unidad. Valida: placa peruana (3 letras + 3 dígitos), categoría MTC `N1/N2/N3`, año entre 1970 y el próximo, y que la configuración vehicular sea un código válido del Anexo IV. | `empresaId`, `placa`, `marca`, `modelo`, `anioFabricacion` (opcional), `categoriaMtc`, `configuracionVehicular` | La unidad creada |
-| `POST /api/unidades/:id/desactivar` | Dar de baja una unidad **sin borrarla** (`activo = false`). Sigue apareciendo en el listado y en los tickets viejos, pero ya no se puede elegir para tickets nuevos. | `id` en la URL | La unidad actualizada |
+| `GET /api/unidades` | Listar las unidades de mi empresa (activas e inactivas), por placa. | — | Arreglo de unidades |
+| `POST /api/unidades` **(admin)** | Registrar una unidad. Valida placa peruana (3+3), categoría MTC `N1/N2/N3`, año 1970–próximo, y configuración vehicular del Anexo IV. | `placa`, `marca`, `modelo`, `anioFabricacion` (opc.), `categoriaMtc`, `configuracionVehicular` | La unidad creada |
+| `POST /api/unidades/:id/desactivar` **(admin)** | Baja lógica (`activo = false`): sigue en tickets viejos, ya no se elige para nuevos. | `id` en la URL | La unidad actualizada |
 
 ### Choferes
 
 | Método y ruta | Para qué sirve | Entrada | Salida |
 |---|---|---|---|
-| `GET /api/choferes?empresaId=<UUID>` | Listar los choferes de una empresa, ordenados por apellido. | `empresaId` en la URL | Arreglo de choferes |
-| `POST /api/choferes` | Registrar un chofer. Valida DNI de 8 dígitos y que no se repita dentro de la misma empresa. | `empresaId`, `dni`, `nombres`, `apellidos` | El chofer creado |
-| `POST /api/choferes/:id/desactivar` | Baja lógica del chofer (`activo = false`), igual que en unidades. | `id` en la URL | El chofer actualizado |
+| `GET /api/choferes` | Listar los choferes de mi empresa, por apellido. | — | Arreglo de choferes |
+| `POST /api/choferes` **(admin)** | Registrar un chofer. Valida DNI de 8 dígitos, único en la empresa. | `dni`, `nombres`, `apellidos` | El chofer creado |
+| `POST /api/choferes/:id/desactivar` **(admin)** | Baja lógica del chofer. | `id` en la URL | El chofer actualizado |
+
+### Documentos (con vencimiento)
+
+| Método y ruta | Para qué sirve | Entrada | Salida |
+|---|---|---|---|
+| `GET /api/unidades/:id/documentos` | Papeles de una unidad: SOAT, revisión técnica, tarjeta de circulación, permiso de operación. | `id` en la URL | Arreglo de documentos |
+| `POST /api/unidades/:id/documentos` **(admin)** | Agregar un documento a la unidad. | `tipoDocumento`, `fechaVencimiento` (AAAA-MM-DD), `numeroDocumento` (opc.), `fechaEmision` (opc.) | El documento creado |
+| `DELETE /api/unidades/:id/documentos/:docId` **(admin)** | Borrar ese documento. | ids en la URL | `{ ok: true }` |
+| `GET /api/choferes/:id/documentos` | Papeles de un chofer: licencia de conducir, certificado médico. | `id` en la URL | Arreglo de documentos |
+| `POST /api/choferes/:id/documentos` **(admin)** | Agregar un documento al chofer. Para `LICENCIA_CONDUCIR` acepta `categoriaLicencia` (A-I … A-IIIc). | `tipoDocumento`, `fechaVencimiento`, `categoriaLicencia` (opc.), `numeroDocumento` (opc.) | El documento creado |
+| `DELETE /api/choferes/:id/documentos/:docId` **(admin)** | Borrar ese documento. | ids en la URL | `{ ok: true }` |
+
+> Al crear un ticket, el backend busca la **licencia de conducir vigente**
+> del chofer y la manda en la GRE (campo `choferLicencia`).
+
+### Vencimientos
+
+| Método y ruta | Para qué sirve | Entrada | Salida |
+|---|---|---|---|
+| `GET /api/vencimientos?dias=30` | Documentos de mi empresa (de unidades y choferes) **ya vencidos o que vencen dentro de N días** (1–365, por defecto 30). Usa la vista `vencimientos_proximos`. | `dias` en la query (opc.) | Arreglo `{ tipo, referencia, documento, fechaVencimiento, diasRestantes }` (negativo = vencido) |
 
 ### Tickets de traslado
 
 | Método y ruta | Para qué sirve | Entrada | Salida |
 |---|---|---|---|
-| `GET /api/tickets?empresaId=<UUID>` | Listar los tickets de la empresa, del más nuevo al más viejo. Cada uno trae ya el estado de su GRE y los datos de la unidad y el chofer. | `empresaId` en la URL | Arreglo de tickets |
-| `POST /api/tickets` | **Generar un ticket y disparar la emisión de la GRE.** Verifica que la unidad y el chofer existan, sean de esa empresa y estén activos. Traduce el `motivo` libre al valor oficial. Responde **de inmediato** con `estadoSunat: "ENVIANDO"` — la GRE se resuelve en segundo plano (1–2 s con el simulador). | `empresaId`, `unidadId`, `choferId`, `origen`, `destino`, `motivo` (opcional), `descripcionMercancia`, `pesoBrutoKg` | El ticket creado (con `codigoInterno` tipo `TCK-000001`) |
-| `GET /api/tickets/:id` | Ver un ticket puntual **con el estado actualizado de su GRE**. Es lo que el frontend consulta en bucle después de crear un ticket, hasta que la GRE deja de estar `ENVIANDO`. | `id` en la URL | El ticket, o 404 |
-| `POST /api/tickets/:id/avanzar` | Cambiar el estado operativo: `EN_TRANSITO`, `ENTREGADO` o `ANULADO`. Regla: solo se puede avanzar (a en tránsito / entregado) si la GRE fue **ACEPTADA**; anular se permite siempre salvo que ya esté anulado. Marca `fecha_traslado` / `fecha_entrega` automáticamente y deja registro en `historial_estado_ticket`. | `id` en la URL, `{ "estadoOperativo": "EN_TRANSITO" }` en el cuerpo | El ticket actualizado |
+| `GET /api/tickets` | Listar los tickets de mi empresa, del más nuevo al más viejo, con el estado de su GRE y los datos de unidad y chofer. | — | Arreglo de tickets |
+| `POST /api/tickets` | **Generar un ticket y disparar la GRE.** Verifica que la unidad y el chofer sean de mi empresa y estén activos. Traduce el `motivo` libre al valor oficial. `creadoPor` sale del token. Responde con `estadoSunat: "ENVIANDO"` — la GRE se resuelve en segundo plano (1–2 s con el simulador). | `unidadId`, `choferId`, `origen`, `destino`, `motivo` (opc.), `descripcionMercancia`, `pesoBrutoKg` | El ticket creado (`codigoInterno` tipo `TCK-000001`) |
+| `GET /api/tickets/:id` | Ver un ticket con el estado actualizado de su GRE. El frontend lo consulta en bucle tras crear, hasta que deja de estar `ENVIANDO`. | `id` en la URL | El ticket, o 404 |
+| `POST /api/tickets/:id/avanzar` | Cambiar el estado operativo: `EN_TRANSITO`, `ENTREGADO` o `ANULADO`. Solo se avanza si la GRE fue **ACEPTADA**; anular se permite salvo que ya esté anulado. Marca `fechaTraslado` / `fechaEntrega` y deja registro (con el usuario) en `historial_estado_ticket`. | `id` en la URL, `{ "estadoOperativo": "EN_TRANSITO" }` | El ticket actualizado |
 
 ### Campos que devuelve un ticket
 
@@ -273,6 +305,7 @@ El contrato formal está en `contrato-api.yaml` (OpenAPI 3.1, pegable en
   "estadoSunat": "ACEPTADO",              // ENVIANDO | ACEPTADO | RECHAZADO | OBSERVADO  (de emisiones_gre)
   "serieCorrelativoGre": "T001-000160",   // null mientras no haya GRE aceptada
   "motivoRechazo": null,
+  "creadoPor": "uuid",         // usuario que lo creó (del token); null en tickets viejos
   "fechaTraslado": null,       "fechaEntrega": null,
   "creadoEn": "2026-09-09T04:06:01.433Z"
 }
@@ -284,7 +317,12 @@ El contrato formal está en `contrato-api.yaml` (OpenAPI 3.1, pegable en
 
 ```bash
 node server.js          # API en http://localhost:3001
-node sembrar-datos.js   # datos de demo + usuario andina / demo2026seguro
+node sembrar-datos.js   # empresa + usuario andina/demo2026seguro + unidades, choferes, documentos y tickets
+npm run probar          # corre todos los scripts de prueba contra la base
 ```
 
-Luego abrir `transguia-prototipo.html` en el navegador.
+Luego abrir `transguia-prototipo.html` en el navegador (ingresar con
+`andina` / `demo2026seguro`). Para crear otra empresa con su primer
+admin: `node crear-empresa.js <RUC> "<Razón>" <usuario> <clave> "<Nombre>"`.
+
+El despliegue a internet está documentado en `DESPLIEGUE.md`.

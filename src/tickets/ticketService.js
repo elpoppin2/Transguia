@@ -20,9 +20,12 @@ class TicketService {
    * @param {object} deps.repositorioTickets
    * @param {object} deps.repositorioUnidades
    * @param {object} deps.repositorioChoferes
+   * @param {object} [deps.repositorioDocumentos] - opcional; si está, la GRE incluye el nº de licencia vigente del chofer
    * @param {string} [deps.proveedorGre] - "demo" | "pse" | "directo" (default: GRE_PROVIDER del .env)
+   * @param {boolean} [deps.emisionSincrona] - si true, espera el resultado de la GRE antes de devolver el ticket
+   *        (necesario en entornos serverless que apagan el proceso al responder, p. ej. Vercel).
    */
-  constructor({ emisorGRE, repositorioTickets, repositorioUnidades, repositorioChoferes, proveedorGre } = {}) {
+  constructor({ emisorGRE, repositorioTickets, repositorioUnidades, repositorioChoferes, repositorioDocumentos, proveedorGre, emisionSincrona } = {}) {
     if (!emisorGRE || !repositorioTickets || !repositorioUnidades || !repositorioChoferes) {
       throw new Error(
         'TicketService requiere emisorGRE, repositorioTickets, repositorioUnidades y repositorioChoferes'
@@ -32,20 +35,25 @@ class TicketService {
     this.repo = repositorioTickets;
     this.unidades = repositorioUnidades;
     this.choferes = repositorioChoferes;
+    this.documentos = repositorioDocumentos || null;
     this.proveedorGre = proveedorGre || process.env.GRE_PROVIDER || 'demo';
+    this.emisionSincrona = !!emisionSincrona;
   }
 
   /**
-   * Crea el ticket en estado GENERADO y dispara la emisión de la GRE en
-   * segundo plano. Devuelve el ticket de inmediato con estadoSunat
-   * 'ENVIANDO'; usa obtenerTicket(id) o el callback onCambio para seguir
-   * su evolución.
+   * Crea el ticket en estado GENERADO y emite la GRE.
    *
-   * @param {object} datos - { empresaId, unidadId, choferId, origen, destino, motivo?, descripcionMercancia, pesoBrutoKg }
+   * - Modo normal: la emisión corre en segundo plano; devuelve el ticket
+   *   con estadoSunat 'ENVIANDO'. Se sigue con obtenerTicket(id) o onCambio.
+   * - Modo `emisionSincrona`: espera el resultado de la GRE y devuelve el
+   *   ticket ya con su estado final.
+   *
+   * @param {object} datos - { empresaId, unidadId, choferId, origen, destino, motivo?, descripcionMercancia, pesoBrutoKg, creadoPor? }
    * @param {(ticket: object) => void} [onCambio]
    */
   async crearTicket(datos, onCambio) {
     const limpio = validarDatosTraslado(datos);
+    const creadoPor = datos && datos.creadoPor ? String(datos.creadoPor) : null;
 
     const unidad = await this.unidades.buscarPorId(limpio.unidadId);
     if (!unidad || unidad.empresaId !== limpio.empresaId) {
@@ -72,42 +80,61 @@ class TicketService {
       motivo: limpio.motivo,
       descripcionMercancia: limpio.descripcionMercancia,
       pesoBrutoKg: limpio.pesoBrutoKg,
-      proveedorGre: this.proveedorGre
+      proveedorGre: this.proveedorGre,
+      creadoPor
     });
 
-    // La emisión corre en segundo plano: el ticket ya existe aunque
-    // SUNAT / el PSE todavía no responda.
-    this.emisorGRE
-      .emitir({
-        ticketId: ticket.id,
-        placa: unidad.placa,
-        configuracionVehicular: unidad.configuracionVehicular,
-        choferDni: chofer.dni,
-        choferNombres: `${chofer.nombres} ${chofer.apellidos}`.trim(),
-        choferLicencia: null, // TODO: tomar la licencia vigente de documentos_chofer cuando exista esa tabla
-        origen: ticket.origen,
-        destino: ticket.destino,
-        mercancia: ticket.descripcionMercancia,
-        pesoKg: Number(ticket.pesoBrutoKg),
-        motivoTraslado: ticket.motivo
-      })
-      .then((resultado) => this.repo.registrarResultadoGre(ticket.id, resultado))
-      .catch((error) =>
-        this.repo.registrarResultadoGre(ticket.id, {
+    // Nº de licencia de conducir vigente del chofer, si tenemos el módulo
+    // de documentos conectado (si no, va null y el emisor lo maneja).
+    let choferLicencia = null;
+    if (this.documentos) {
+      try {
+        const lic = await this.documentos.licenciaVigenteDeChofer(chofer.id);
+        choferLicencia = lic ? lic.numeroDocumento : null;
+      } catch (_) { /* no bloquear la emisión por esto */ }
+    }
+
+    const datosGre = {
+      ticketId: ticket.id,
+      placa: unidad.placa,
+      configuracionVehicular: unidad.configuracionVehicular,
+      choferDni: chofer.dni,
+      choferNombres: `${chofer.nombres} ${chofer.apellidos}`.trim(),
+      choferLicencia,
+      origen: ticket.origen,
+      destino: ticket.destino,
+      mercancia: ticket.descripcionMercancia,
+      pesoKg: Number(ticket.pesoBrutoKg),
+      motivoTraslado: ticket.motivo
+    };
+
+    // Emite la GRE y guarda el resultado en emisiones_gre. Devuelve el
+    // ticket ya actualizado (o el mismo ticket si algo raro pasó).
+    const emitirYGuardar = () =>
+      this.emisorGRE
+        .emitir(datosGre)
+        .catch((error) => ({
           estado: 'RECHAZADO',
           serieCorrelativo: null,
           hash: null,
           motivoRechazo: `Error del proveedor: ${error.message}`,
           proveedor: this.proveedorGre
-        })
-      )
-      .then((actualizado) => {
-        if (actualizado && onCambio) onCambio(actualizado);
-      })
-      .catch((error) => {
-        console.error(`[ticket ${ticket.id}] no se pudo registrar el resultado de la GRE:`, error.message);
-      });
+        }))
+        .then((resultado) => this.repo.registrarResultadoGre(ticket.id, resultado))
+        .then((actualizado) => {
+          if (actualizado && onCambio) onCambio(actualizado);
+          return actualizado || ticket;
+        });
 
+    if (this.emisionSincrona) {
+      return emitirYGuardar();
+    }
+
+    // Modo normal: en segundo plano. El ticket ya existe aunque SUNAT /
+    // el PSE todavía no responda.
+    emitirYGuardar().catch((error) => {
+      console.error(`[ticket ${ticket.id}] no se pudo registrar el resultado de la GRE:`, error.message);
+    });
     return ticket;
   }
 

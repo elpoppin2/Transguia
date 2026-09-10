@@ -18,6 +18,8 @@ const { UnidadesService } = require('./src/unidades/unidadesService');
 const { UnidadesRepositorioPostgres } = require('./src/unidades/unidadesRepoPostgres');
 const { ChoferesService } = require('./src/choferes/choferesService');
 const { ChoferesRepositorioPostgres } = require('./src/choferes/choferesRepoPostgres');
+const { DocumentosService } = require('./src/documentos/documentosService');
+const { DocumentosRepositorioPostgres } = require('./src/documentos/documentosRepoPostgres');
 const { TicketService } = require('./src/tickets/ticketService');
 const { TicketsRepositorioPostgres } = require('./src/tickets/ticketsRepoPostgres');
 
@@ -43,6 +45,22 @@ const TICKETS = [
   { placa: 'CDF-903', dni: '47001122', origen: 'Lima', destino: 'Trujillo', motivo: 'TRASLADO_ENTRE_ESTABLECIMIENTOS', descripcionMercancia: 'Materiales de construcción', pesoBrutoKg: 15000 }
 ];
 
+const dias = (n) => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10);
+
+// Documentos con vencimiento (algunos ya casi vencen, para que la
+// pestaña "Vencimientos" del prototipo muestre algo).
+const DOCS_UNIDAD = [
+  { placa: 'ABC-756', tipoDocumento: 'SOAT', numeroDocumento: 'SOAT-ABC756', fechaVencimiento: dias(12) },
+  { placa: 'ABC-756', tipoDocumento: 'REVISION_TECNICA', numeroDocumento: 'RT-ABC756', fechaVencimiento: dias(200) },
+  { placa: 'CDF-903', tipoDocumento: 'SOAT', numeroDocumento: 'SOAT-CDF903', fechaVencimiento: dias(90) },
+  { placa: 'D2W-118', tipoDocumento: 'SOAT', numeroDocumento: 'SOAT-D2W118', fechaVencimiento: dias(-5) }
+];
+const DOCS_CHOFER = [
+  { dni: '45678912', tipoDocumento: 'LICENCIA_CONDUCIR', categoriaLicencia: 'A-IIIc', numeroDocumento: 'Q45678912', fechaVencimiento: dias(400) },
+  { dni: '45678912', tipoDocumento: 'CERTIFICADO_MEDICO', numeroDocumento: 'CM-45678912', fechaVencimiento: dias(20) },
+  { dni: '47001122', tipoDocumento: 'LICENCIA_CONDUCIR', categoriaLicencia: 'A-IIIb', numeroDocumento: 'Q47001122', fechaVencimiento: dias(150) }
+];
+
 function esperarEmision(ticketService, datos) {
   return new Promise((resolve, reject) => {
     ticketService.crearTicket(datos, (t) => resolve(t)).catch(reject);
@@ -64,14 +82,17 @@ function esperarEmision(ticketService, datos) {
   const empresaId = rows[0].id;
 
   // --- Usuario para ingresar al prototipo ---
-  const auth = new AuthService(new UsuariosRepositorioPostgres());
-  const yaExiste = await new UsuariosRepositorioPostgres().buscarPorUsername(USUARIO.username);
-  if (!yaExiste) {
+  const usuariosRepo = new UsuariosRepositorioPostgres();
+  const auth = new AuthService(usuariosRepo);
+  let usuario = await usuariosRepo.buscarPorUsername(USUARIO.username);
+  if (!usuario) {
     await auth.registrarUsuario({ empresaId, ...USUARIO });
+    usuario = await usuariosRepo.buscarPorUsername(USUARIO.username);
     console.log('usuario creado:', USUARIO.username);
   } else {
     console.log('usuario ya existía:', USUARIO.username);
   }
+  const adminId = usuario.id;
 
   // --- Unidades ---
   const unidadesRepo = new UnidadesRepositorioPostgres();
@@ -93,6 +114,33 @@ function esperarEmision(ticketService, datos) {
     console.log('chofer creado:', c.dni, '-', c.apellidos);
   }
 
+  // --- Documentos (idempotente por unidad/chofer + tipo) ---
+  const documentosRepo = new DocumentosRepositorioPostgres();
+  const documentos = new DocumentosService({
+    repositorioDocumentos: documentosRepo,
+    repositorioUnidades: unidadesRepo,
+    repositorioChoferes: choferesRepo
+  });
+  const mapaUnidades = Object.fromEntries((await unidades.listarUnidades(empresaId)).map((u) => [u.placa, u.id]));
+  const mapaChoferes = Object.fromEntries((await choferes.listarChoferes(empresaId)).map((c) => [c.dni, c.id]));
+
+  for (const d of DOCS_UNIDAD) {
+    const unidadId = mapaUnidades[d.placa];
+    if (!unidadId) continue;
+    const yaTiene = (await documentosRepo.listarDeUnidad(unidadId)).some((x) => x.tipoDocumento === d.tipoDocumento);
+    if (yaTiene) { console.log(`doc unidad ya existía: ${d.placa} ${d.tipoDocumento}`); continue; }
+    await documentos.agregarAUnidad(empresaId, unidadId, d);
+    console.log(`doc unidad creado: ${d.placa} ${d.tipoDocumento} (vence ${d.fechaVencimiento})`);
+  }
+  for (const d of DOCS_CHOFER) {
+    const choferId = mapaChoferes[d.dni];
+    if (!choferId) continue;
+    const yaTiene = (await documentosRepo.listarDeChofer(choferId)).some((x) => x.tipoDocumento === d.tipoDocumento);
+    if (yaTiene) { console.log(`doc chofer ya existía: ${d.dni} ${d.tipoDocumento}`); continue; }
+    await documentos.agregarAChofer(empresaId, choferId, d);
+    console.log(`doc chofer creado: ${d.dni} ${d.tipoDocumento} (vence ${d.fechaVencimiento})`);
+  }
+
   // --- Tickets (solo si la empresa aún no tiene ninguno) ---
   const ticketsRepo = new TicketsRepositorioPostgres();
   await ticketsRepo.asegurarEsquema();
@@ -106,15 +154,15 @@ function esperarEmision(ticketService, datos) {
       emisorGRE: crearEmisorGRE(),
       repositorioTickets: ticketsRepo,
       repositorioUnidades: unidadesRepo,
-      repositorioChoferes: choferesRepo
+      repositorioChoferes: choferesRepo,
+      repositorioDocumentos: documentosRepo
     });
-    const mapaU = Object.fromEntries((await unidades.listarUnidades(empresaId)).map((u) => [u.placa, u.id]));
-    const mapaC = Object.fromEntries((await choferes.listarChoferes(empresaId)).map((c) => [c.dni, c.id]));
     for (const t of TICKETS) {
       const creado = await esperarEmision(ticketService, {
         empresaId,
-        unidadId: mapaU[t.placa],
-        choferId: mapaC[t.dni],
+        unidadId: mapaUnidades[t.placa],
+        choferId: mapaChoferes[t.dni],
+        creadoPor: adminId,
         origen: t.origen, destino: t.destino, motivo: t.motivo,
         descripcionMercancia: t.descripcionMercancia, pesoBrutoKg: t.pesoBrutoKg
       });

@@ -24,8 +24,16 @@ grandes o instalar cosas nuevas.
   tablas + 1 vista (`vencimientos_proximos`) ya existen en Supabase
 
 ## Qué existe hoy en el código
-- `server.js` — API Express con endpoints de auth, unidades, choferes y
-  tickets. Al arrancar prepara la secuencia del código de ticket.
+- `server.js` — API Express. Rutas de salud, auth, unidades, choferes,
+  documentos, vencimientos y tickets. **Con autenticación**: todo exige
+  `Authorization: Bearer <token>` salvo `/api/health` y `/api/auth/login`;
+  el `empresaId` sale del token. Rol `operador` vs `admin_empresa`.
+- `src/auth/sesion.js` — token de sesión firmado con HMAC (sin librerías,
+  sin tabla; dura 12 h). Secreto en `SESSION_SECRET` del `.env`.
+- `src/auth/middleware.js` — `requiereSesion` y `requiereRol(...)`.
+- `src/documentos/` — SOAT, revisión técnica, licencias, certificados
+  médicos (tablas `documentos_unidad` / `documentos_chofer`) + la vista
+  `vencimientos_proximos`. La licencia vigente del chofer se manda en la GRE.
 - `src/gre/` — interfaz desacoplada para emitir la GRE:
   - `EmisorGRE.js` (contrato común)
   - `EmisorGREDemo.js` (simulador, funciona sin credenciales — el activo
@@ -46,39 +54,44 @@ grandes o instalar cosas nuevas.
   `server.js`/los scripts crean la secuencia `transguia_ticket_codigo_seq`
   si no existe — es el correlativo de `codigo_interno`.)
 - `transguia-prototipo.html` — interfaz de una sola página (sin build ni
-  dependencias) YA conectada a la API real de `server.js` vía `fetch`.
-- `contrato-api.yaml` — contrato de la API en formato OpenAPI 3.1
-  (pegable en editor.swagger.io para ver la documentación).
-- Scripts de prueba contra la base real: `probar-conexion-db.js` (auth),
-  `probar-unidades-db.js`, `probar-choferes-db.js`, `probar-tickets-db.js`
-  (este último limpia lo que crea).
-- Scripts de datos: `sembrar-datos.js` (carga una demo completa,
-  idempotente) y `borrar-datos-demo.js` (la borra).
+  dependencias) conectada a la API real. Login con token, pestañas de
+  unidades, choferes, tickets, vencimientos y (solo admin) usuarios;
+  gestión de documentos por unidad/chofer.
+- `contrato-api.yaml` — contrato de la API en OpenAPI 3.1 (pegable en
+  editor.swagger.io).
+- `MODELO-DE-DATOS-Y-API.md` — diagrama de entidades + para qué sirve
+  cada endpoint.
+- `DESPLIEGUE.md` — guía para subir el backend a Render / Railway.
+- Repo Git iniciado; `.gitignore` protege `.env`, `node_modules/` y
+  `certificados/`. `Procfile` para el hosting.
+- Scripts de prueba contra la base real (`probar-*.js`, todos limpian lo
+  que crean salvo los de unidades/choferes que solo desactivan);
+  `probar-todo.js` los corre en fila (`npm run probar`).
+- Scripts de datos: `sembrar-datos.js` (demo completa, idempotente),
+  `borrar-datos-demo.js` (la borra), `crear-empresa.js` (empresa nueva +
+  su primer admin).
 
 ## Dónde quedamos (siguiente paso inmediato)
-El registro/login de usuarios YA está conectado a la base de datos real
-(hecho el 2026-09-08):
-1. [x] Archivo `.env` creado con el `DATABASE_URL` real ("Session
-   pooler" de Supabase, contraseña rotada una vez)
-2. [x] `npm install` corrido (`pg` y `dotenv` instalados)
-3. [x] Empresa de prueba insertada en Supabase ("Transportes Andina
-   S.A.C.", id `d8cb77bd-33f4-4efe-8337-70c12002efc9`)
-4. [x] `node probar-conexion-db.js` pasó: conexión OK, usuario creado y
-   login verificado contra la base real. Nota: dejó un usuario de prueba
-   `prueba_1788924673620` en la tabla `usuarios` (borrable).
 
-Siguiente paso inmediato: punto 7 — subir el backend a internet (Render o
-Railway). Puntos 5 y 6 ya están hechos.
+Todo lo que es **código** de la hoja de ruta está hecho (puntos 5, 6, y
+los extras de sesiones/roles y documentos). El proyecto corre entero
+contra Supabase real y pasa `npm run probar`.
+
+**Siguiente paso: punto 7 — desplegar** el backend en Render o Railway.
+Requiere una cuenta del usuario; los pasos están en `DESPLIEGUE.md`. El
+usuario todavía no eligió plataforma.
+
+Después quedan cosas que dependen de terceros (punto 8: contratar un PSE
+o certificado digital; punto 9: piloto con transportistas reales).
 
 ### Para levantar y demostrar ahora mismo (local)
 1. `node server.js` — API en http://localhost:3001
-2. `node sembrar-datos.js` — deja empresa + usuario + 4 unidades + 4
-   choferes + 2 tickets. Idempotente. Login del prototipo:
-   usuario `andina`, contraseña `demo2026seguro`.
-3. Abrir `transguia-prototipo.html` en el navegador (doble clic). El
-   campo "API" arriba a la derecha ya apunta a localhost:3001.
-4. `node borrar-datos-demo.js` — limpia todo lo sembrado (agrega
-   `--empresa` para borrar también la empresa).
+2. `node sembrar-datos.js` — empresa + usuario `andina`/`demo2026seguro`
+   + 4 unidades + 4 choferes + documentos + 2 tickets. Idempotente.
+3. Abrir `transguia-prototipo.html` (doble clic). El campo "API" ya
+   apunta a localhost:3001.
+4. `node borrar-datos-demo.js` — limpia lo sembrado (`--empresa` borra
+   también la empresa).
 
 ## Después de eso (hoja de ruta pendiente, en orden)
 5. Repetir el patrón de `usuariosRepoPostgres.js` para unidades, choferes
@@ -111,40 +124,62 @@ Railway). Puntos 5 y 6 ya están hechos.
      - **Decisión (opción B):** al crear un ticket se pasan `unidadId` y
        `choferId` (la unidad y el chofer deben estar registrados antes).
        El servicio valida que existan, sean de la empresa y estén activos.
-     - `creado_por` se deja NULL por ahora (falta sesión de usuario real).
+     - `creado_por` y `historial_estado_ticket.usuario_id` ahora se
+       llenan con el usuario del token (ver "Sesiones y roles" abajo).
      - Se escribe `historial_estado_ticket` en cada cambio de estado.
      - `motivo` libre → enum (`VENTA` / `TRASLADO_ENTRE_ESTABLECIMIENTOS`
        / `OTROS`); vacío = `VENTA`, no reconocido = `OTROS`.
      - `codigo_interno` = `TCK-` + secuencia Postgres (no se repite).
      - Regla mantenida: solo se avanza de estado si la GRE fue `ACEPTADO`
        (excepto `ANULADO`).
-     - `choferLicencia` va en null al emisor (TODO: sacarla de
-       `documentos_chofer` cuando se implemente esa tabla).
-     - Endpoints: `POST /api/tickets` (body con `empresaId`, `unidadId`,
-       `choferId`, `origen`, `destino`, `motivo?`, `descripcionMercancia`,
-       `pesoBrutoKg`), `GET /api/tickets?empresaId=...`,
-       `GET /api/tickets/:id`, `POST /api/tickets/:id/avanzar` (body
-       `{ estadoOperativo }`). Prueba: `node probar-tickets-db.js` (pasó).
-6. [x] **Prototipo web conectado** (hecho el 2026-09-08). El
-   `transguia-prototipo.html` original nunca estuvo en el repo, así que
-   se creó de cero: archivo único, sin dependencias ni build, con login,
-   alta de unidades/choferes y creación de tickets (con dropdowns de
-   unidad/chofer y sondeo del estado de la GRE). Habla con la API real
-   vía `fetch`; la URL base es editable y se guarda en `localStorage`.
-   Scripts de datos nuevos: `sembrar-datos.js` (idempotente) y
-   `borrar-datos-demo.js`. Contrato de la API en `contrato-api.yaml`
-   (OpenAPI 3.1).
-7. Subir el backend a internet (Render o Railway) para que no dependa
-   de que la computadora de la persona esté prendida
-8. Conseguir un PSE (Nubefact, EFACT, etc.) o certificado digital para
-   emitir la GRE real ante SUNAT (hoy solo está simulada)
-9. Pilotear con 1-2 transportistas reales antes de escalar
+     - `choferLicencia`: el servicio busca la licencia de conducir
+       vigente del chofer (módulo de documentos) y la manda en la GRE.
+     - Endpoints (ver `contrato-api.yaml`): `GET/POST /api/tickets`,
+       `GET /api/tickets/:id`, `POST /api/tickets/:id/avanzar`.
+       Prueba: `node probar-tickets-db.js` (pasó).
+6. [x] **Prototipo web conectado** (2026-09-08). `transguia-prototipo.html`
+   creado de cero (el original nunca estuvo en el repo): archivo único,
+   sin build, login con token, pestañas unidades / choferes / tickets /
+   vencimientos / usuarios, gestión de documentos por fila. URL de la API
+   editable y guardada en `localStorage`.
+6b. [x] **Sesiones y roles** (2026-09-09). Token HMAC (`src/auth/sesion.js`),
+   middleware `requiereSesion` / `requiereRol`. El `empresaId` sale del
+   token; `operador` no puede tocar configuración (403). Login devuelve
+   `token`. Registro de usuarios pasa a ser (admin) y entra a la empresa
+   del que lo crea. `crear-empresa.js` para el primer admin de una empresa.
+6c. [x] **Documentos y vencimientos** (2026-09-09). `src/documentos/`
+   (SOAT, revisión técnica, licencias, certificados médicos) + endpoint
+   `GET /api/vencimientos` sobre la vista `vencimientos_proximos`. La
+   licencia vigente del chofer va en la GRE. Prueba: `probar-documentos-db.js`.
+6d. [x] **Preparación de despliegue** (2026-09-09). `.gitignore`, `Procfile`,
+   `engines`, `GET /api/health`, `SESSION_SECRET`, repo Git.
+6e. [x] **Listo para Vercel** (2026-09-09, decisión del usuario). La app
+   Express se movió a `src/app.js` (sin `listen`); `server.js` la
+   levanta como proceso normal y `api/index.js` + `vercel.json` la
+   sirven como función serverless. En Vercel (autodetectado por la
+   variable `VERCEL`): emisión de GRE **síncrona** — `ticketService`
+   tiene la opción `emisionSincrona` y espera el resultado antes de
+   responder, porque la función se apaga al contestar; el esquema se
+   prepara en la 1ª petición; el pool `pg` usa `max: 1` y hace falta la
+   cadena **Transaction pooler** (6543) de Supabase. Con `demo` es
+   instantáneo. Pasos en `DESPLIEGUE.md`.
+7. **(pendiente — necesita cuenta del usuario)** Deploy a Vercel. Todo el
+   código y la config están; solo falta importar el repo en vercel.com y
+   cargar las variables de entorno. Guía en `DESPLIEGUE.md`.
+8. **(pendiente — externo)** Conseguir un PSE (Nubefact, EFACT…) o
+   certificado digital para emitir la GRE real ante SUNAT.
+9. **(pendiente — externo)** Pilotear con 1-2 transportistas reales.
 
 ## Decisiones de diseño a respetar
 - Todo lo relacionado a la emisión de la GRE pasa por la interfaz
   `EmisorGRE` — nunca acoplar `ticketService.js` a un proveedor
   específico de forma directa
 - Nunca guardar contraseñas en texto plano
+- El `empresaId` de una petición SIEMPRE sale del token de sesión, nunca
+  de la query ni del cuerpo — así un usuario no puede ver datos de otra
+  empresa
+- En producción `SESSION_SECRET` debe tener un valor propio y largo; el
+  `.env` nunca se sube al repo
 - No inventar valores de `peso_bruto_maximo_kg` en
   `configuraciones_vehiculares` sin la fuente oficial (Anexo IV del
   Reglamento Nacional de Vehículos) — dejarlo en NULL antes que adivinar

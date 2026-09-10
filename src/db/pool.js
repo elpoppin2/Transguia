@@ -7,9 +7,19 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
+// En serverless (Vercel) cada instancia atiende de a una petición y se
+// congela; conviene un pool chico y que suelte las conexiones rápido.
+// Para eso, además, en Vercel hay que usar la cadena "Transaction pooler"
+// de Supabase (puerto 6543) en DATABASE_URL — ver DESPLIEGUE.md.
+const esServerless = !!process.env.VERCEL;
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false } // necesario para conectarse a Supabase
+  ssl: { rejectUnauthorized: false }, // necesario para conectarse a Supabase
+  max: esServerless ? 1 : 10,
+  idleTimeoutMillis: esServerless ? 10000 : 30000,
+  // El transaction pooler no admite prepared statements con nombre.
+  ...(esServerless ? { statement_timeout: 15000 } : {})
 });
 
 /**

@@ -2,51 +2,73 @@ openapi: 3.1.0
 
 info:
   title: TransGuía — API
-  version: "0.1.0"
+  version: "0.2.0"
   description: >
-    Contrato de la API del backend de TransGuía: autenticación, registro de
-    unidades y choferes según normativa del MTC, y tickets de traslado
-    vinculados a la GRE-Transportista de SUNAT.
+    API del backend de TransGuía: autenticación, registro de unidades y
+    choferes según normativa del MTC, documentos con vencimiento, y
+    tickets de traslado vinculados a la GRE-Transportista de SUNAT.
 
-    La emisión de la GRE es asíncrona: al crear un ticket se devuelve de
-    inmediato con `estadoSunat: "ENVIANDO"`; consulta `GET /api/tickets/{id}`
-    hasta que cambie a `ACEPTADO`, `RECHAZADO` u `OBSERVADO`.
+    ## Autenticación
 
-    El proveedor de emisión se elige con la variable de entorno
-    `GRE_PROVIDER` (`demo` | `pse` | `directo`) y no afecta a este contrato.
+    Todas las rutas exigen un token de sesión salvo `POST /api/auth/login`
+    y `GET /api/health`. El token se obtiene en el login y se envía en la
+    cabecera `Authorization: Bearer <token>`. Dura 12 horas.
+
+    El `empresaId` sale SIEMPRE del token: no se envía en la query ni en
+    el cuerpo, y un usuario nunca ve datos de otra empresa.
+
+    ## Roles
+
+    - `operador`: crea y mueve tickets.
+    - `admin_empresa`: además registra unidades, choferes, documentos y
+      usuarios. Las rutas marcadas *(admin)* devuelven 403 para un operador.
+
+    ## Emisión de la GRE
+
+    Es asíncrona: `POST /api/tickets` responde con
+    `estadoSunat: "ENVIANDO"`; hay que consultar `GET /api/tickets/{id}`
+    hasta que cambie a `ACEPTADO`, `RECHAZADO` u `OBSERVADO`. El proveedor
+    se elige con `GRE_PROVIDER` (`demo` | `pse` | `directo`).
 
 servers:
   - url: http://localhost:3001
     description: Desarrollo local
 
+security:
+  - bearerAuth: []
+
 tags:
+  - name: Sistema
   - name: Autenticación
   - name: Unidades
   - name: Choferes
+  - name: Documentos
+  - name: Vencimientos
   - name: Tickets
 
 paths:
-  /api/auth/registro:
-    post:
-      tags: [Autenticación]
-      summary: Registrar un usuario en una empresa existente
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/RegistroUsuario" }
+  /api/health:
+    get:
+      tags: [Sistema]
+      summary: Estado del servicio (público)
+      security: []
       responses:
-        "201":
-          description: Usuario creado
+        "200":
+          description: OK
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/UsuarioPublico" }
-        "400": { $ref: "#/components/responses/ErrorValidacion" }
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  servicio: { type: string }
+                  gre: { type: string, enum: [demo, pse, directo] }
 
   /api/auth/login:
     post:
       tags: [Autenticación]
-      summary: Validar credenciales
+      summary: Ingresar (público). Devuelve el token de sesión.
+      security: []
       requestBody:
         required: true
         content:
@@ -66,30 +88,47 @@ paths:
         "401":
           description: Usuario o contraseña incorrectos
           content:
-            application/json:
-              schema: { $ref: "#/components/schemas/Error" }
+            application/json: { schema: { $ref: "#/components/schemas/Error" } }
+
+  /api/auth/registro:
+    post:
+      tags: [Autenticación]
+      summary: Crear un usuario en la misma empresa del admin *(admin)*
+      responses:
+        "201":
+          description: Usuario creado
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/UsuarioPublico" } }
+        "400": { $ref: "#/components/responses/ErrorValidacion" }
+        "401": { $ref: "#/components/responses/NoAutenticado" }
+        "403": { $ref: "#/components/responses/SinPermiso" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password, nombreCompleto]
+              properties:
+                username: { type: string }
+                password: { type: string, format: password, minLength: 8 }
+                nombreCompleto: { type: string }
+                rol: { $ref: "#/components/schemas/RolUsuario" }
 
   /api/unidades:
     get:
       tags: [Unidades]
-      summary: Listar las unidades de una empresa
-      parameters:
-        - name: empresaId
-          in: query
-          required: true
-          schema: { type: string, format: uuid }
+      summary: Listar las unidades de mi empresa
       responses:
         "200":
-          description: Lista de unidades (ordenadas por placa)
+          description: Lista de unidades
           content:
             application/json:
-              schema:
-                type: array
-                items: { $ref: "#/components/schemas/Unidad" }
-        "400": { $ref: "#/components/responses/ErrorValidacion" }
+              schema: { type: array, items: { $ref: "#/components/schemas/Unidad" } }
+        "401": { $ref: "#/components/responses/NoAutenticado" }
     post:
       tags: [Unidades]
-      summary: Registrar una unidad
+      summary: Registrar una unidad *(admin)*
       requestBody:
         required: true
         content:
@@ -99,45 +138,82 @@ paths:
         "201":
           description: Unidad registrada
           content:
-            application/json:
-              schema: { $ref: "#/components/schemas/Unidad" }
+            application/json: { schema: { $ref: "#/components/schemas/Unidad" } }
         "400": { $ref: "#/components/responses/ErrorValidacion" }
+        "401": { $ref: "#/components/responses/NoAutenticado" }
+        "403": { $ref: "#/components/responses/SinPermiso" }
 
   /api/unidades/{id}/desactivar:
     post:
       tags: [Unidades]
-      summary: Dar de baja lógica una unidad (no se borra; queda inactiva)
-      parameters:
-        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      summary: Baja lógica de una unidad *(admin)*
+      parameters: [{ $ref: "#/components/parameters/IdPath" }]
       responses:
         "200":
           description: Unidad desactivada
           content:
-            application/json:
-              schema: { $ref: "#/components/schemas/Unidad" }
+            application/json: { schema: { $ref: "#/components/schemas/Unidad" } }
         "400": { $ref: "#/components/responses/ErrorValidacion" }
+        "403": { $ref: "#/components/responses/SinPermiso" }
+
+  /api/unidades/{id}/documentos:
+    get:
+      tags: [Documentos]
+      summary: Documentos de una unidad (SOAT, revisión técnica, ...)
+      parameters: [{ $ref: "#/components/parameters/IdPath" }]
+      responses:
+        "200":
+          description: Lista de documentos
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/DocumentoUnidad" } }
+        "401": { $ref: "#/components/responses/NoAutenticado" }
+    post:
+      tags: [Documentos]
+      summary: Agregar un documento a una unidad *(admin)*
+      parameters: [{ $ref: "#/components/parameters/IdPath" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NuevoDocumentoUnidad" }
+      responses:
+        "201":
+          description: Documento agregado
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/DocumentoUnidad" } }
+        "400": { $ref: "#/components/responses/ErrorValidacion" }
+        "403": { $ref: "#/components/responses/SinPermiso" }
+
+  /api/unidades/{id}/documentos/{docId}:
+    delete:
+      tags: [Documentos]
+      summary: Eliminar un documento de una unidad *(admin)*
+      parameters:
+        - { $ref: "#/components/parameters/IdPath" }
+        - { name: docId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Eliminado
+          content:
+            application/json: { schema: { type: object, properties: { ok: { type: boolean } } } }
+        "400": { $ref: "#/components/responses/ErrorValidacion" }
+        "403": { $ref: "#/components/responses/SinPermiso" }
 
   /api/choferes:
     get:
       tags: [Choferes]
-      summary: Listar los choferes de una empresa
-      parameters:
-        - name: empresaId
-          in: query
-          required: true
-          schema: { type: string, format: uuid }
+      summary: Listar los choferes de mi empresa
       responses:
         "200":
-          description: Lista de choferes (ordenados por apellidos)
+          description: Lista de choferes
           content:
             application/json:
-              schema:
-                type: array
-                items: { $ref: "#/components/schemas/Chofer" }
-        "400": { $ref: "#/components/responses/ErrorValidacion" }
+              schema: { type: array, items: { $ref: "#/components/schemas/Chofer" } }
+        "401": { $ref: "#/components/responses/NoAutenticado" }
     post:
       tags: [Choferes]
-      summary: Registrar un chofer
+      summary: Registrar un chofer *(admin)*
       requestBody:
         required: true
         content:
@@ -147,49 +223,101 @@ paths:
         "201":
           description: Chofer registrado
           content:
-            application/json:
-              schema: { $ref: "#/components/schemas/Chofer" }
+            application/json: { schema: { $ref: "#/components/schemas/Chofer" } }
         "400": { $ref: "#/components/responses/ErrorValidacion" }
+        "403": { $ref: "#/components/responses/SinPermiso" }
 
   /api/choferes/{id}/desactivar:
     post:
       tags: [Choferes]
-      summary: Dar de baja lógica un chofer
-      parameters:
-        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      summary: Baja lógica de un chofer *(admin)*
+      parameters: [{ $ref: "#/components/parameters/IdPath" }]
       responses:
         "200":
           description: Chofer desactivado
           content:
+            application/json: { schema: { $ref: "#/components/schemas/Chofer" } }
+        "403": { $ref: "#/components/responses/SinPermiso" }
+
+  /api/choferes/{id}/documentos:
+    get:
+      tags: [Documentos]
+      summary: Documentos de un chofer (licencia, certificado médico, ...)
+      parameters: [{ $ref: "#/components/parameters/IdPath" }]
+      responses:
+        "200":
+          description: Lista de documentos
+          content:
             application/json:
-              schema: { $ref: "#/components/schemas/Chofer" }
+              schema: { type: array, items: { $ref: "#/components/schemas/DocumentoChofer" } }
+        "401": { $ref: "#/components/responses/NoAutenticado" }
+    post:
+      tags: [Documentos]
+      summary: Agregar un documento a un chofer *(admin)*
+      parameters: [{ $ref: "#/components/parameters/IdPath" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NuevoDocumentoChofer" }
+      responses:
+        "201":
+          description: Documento agregado
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/DocumentoChofer" } }
         "400": { $ref: "#/components/responses/ErrorValidacion" }
+        "403": { $ref: "#/components/responses/SinPermiso" }
+
+  /api/choferes/{id}/documentos/{docId}:
+    delete:
+      tags: [Documentos]
+      summary: Eliminar un documento de un chofer *(admin)*
+      parameters:
+        - { $ref: "#/components/parameters/IdPath" }
+        - { name: docId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Eliminado
+          content:
+            application/json: { schema: { type: object, properties: { ok: { type: boolean } } } }
+        "403": { $ref: "#/components/responses/SinPermiso" }
+
+  /api/vencimientos:
+    get:
+      tags: [Vencimientos]
+      summary: Documentos (de unidades y choferes) vencidos o por vencer
+      parameters:
+        - name: dias
+          in: query
+          required: false
+          schema: { type: integer, default: 30, minimum: 1, maximum: 365 }
+          description: Rango hacia adelante. Incluye también los ya vencidos.
+      responses:
+        "200":
+          description: Lista ordenada por fecha de vencimiento
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Vencimiento" } }
+        "401": { $ref: "#/components/responses/NoAutenticado" }
 
   /api/tickets:
     get:
       tags: [Tickets]
-      summary: Listar los tickets de una empresa
-      parameters:
-        - name: empresaId
-          in: query
-          required: true
-          schema: { type: string, format: uuid }
+      summary: Listar los tickets de mi empresa (más recientes primero)
       responses:
         "200":
-          description: Lista de tickets (más recientes primero)
+          description: Lista de tickets
           content:
             application/json:
-              schema:
-                type: array
-                items: { $ref: "#/components/schemas/Ticket" }
-        "400": { $ref: "#/components/responses/ErrorValidacion" }
+              schema: { type: array, items: { $ref: "#/components/schemas/Ticket" } }
+        "401": { $ref: "#/components/responses/NoAutenticado" }
     post:
       tags: [Tickets]
-      summary: Crear un ticket de traslado y disparar la emisión de la GRE
+      summary: Crear un ticket y disparar la emisión de la GRE
       description: >
-        La unidad y el chofer deben estar registrados, pertenecer a la
-        empresa y estar activos. La respuesta llega antes de que SUNAT
-        conteste: el ticket vuelve con `estadoSunat: "ENVIANDO"`.
+        La unidad y el chofer deben estar registrados, ser de mi empresa
+        y estar activos. `creadoPor` se toma del token. Responde antes de
+        que SUNAT conteste (`estadoSunat: "ENVIANDO"`).
       requestBody:
         required: true
         content:
@@ -197,29 +325,26 @@ paths:
             schema: { $ref: "#/components/schemas/NuevoTicket" }
       responses:
         "201":
-          description: Ticket creado (emisión de GRE en curso)
+          description: Ticket creado (emisión en curso)
           content:
-            application/json:
-              schema: { $ref: "#/components/schemas/Ticket" }
+            application/json: { schema: { $ref: "#/components/schemas/Ticket" } }
         "400": { $ref: "#/components/responses/ErrorValidacion" }
+        "401": { $ref: "#/components/responses/NoAutenticado" }
 
   /api/tickets/{id}:
     get:
       tags: [Tickets]
-      summary: Detalle de un ticket (incluye el estado actual de su GRE)
-      parameters:
-        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      summary: Detalle de un ticket (con el estado actual de su GRE)
+      parameters: [{ $ref: "#/components/parameters/IdPath" }]
       responses:
         "200":
           description: Ticket encontrado
           content:
-            application/json:
-              schema: { $ref: "#/components/schemas/Ticket" }
+            application/json: { schema: { $ref: "#/components/schemas/Ticket" } }
         "404":
-          description: Ticket no encontrado
+          description: No encontrado (o de otra empresa)
           content:
-            application/json:
-              schema: { $ref: "#/components/schemas/Error" }
+            application/json: { schema: { $ref: "#/components/schemas/Error" } }
 
   /api/tickets/{id}/avanzar:
     post:
@@ -227,9 +352,9 @@ paths:
       summary: Cambiar el estado operativo del ticket
       description: >
         Solo se puede pasar a `EN_TRANSITO` o `ENTREGADO` si la GRE fue
-        `ACEPTADO`. `ANULADO` se permite siempre (salvo que ya esté anulado).
-      parameters:
-        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        `ACEPTADO`. `ANULADO` se permite salvo que ya esté anulado. Marca
+        `fechaTraslado` / `fechaEntrega` y deja registro en el historial.
+      parameters: [{ $ref: "#/components/parameters/IdPath" }]
       requestBody:
         required: true
         content:
@@ -238,23 +363,45 @@ paths:
               type: object
               required: [estadoOperativo]
               properties:
-                estadoOperativo:
-                  $ref: "#/components/schemas/EstadoOperativo"
+                estadoOperativo: { $ref: "#/components/schemas/EstadoOperativo" }
       responses:
         "200":
           description: Estado actualizado
           content:
-            application/json:
-              schema: { $ref: "#/components/schemas/Ticket" }
+            application/json: { schema: { $ref: "#/components/schemas/Ticket" } }
         "400": { $ref: "#/components/responses/ErrorValidacion" }
+        "404":
+          description: No encontrado (o de otra empresa)
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/Error" } }
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Token devuelto por POST /api/auth/login
+
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
   responses:
     ErrorValidacion:
       description: Datos inválidos o regla de negocio no cumplida
       content:
-        application/json:
-          schema: { $ref: "#/components/schemas/Error" }
+        application/json: { schema: { $ref: "#/components/schemas/Error" } }
+    NoAutenticado:
+      description: Falta el token o expiró
+      content:
+        application/json: { schema: { $ref: "#/components/schemas/Error" } }
+    SinPermiso:
+      description: El rol del usuario no permite esta acción
+      content:
+        application/json: { schema: { $ref: "#/components/schemas/Error" } }
 
   schemas:
     Error:
@@ -262,41 +409,18 @@ components:
       properties:
         error: { type: string, example: "Faltan campos obligatorios: origen, destino" }
 
-    RolUsuario:
-      type: string
-      enum: [admin_empresa, operador]
-
-    CategoriaMtc:
-      type: string
-      enum: [N1, N2, N3]
-      description: Categoría de vehículo de carga según el RNV.
-
+    RolUsuario: { type: string, enum: [admin_empresa, operador] }
+    CategoriaMtc: { type: string, enum: [N1, N2, N3] }
     ConfiguracionVehicular:
       type: string
       description: Código del Anexo IV del RNV (DS 058-2003-MTC).
       enum: [C2, C2R2, C2R3, C3, C3R2, C3R3, C4, T2S1, T2S2, T2S3, T3S1, T3S2, T3S3]
-
-    MotivoTraslado:
-      type: string
-      enum: [VENTA, TRASLADO_ENTRE_ESTABLECIMIENTOS, OTROS]
-
-    EstadoOperativo:
-      type: string
-      enum: [GENERADO, EN_TRANSITO, ENTREGADO, ANULADO]
-
-    EstadoSunat:
-      type: string
-      enum: [ENVIANDO, ACEPTADO, RECHAZADO, OBSERVADO]
-
-    RegistroUsuario:
-      type: object
-      required: [empresaId, username, password, nombreCompleto]
-      properties:
-        empresaId: { type: string, format: uuid }
-        username: { type: string, example: andina }
-        password: { type: string, format: password, minLength: 8 }
-        nombreCompleto: { type: string, example: "María Andina" }
-        rol: { $ref: "#/components/schemas/RolUsuario" }
+    MotivoTraslado: { type: string, enum: [VENTA, TRASLADO_ENTRE_ESTABLECIMIENTOS, OTROS] }
+    EstadoOperativo: { type: string, enum: [GENERADO, EN_TRANSITO, ENTREGADO, ANULADO] }
+    EstadoSunat: { type: string, enum: [ENVIANDO, ACEPTADO, RECHAZADO, OBSERVADO] }
+    TipoDocumentoUnidad: { type: string, enum: [SOAT, REVISION_TECNICA, TARJETA_CIRCULACION, PERMISO_OPERACION, OTRO] }
+    TipoDocumentoChofer: { type: string, enum: [LICENCIA_CONDUCIR, CERTIFICADO_MEDICO, OTRO] }
+    CategoriaLicencia: { type: string, enum: ["A-I", "A-IIa", "A-IIb", "A-IIIa", "A-IIIb", "A-IIIc"] }
 
     UsuarioPublico:
       type: object
@@ -314,22 +438,17 @@ components:
         username: { type: string }
         nombreCompleto: { type: string }
         rol: { $ref: "#/components/schemas/RolUsuario" }
+        token: { type: string, description: "Enviar como 'Authorization: Bearer <token>'" }
+        expiraEnMs: { type: integer, example: 43200000 }
 
     NuevaUnidad:
       type: object
-      required: [empresaId, placa, marca, modelo, categoriaMtc, configuracionVehicular]
+      required: [placa, marca, modelo, categoriaMtc, configuracionVehicular]
       properties:
-        empresaId: { type: string, format: uuid }
-        placa:
-          type: string
-          description: 3 letras + 3 dígitos, con o sin guion. Se normaliza a "ABC-123".
-          example: ABC-756
+        placa: { type: string, description: "3 letras + 3 dígitos; se normaliza a ABC-123", example: ABC-756 }
         marca: { type: string, example: Volvo }
         modelo: { type: string, example: "FH 460" }
-        anioFabricacion:
-          type: [integer, "null"]
-          minimum: 1970
-          example: 2021
+        anioFabricacion: { type: [integer, "null"], minimum: 1970, example: 2021 }
         categoriaMtc: { $ref: "#/components/schemas/CategoriaMtc" }
         configuracionVehicular: { $ref: "#/components/schemas/ConfiguracionVehicular" }
 
@@ -339,18 +458,15 @@ components:
         - type: object
           properties:
             id: { type: string, format: uuid }
+            empresaId: { type: string, format: uuid }
             activo: { type: boolean }
             creadoEn: { type: string, format: date-time }
 
     NuevoChofer:
       type: object
-      required: [empresaId, dni, nombres, apellidos]
+      required: [dni, nombres, apellidos]
       properties:
-        empresaId: { type: string, format: uuid }
-        dni:
-          type: string
-          pattern: "^[0-9]{8}$"
-          example: "45678912"
+        dni: { type: string, pattern: "^[0-9]{8}$", example: "45678912" }
         nombres: { type: string, example: "Luis Alberto" }
         apellidos: { type: string, example: "Quispe Mamani" }
 
@@ -360,21 +476,74 @@ components:
         - type: object
           properties:
             id: { type: string, format: uuid }
+            empresaId: { type: string, format: uuid }
             activo: { type: boolean }
             creadoEn: { type: string, format: date-time }
 
+    NuevoDocumentoUnidad:
+      type: object
+      required: [tipoDocumento, fechaVencimiento]
+      properties:
+        tipoDocumento: { $ref: "#/components/schemas/TipoDocumentoUnidad" }
+        numeroDocumento: { type: [string, "null"] }
+        fechaEmision: { type: [string, "null"], format: date, example: "2025-01-15" }
+        fechaVencimiento: { type: string, format: date, example: "2026-12-31" }
+        archivoUrl: { type: [string, "null"] }
+
+    DocumentoUnidad:
+      allOf:
+        - $ref: "#/components/schemas/NuevoDocumentoUnidad"
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            unidadId: { type: string, format: uuid }
+            creadoEn: { type: string, format: date-time }
+
+    NuevoDocumentoChofer:
+      type: object
+      required: [tipoDocumento, fechaVencimiento]
+      properties:
+        tipoDocumento: { $ref: "#/components/schemas/TipoDocumentoChofer" }
+        numeroDocumento: { type: [string, "null"] }
+        categoriaLicencia:
+          description: Solo para LICENCIA_CONDUCIR.
+          oneOf:
+            - $ref: "#/components/schemas/CategoriaLicencia"
+            - type: "null"
+        fechaEmision: { type: [string, "null"], format: date }
+        fechaVencimiento: { type: string, format: date }
+
+    DocumentoChofer:
+      allOf:
+        - $ref: "#/components/schemas/NuevoDocumentoChofer"
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            choferId: { type: string, format: uuid }
+            creadoEn: { type: string, format: date-time }
+
+    Vencimiento:
+      type: object
+      properties:
+        tipo: { type: string, enum: [unidad, chofer] }
+        referencia: { type: string, description: "Placa de la unidad o nombre del chofer", example: ABC-756 }
+        documento: { type: string, example: SOAT }
+        fechaVencimiento: { type: string, format: date }
+        diasRestantes: { type: integer, description: "Negativo si ya venció", example: -5 }
+
     NuevoTicket:
       type: object
-      required: [empresaId, unidadId, choferId, origen, destino, descripcionMercancia, pesoBrutoKg]
+      required: [unidadId, choferId, origen, destino, descripcionMercancia, pesoBrutoKg]
       properties:
-        empresaId: { type: string, format: uuid }
         unidadId: { type: string, format: uuid }
         choferId: { type: string, format: uuid }
         origen: { type: string, example: Lima }
         destino: { type: string, example: Arequipa }
         motivo:
-          $ref: "#/components/schemas/MotivoTraslado"
-          description: Texto libre también aceptado; se traduce al enum (vacío → VENTA).
+          description: "Texto libre también aceptado; se traduce al enum (vacío → VENTA)."
+          oneOf:
+            - $ref: "#/components/schemas/MotivoTraslado"
+            - type: string
         descripcionMercancia: { type: string, example: "Repuestos industriales" }
         pesoBrutoKg: { type: number, exclusiveMinimum: 0, example: 8200 }
 
@@ -397,11 +566,9 @@ components:
         pesoBrutoKg: { type: number }
         estadoOperativo: { $ref: "#/components/schemas/EstadoOperativo" }
         estadoSunat: { $ref: "#/components/schemas/EstadoSunat" }
-        serieCorrelativoGre:
-          type: [string, "null"]
-          example: T001-000160
-        motivoRechazo:
-          type: [string, "null"]
+        serieCorrelativoGre: { type: [string, "null"], example: T001-000160 }
+        motivoRechazo: { type: [string, "null"] }
+        creadoPor: { type: [string, "null"], format: uuid, description: "Usuario que creó el ticket (del token)" }
         fechaTraslado: { type: [string, "null"], format: date-time }
         fechaEntrega: { type: [string, "null"], format: date-time }
         creadoEn: { type: string, format: date-time }

@@ -17,7 +17,11 @@ function crearEmisorGRE(env = process.env) {
     case 'demo':
       return new EmisorGREDemo({
         serie: env.GRE_SERIE || 'T001',
-        correlativoInicial: Number(env.GRE_CORRELATIVO_INICIAL || 1)
+        correlativoInicial: Number(env.GRE_CORRELATIVO_INICIAL || 1),
+        // En serverless conviene una demora corta (la petición espera este tiempo).
+        demoraMs: env.GRE_DEMO_DEMORA_MS !== undefined
+          ? Number(env.GRE_DEMO_DEMORA_MS)
+          : (env.VERCEL ? 150 : 1200)
       });
 
     case 'pse':

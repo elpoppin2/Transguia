@@ -1,28 +1,21 @@
-# Angular specific
-/dist/
-/out-tsc/
-/tmp/
-/coverage/
-/e2e/test-output/
-/.angular/
-.angular/
+# Dependencias
+node_modules/
 
-# Node modules and dependency files
-/node_modules/
-/package-lock.json
-/yarn.lock
+# Credenciales y configuración local — NUNCA subir
+.env
+.env.*
+!.env.example
 
-# Environment files
-/.env
+# Certificados digitales de SUNAT
+certificados/
+*.pfx
+*.p12
 
-# Angular CLI and build artefacts
-/.angular-cli.json
-/.ng/
+# Vercel
+.vercel
 
-# TypeScript cache
-*.tsbuildinfo
-
-# Logs
+# Logs y temporales
+*.log
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+.DS_Store
+Thumbs.db

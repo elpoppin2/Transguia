@@ -4,9 +4,15 @@
   "private": true,
   "description": "Módulo de emisión de GRE-Transportista desacoplado del proveedor (demo / PSE / SUNAT directo)",
   "main": "server.js",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
+    "start": "node server.js",
     "demo": "node demo.js",
-    "start": "node server.js"
+    "sembrar": "node sembrar-datos.js",
+    "borrar-demo": "node borrar-datos-demo.js",
+    "probar": "node probar-todo.js"
   },
   "dependencies": {
     "dotenv": "^16.4.5",

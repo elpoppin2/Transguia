@@ -7,29 +7,19 @@
 <style>
   :root {
     color-scheme: light dark;
-    --bg: #f4f5f7;
-    --panel: #ffffff;
-    --panel-2: #fafbfc;
-    --texto: #1c2430;
-    --texto-suave: #5b6673;
-    --borde: #dde1e6;
-    --primario: #1f6feb;
-    --primario-texto: #ffffff;
+    --bg: #f4f5f7; --panel: #fff; --panel-2: #fafbfc;
+    --texto: #1c2430; --texto-suave: #5b6673; --borde: #dde1e6;
+    --primario: #1f6feb; --primario-texto: #fff;
     --ok-bg: #e6f4ea; --ok-tx: #1a7f37;
     --warn-bg: #fff4e5; --warn-tx: #9a6700;
     --err-bg: #fde8e8; --err-tx: #b42318;
     --info-bg: #e8f0fe; --info-tx: #1f4fa8;
-    --radio: 10px;
-    --sombra: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.1);
+    --radio: 10px; --sombra: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.1);
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #0f141a;
-      --panel: #172029;
-      --panel-2: #1c2732;
-      --texto: #e6edf3;
-      --texto-suave: #9aa7b4;
-      --borde: #2a3742;
+      --bg: #0f141a; --panel: #172029; --panel-2: #1c2732;
+      --texto: #e6edf3; --texto-suave: #9aa7b4; --borde: #2a3742;
       --primario: #4c8dff;
       --ok-bg: #10281a; --ok-tx: #57d68a;
       --warn-bg: #2b2110; --warn-tx: #e2b341;
@@ -39,91 +29,52 @@
     }
   }
   * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--texto);
-    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  }
-  header {
-    background: var(--panel);
-    border-bottom: 1px solid var(--borde);
-    padding: 12px 20px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    flex-wrap: wrap;
-  }
+  body { margin: 0; background: var(--bg); color: var(--texto);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { background: var(--panel); border-bottom: 1px solid var(--borde);
+    padding: 12px 20px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
   header h1 { font-size: 17px; margin: 0; letter-spacing: .3px; }
   header .sp { flex: 1; }
   header .quien { color: var(--texto-suave); font-size: 13px; }
-  main { max-width: 1040px; margin: 0 auto; padding: 20px; }
-  .panel {
-    background: var(--panel);
-    border: 1px solid var(--borde);
-    border-radius: var(--radio);
-    box-shadow: var(--sombra);
-    padding: 18px;
-    margin-bottom: 18px;
-  }
+  main { max-width: 1080px; margin: 0 auto; padding: 20px; }
+  .panel { background: var(--panel); border: 1px solid var(--borde); border-radius: var(--radio);
+    box-shadow: var(--sombra); padding: 18px; margin-bottom: 18px; }
   h2 { font-size: 15px; margin: 0 0 14px; }
   h2 .sub { color: var(--texto-suave); font-weight: 400; font-size: 13px; }
   label { display: block; font-size: 13px; color: var(--texto-suave); margin: 0 0 4px; }
-  input, select {
-    width: 100%;
-    padding: 8px 10px;
-    border: 1px solid var(--borde);
-    border-radius: 8px;
-    background: var(--panel-2);
-    color: var(--texto);
-    font: inherit;
-  }
+  input, select { width: 100%; padding: 8px 10px; border: 1px solid var(--borde);
+    border-radius: 8px; background: var(--panel-2); color: var(--texto); font: inherit; }
   input:focus, select:focus { outline: 2px solid var(--primario); outline-offset: -1px; }
-  .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+  .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
   .fila { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
-  button {
-    padding: 8px 14px;
-    border: 1px solid var(--primario);
-    border-radius: 8px;
-    background: var(--primario);
-    color: var(--primario-texto);
-    font: inherit;
-    font-weight: 500;
-    cursor: pointer;
-  }
+  button { padding: 8px 14px; border: 1px solid var(--primario); border-radius: 8px;
+    background: var(--primario); color: var(--primario-texto); font: inherit; font-weight: 500; cursor: pointer; }
   button.sec { background: transparent; color: var(--primario); }
   button.tenue { background: transparent; color: var(--texto-suave); border-color: var(--borde); }
   button:disabled { opacity: .5; cursor: default; }
   button.chico { padding: 4px 9px; font-size: 12px; }
   table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
-  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--borde); }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--borde); vertical-align: top; }
   th { color: var(--texto-suave); font-weight: 500; }
   .tabla-scroll { overflow-x: auto; }
-  .pill {
-    display: inline-block; padding: 2px 8px; border-radius: 999px;
-    font-size: 12px; font-weight: 500; white-space: nowrap;
-  }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 500; white-space: nowrap; }
   .pill.ok { background: var(--ok-bg); color: var(--ok-tx); }
   .pill.warn { background: var(--warn-bg); color: var(--warn-tx); }
   .pill.err { background: var(--err-bg); color: var(--err-tx); }
   .pill.info { background: var(--info-bg); color: var(--info-tx); }
   .pill.gris { background: var(--panel-2); color: var(--texto-suave); border: 1px solid var(--borde); }
   .tabs { display: flex; gap: 4px; margin-bottom: 16px; flex-wrap: wrap; }
-  .tabs button {
-    background: transparent; color: var(--texto-suave);
-    border: 1px solid transparent; border-radius: 8px;
-  }
+  .tabs button { background: transparent; color: var(--texto-suave); border: 1px solid transparent; border-radius: 8px; }
   .tabs button.activa { background: var(--panel); color: var(--texto); border-color: var(--borde); }
-  .aviso {
-    padding: 10px 12px; border-radius: 8px; font-size: 13.5px; margin-bottom: 14px;
-    background: var(--err-bg); color: var(--err-tx);
-  }
+  .aviso { padding: 10px 12px; border-radius: 8px; font-size: 13.5px; margin-bottom: 14px; background: var(--err-bg); color: var(--err-tx); }
   .aviso.ok { background: var(--ok-bg); color: var(--ok-tx); }
   .vacio { color: var(--texto-suave); font-size: 13.5px; padding: 10px 0; }
   .muted { color: var(--texto-suave); font-size: 12.5px; }
   .config { font-size: 12.5px; color: var(--texto-suave); display: flex; gap: 8px; align-items: center; }
-  .config input { width: 260px; padding: 4px 8px; font-size: 12.5px; }
+  .config input { width: 240px; padding: 4px 8px; font-size: 12.5px; }
   code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; font-size: 12.5px; }
+  .sub-panel { background: var(--panel-2); border-radius: 8px; padding: 12px; }
+  .solo-admin.oculto { display: none; }
 </style>
 </head>
 <body>
@@ -131,9 +82,7 @@
   <h1>TransGuía</h1>
   <span class="quien" id="quien"></span>
   <span class="sp"></span>
-  <span class="config">
-    API <input id="apiUrl" spellcheck="false" />
-  </span>
+  <span class="config">API <input id="apiUrl" spellcheck="false" /></span>
   <button class="tenue chico" id="btnSalir" hidden>Cerrar sesión</button>
 </header>
 
@@ -142,36 +91,12 @@
 
   <!-- ==================== LOGIN ==================== -->
   <section class="panel" id="panelLogin">
-    <h2>Ingresar <span class="sub">— usa el usuario que sembraste con <code>node sembrar-datos.js</code></span></h2>
+    <h2>Ingresar <span class="sub">— usuario creado con <code>node sembrar-datos.js</code> o <code>node crear-empresa.js</code></span></h2>
     <div class="grid">
-      <div>
-        <label>Usuario</label>
-        <input id="loginUser" autocomplete="username" value="andina" />
-      </div>
-      <div>
-        <label>Contraseña</label>
-        <input id="loginPass" type="password" autocomplete="current-password" value="demo2026seguro" />
-      </div>
+      <div><label>Usuario</label><input id="loginUser" autocomplete="username" value="andina" /></div>
+      <div><label>Contraseña</label><input id="loginPass" type="password" autocomplete="current-password" value="demo2026seguro" /></div>
     </div>
-    <div class="fila" style="margin-top:12px">
-      <button id="btnLogin">Ingresar</button>
-      <button class="sec" id="btnMostrarRegistro">Registrar un usuario nuevo</button>
-    </div>
-
-    <div id="bloqueRegistro" hidden style="margin-top:16px; border-top:1px solid var(--borde); padding-top:16px">
-      <h2>Registrar usuario <span class="sub">— necesitas el UUID completo de una empresa ya creada (lo imprime <code>sembrar-datos.js</code>)</span></h2>
-      <div class="grid">
-        <div><label>Empresa (UUID completo)</label><input id="regEmpresa" placeholder="00000000-0000-0000-0000-000000000000" /></div>
-        <div><label>Usuario</label><input id="regUser" /></div>
-        <div><label>Contraseña (mín. 8)</label><input id="regPass" type="password" /></div>
-        <div><label>Nombre completo</label><input id="regNombre" /></div>
-        <div>
-          <label>Rol</label>
-          <select id="regRol"><option value="admin_empresa">admin_empresa</option><option value="operador">operador</option></select>
-        </div>
-      </div>
-      <div class="fila" style="margin-top:12px"><button id="btnRegistro">Crear usuario</button></div>
-    </div>
+    <div class="fila" style="margin-top:12px"><button id="btnLogin">Ingresar</button></div>
   </section>
 
   <!-- ==================== APP ==================== -->
@@ -179,27 +104,28 @@
     <div class="tabs">
       <button data-tab="unidades" class="activa">Unidades</button>
       <button data-tab="choferes">Choferes</button>
-      <button data-tab="tickets">Tickets de traslado</button>
+      <button data-tab="tickets">Tickets</button>
+      <button data-tab="vencimientos">Vencimientos</button>
+      <button data-tab="usuarios" class="solo-admin">Usuarios</button>
     </div>
 
     <!-- UNIDADES -->
     <section class="panel" data-vista="unidades">
-      <h2>Registrar unidad</h2>
-      <div class="grid">
-        <div><label>Placa</label><input id="uPlaca" placeholder="ABC-123" /></div>
-        <div><label>Marca</label><input id="uMarca" placeholder="Volvo" /></div>
-        <div><label>Modelo</label><input id="uModelo" placeholder="FH 460" /></div>
-        <div><label>Año fabricación</label><input id="uAnio" type="number" placeholder="2021" /></div>
-        <div>
-          <label>Categoría MTC</label>
-          <select id="uCategoria"><option>N1</option><option>N2</option><option selected>N3</option></select>
+      <div class="solo-admin">
+        <h2>Registrar unidad</h2>
+        <div class="grid">
+          <div><label>Placa</label><input id="uPlaca" placeholder="ABC-123" /></div>
+          <div><label>Marca</label><input id="uMarca" placeholder="Volvo" /></div>
+          <div><label>Modelo</label><input id="uModelo" placeholder="FH 460" /></div>
+          <div><label>Año</label><input id="uAnio" type="number" placeholder="2021" /></div>
+          <div><label>Categoría MTC</label><select id="uCategoria"><option>N1</option><option>N2</option><option selected>N3</option></select></div>
+          <div><label>Config. vehicular</label><select id="uConfig"></select></div>
         </div>
-        <div><label>Config. vehicular</label><select id="uConfig"></select></div>
+        <div class="fila" style="margin-top:12px"><button id="btnCrearUnidad">Guardar unidad</button></div>
       </div>
-      <div class="fila" style="margin-top:12px"><button id="btnCrearUnidad">Guardar unidad</button></div>
       <div class="tabla-scroll" style="margin-top:16px">
         <table>
-          <thead><tr><th>Placa</th><th>Vehículo</th><th>Categoría</th><th>Config.</th><th>Estado</th><th></th></tr></thead>
+          <thead><tr><th>Placa</th><th>Vehículo</th><th>Cat.</th><th>Config.</th><th>Estado</th><th>Documentos</th></tr></thead>
           <tbody id="tbUnidades"></tbody>
         </table>
       </div>
@@ -208,16 +134,18 @@
 
     <!-- CHOFERES -->
     <section class="panel" data-vista="choferes" hidden>
-      <h2>Registrar chofer</h2>
-      <div class="grid">
-        <div><label>DNI (8 dígitos)</label><input id="cDni" placeholder="45678912" /></div>
-        <div><label>Nombres</label><input id="cNombres" placeholder="Juan Carlos" /></div>
-        <div><label>Apellidos</label><input id="cApellidos" placeholder="Quispe Mamani" /></div>
+      <div class="solo-admin">
+        <h2>Registrar chofer</h2>
+        <div class="grid">
+          <div><label>DNI (8 dígitos)</label><input id="cDni" placeholder="45678912" /></div>
+          <div><label>Nombres</label><input id="cNombres" placeholder="Juan Carlos" /></div>
+          <div><label>Apellidos</label><input id="cApellidos" placeholder="Quispe Mamani" /></div>
+        </div>
+        <div class="fila" style="margin-top:12px"><button id="btnCrearChofer">Guardar chofer</button></div>
       </div>
-      <div class="fila" style="margin-top:12px"><button id="btnCrearChofer">Guardar chofer</button></div>
       <div class="tabla-scroll" style="margin-top:16px">
         <table>
-          <thead><tr><th>DNI</th><th>Nombre</th><th>Estado</th><th></th></tr></thead>
+          <thead><tr><th>DNI</th><th>Nombre</th><th>Estado</th><th>Documentos</th></tr></thead>
           <tbody id="tbChoferes"></tbody>
         </table>
       </div>
@@ -232,14 +160,11 @@
         <div><label>Chofer</label><select id="tChofer"></select></div>
         <div><label>Origen</label><input id="tOrigen" placeholder="Lima" /></div>
         <div><label>Destino</label><input id="tDestino" placeholder="Arequipa" /></div>
-        <div>
-          <label>Motivo</label>
-          <select id="tMotivo">
-            <option value="VENTA">Venta</option>
-            <option value="TRASLADO_ENTRE_ESTABLECIMIENTOS">Traslado entre establecimientos</option>
-            <option value="OTROS">Otros</option>
-          </select>
-        </div>
+        <div><label>Motivo</label><select id="tMotivo">
+          <option value="VENTA">Venta</option>
+          <option value="TRASLADO_ENTRE_ESTABLECIMIENTOS">Traslado entre establecimientos</option>
+          <option value="OTROS">Otros</option>
+        </select></div>
         <div><label>Mercancía</label><input id="tMercancia" placeholder="Repuestos industriales" /></div>
         <div><label>Peso bruto (kg)</label><input id="tPeso" type="number" placeholder="8200" /></div>
       </div>
@@ -249,14 +174,43 @@
       </div>
       <div class="tabla-scroll" style="margin-top:16px">
         <table>
-          <thead><tr>
-            <th>Código</th><th>Ruta</th><th>Unidad</th><th>Chofer</th>
-            <th>Peso</th><th>GRE</th><th>Estado oper.</th><th>Acciones</th>
-          </tr></thead>
+          <thead><tr><th>Código</th><th>Ruta</th><th>Unidad</th><th>Chofer</th><th>Peso</th><th>GRE</th><th>Estado oper.</th><th>Acciones</th></tr></thead>
           <tbody id="tbTickets"></tbody>
         </table>
       </div>
       <div class="vacio" id="vacioTickets" hidden>Todavía no hay tickets.</div>
+    </section>
+
+    <!-- VENCIMIENTOS -->
+    <section class="panel" data-vista="vencimientos" hidden>
+      <h2>Documentos por vencer <span class="sub">— SOAT, revisión técnica, licencias, certificados médicos</span></h2>
+      <div class="fila">
+        <div><label>Próximos… días</label><input id="vDias" type="number" value="30" style="width:110px" /></div>
+        <button class="sec" id="btnVencimientos">Actualizar</button>
+      </div>
+      <div class="tabla-scroll" style="margin-top:16px">
+        <table>
+          <thead><tr><th>Tipo</th><th>Referencia</th><th>Documento</th><th>Vence</th><th>Faltan</th></tr></thead>
+          <tbody id="tbVencimientos"></tbody>
+        </table>
+      </div>
+      <div class="vacio" id="vacioVencimientos" hidden>Nada por vencer en ese rango. 👍</div>
+    </section>
+
+    <!-- USUARIOS (admin) -->
+    <section class="panel solo-admin" data-vista="usuarios" hidden>
+      <h2>Crear usuario <span class="sub">— entra a tu misma empresa</span></h2>
+      <div class="grid">
+        <div><label>Usuario</label><input id="nuUser" /></div>
+        <div><label>Contraseña (mín. 8)</label><input id="nuPass" type="password" /></div>
+        <div><label>Nombre completo</label><input id="nuNombre" /></div>
+        <div><label>Rol</label><select id="nuRol"><option value="operador">operador</option><option value="admin_empresa">admin_empresa</option></select></div>
+      </div>
+      <div class="fila" style="margin-top:12px"><button id="btnCrearUsuario">Crear usuario</button></div>
+      <p class="muted" style="margin-top:12px">
+        <strong>operador</strong>: crea y mueve tickets.<br>
+        <strong>admin_empresa</strong>: además registra unidades, choferes, documentos y usuarios.
+      </p>
     </section>
   </div>
 </main>
@@ -265,26 +219,27 @@
 "use strict";
 
 const CONFIG_VEHICULAR = ["C2","C2R2","C2R3","C3","C3R2","C3R3","C4","T2S1","T2S2","T2S3","T3S1","T3S2","T3S3"];
+const TIPOS_DOC_UNIDAD = ["SOAT","REVISION_TECNICA","TARJETA_CIRCULACION","PERMISO_OPERACION","OTRO"];
+const TIPOS_DOC_CHOFER = ["LICENCIA_CONDUCIR","CERTIFICADO_MEDICO","OTRO"];
+const CATEGORIAS_LICENCIA = ["A-I","A-IIa","A-IIb","A-IIIa","A-IIIb","A-IIIc"];
 
 const estado = {
   api: localStorage.getItem("transguia.api") || "http://localhost:3001",
   sesion: JSON.parse(localStorage.getItem("transguia.sesion") || "null"),
-  unidades: [],
-  choferes: []
+  unidades: [], choferes: []
 };
 
-const $ = (sel) => document.querySelector(sel);
 const el = (id) => document.getElementById(id);
+const esAdmin = () => estado.sesion && estado.sesion.rol === "admin_empresa";
+const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
+const escapar = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
 
-// ---------- utilidades ----------
-function guardarSesion(s) {
-  estado.sesion = s;
-  localStorage.setItem("transguia.sesion", JSON.stringify(s));
-}
-function cerrarSesion() {
+function guardarSesion(s) { estado.sesion = s; localStorage.setItem("transguia.sesion", JSON.stringify(s)); }
+function cerrarSesion(msg) {
   estado.sesion = null;
   localStorage.removeItem("transguia.sesion");
   render();
+  if (msg) aviso(msg);
 }
 function aviso(mensaje, tipo = "err") {
   const z = el("zonaAviso");
@@ -294,300 +249,323 @@ function aviso(mensaje, tipo = "err") {
   d.className = "aviso" + (tipo === "ok" ? " ok" : "");
   d.textContent = mensaje;
   z.appendChild(d);
-  if (tipo === "ok") setTimeout(() => { if (z.contains(d)) d.remove(); }, 4000);
+  if (tipo === "ok") setTimeout(() => d.remove(), 4000);
 }
+
 async function api(ruta, opciones = {}) {
-  const resp = await fetch(estado.api + ruta, {
-    ...opciones,
-    headers: { "Content-Type": "application/json", ...(opciones.headers || {}) }
-  });
+  const headers = { "Content-Type": "application/json", ...(opciones.headers || {}) };
+  if (estado.sesion && estado.sesion.token) headers.Authorization = "Bearer " + estado.sesion.token;
+  const resp = await fetch(estado.api + ruta, { ...opciones, headers });
+  if (resp.status === 401 && estado.sesion) { cerrarSesion("Tu sesión expiró. Ingresa de nuevo."); throw new Error("sesión expirada"); }
   let cuerpo = null;
-  try { cuerpo = await resp.json(); } catch (_) { /* sin cuerpo */ }
-  if (!resp.ok) {
-    throw new Error((cuerpo && cuerpo.error) || `Error ${resp.status} en ${ruta}`);
-  }
+  try { cuerpo = await resp.json(); } catch (_) {}
+  if (!resp.ok) throw new Error((cuerpo && cuerpo.error) || `Error ${resp.status} en ${ruta}`);
   return cuerpo;
 }
-const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 
-function pillGre(estadoSunat) {
-  const map = {
-    ACEPTADO: "ok", ENVIANDO: "warn", RECHAZADO: "err", OBSERVADO: "warn"
-  };
-  return `<span class="pill ${map[estadoSunat] || "gris"}">${estadoSunat || "—"}</span>`;
+function pillGre(e) {
+  const m = { ACEPTADO: "ok", ENVIANDO: "warn", RECHAZADO: "err", OBSERVADO: "warn" };
+  return `<span class="pill ${m[e] || "gris"}">${e || "—"}</span>`;
 }
 function pillOperativo(e) {
-  const map = { GENERADO: "info", EN_TRANSITO: "warn", ENTREGADO: "ok", ANULADO: "gris" };
-  return `<span class="pill ${map[e] || "gris"}">${(e || "").replace("_", " ")}</span>`;
+  const m = { GENERADO: "info", EN_TRANSITO: "warn", ENTREGADO: "ok", ANULADO: "gris" };
+  return `<span class="pill ${m[e] || "gris"}">${(e || "").replace("_", " ")}</span>`;
+}
+function pillDias(d) {
+  const n = Number(d);
+  const clase = n < 0 ? "err" : n <= 15 ? "warn" : "gris";
+  const txt = n < 0 ? `vencido hace ${Math.abs(n)} d` : `${n} d`;
+  return `<span class="pill ${clase}">${txt}</span>`;
 }
 
-// ---------- render principal ----------
+// ---------- render ----------
 function render() {
   el("apiUrl").value = estado.api;
-  const logueado = !!(estado.sesion && estado.sesion.empresaId);
-  el("panelLogin").hidden = logueado;
-  el("app").hidden = !logueado;
-  el("btnSalir").hidden = !logueado;
-  el("quien").textContent = logueado
-    ? `${estado.sesion.nombreCompleto || estado.sesion.username} · empresa ${estado.sesion.empresaId.slice(0, 8)}…`
+  const dentro = !!(estado.sesion && estado.sesion.token);
+  el("panelLogin").hidden = dentro;
+  el("app").hidden = !dentro;
+  el("btnSalir").hidden = !dentro;
+  el("quien").textContent = dentro
+    ? `${estado.sesion.nombreCompleto || estado.sesion.username} · ${estado.sesion.rol} · empresa ${String(estado.sesion.empresaId).slice(0, 8)}…`
     : "";
-  if (logueado) recargarTodo();
+  document.querySelectorAll(".solo-admin").forEach((n) => n.classList.toggle("oculto", !esAdmin()));
+  if (dentro) recargarTodo();
 }
-
 function mostrarVista(nombre) {
   document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("activa", b.dataset.tab === nombre));
   document.querySelectorAll("[data-vista]").forEach((v) => { v.hidden = v.dataset.vista !== nombre; });
+  if (nombre === "vencimientos") cargarVencimientos();
 }
 
-// ---------- carga de datos ----------
 async function recargarTodo() {
-  await Promise.all([cargarUnidades(), cargarChoferes()]);
-  await cargarTickets();
+  try {
+    await Promise.all([cargarUnidades(), cargarChoferes()]);
+    await cargarTickets();
+  } catch (_) {}
 }
 
+// ---------- unidades ----------
 async function cargarUnidades() {
-  try {
-    estado.unidades = await api(`/api/unidades?empresaId=${estado.sesion.empresaId}`);
-  } catch (e) { aviso(e.message); return; }
-  const tb = el("tbUnidades");
-  tb.innerHTML = "";
+  estado.unidades = await api("/api/unidades");
+  const tb = el("tbUnidades"); tb.innerHTML = "";
   el("vacioUnidades").hidden = estado.unidades.length > 0;
   for (const u of estado.unidades) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td><strong>${u.placa}</strong></td>
-      <td>${u.marca} ${u.modelo}${u.anioFabricacion ? " · " + u.anioFabricacion : ""}</td>
+      <td><strong>${escapar(u.placa)}</strong></td>
+      <td>${escapar(u.marca)} ${escapar(u.modelo)}${u.anioFabricacion ? " · " + u.anioFabricacion : ""}</td>
       <td>${u.categoriaMtc}</td>
       <td>${u.configuracionVehicular}</td>
-      <td>${u.activo ? '<span class="pill ok">activa</span>' : '<span class="pill gris">inactiva</span>'}</td>
-      <td>${u.activo ? `<button class="tenue chico" data-desactivar-unidad="${u.id}">Desactivar</button>` : ""}</td>`;
+      <td>${u.activo ? '<span class="pill ok">activa</span>' : '<span class="pill gris">inactiva</span>'}
+          ${u.activo && esAdmin() ? `<button class="tenue chico" data-desactivar="unidades:${u.id}">Desactivar</button>` : ""}</td>
+      <td><button class="sec chico" data-docs="unidad:${u.id}">Ver / agregar</button></td>`;
     tb.appendChild(tr);
+    const trDoc = document.createElement("tr");
+    trDoc.hidden = true; trDoc.dataset.docsRow = "unidad:" + u.id;
+    trDoc.innerHTML = `<td colspan="6"><div class="sub-panel" id="docs-unidad-${u.id}">…</div></td>`;
+    tb.appendChild(trDoc);
   }
-  // selects de tickets
   const sel = el("tUnidad");
   sel.innerHTML = estado.unidades.filter((u) => u.activo)
-    .map((u) => `<option value="${u.id}">${u.placa} — ${u.marca} ${u.modelo} (${u.configuracionVehicular})</option>`).join("")
+    .map((u) => `<option value="${u.id}">${escapar(u.placa)} — ${escapar(u.marca)} ${escapar(u.modelo)} (${u.configuracionVehicular})</option>`).join("")
     || `<option value="">(registra una unidad primero)</option>`;
 }
 
+// ---------- choferes ----------
 async function cargarChoferes() {
-  try {
-    estado.choferes = await api(`/api/choferes?empresaId=${estado.sesion.empresaId}`);
-  } catch (e) { aviso(e.message); return; }
-  const tb = el("tbChoferes");
-  tb.innerHTML = "";
+  estado.choferes = await api("/api/choferes");
+  const tb = el("tbChoferes"); tb.innerHTML = "";
   el("vacioChoferes").hidden = estado.choferes.length > 0;
   for (const c of estado.choferes) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${c.dni}</td>
-      <td>${c.apellidos}, ${c.nombres}</td>
-      <td>${c.activo ? '<span class="pill ok">activo</span>' : '<span class="pill gris">inactivo</span>'}</td>
-      <td>${c.activo ? `<button class="tenue chico" data-desactivar-chofer="${c.id}">Desactivar</button>` : ""}</td>`;
+      <td>${escapar(c.dni)}</td>
+      <td>${escapar(c.apellidos)}, ${escapar(c.nombres)}</td>
+      <td>${c.activo ? '<span class="pill ok">activo</span>' : '<span class="pill gris">inactivo</span>'}
+          ${c.activo && esAdmin() ? `<button class="tenue chico" data-desactivar="choferes:${c.id}">Desactivar</button>` : ""}</td>
+      <td><button class="sec chico" data-docs="chofer:${c.id}">Ver / agregar</button></td>`;
     tb.appendChild(tr);
+    const trDoc = document.createElement("tr");
+    trDoc.hidden = true; trDoc.dataset.docsRow = "chofer:" + c.id;
+    trDoc.innerHTML = `<td colspan="4"><div class="sub-panel" id="docs-chofer-${c.id}">…</div></td>`;
+    tb.appendChild(trDoc);
   }
   const sel = el("tChofer");
   sel.innerHTML = estado.choferes.filter((c) => c.activo)
-    .map((c) => `<option value="${c.id}">${c.apellidos}, ${c.nombres} — ${c.dni}</option>`).join("")
+    .map((c) => `<option value="${c.id}">${escapar(c.apellidos)}, ${escapar(c.nombres)} — ${escapar(c.dni)}</option>`).join("")
     || `<option value="">(registra un chofer primero)</option>`;
 }
 
-async function cargarTickets() {
-  let tickets;
+// ---------- documentos ----------
+async function toggleDocs(clave) {
+  const fila = document.querySelector(`[data-docs-row="${clave}"]`);
+  if (!fila) return;
+  fila.hidden = !fila.hidden;
+  if (!fila.hidden) await pintarDocs(clave);
+}
+async function pintarDocs(clave) {
+  const [tipo, id] = clave.split(":");
+  const cont = el(`docs-${tipo}-${id}`);
+  const ruta = tipo === "unidad" ? `/api/unidades/${id}/documentos` : `/api/choferes/${id}/documentos`;
+  let docs = [];
+  try { docs = await api(ruta); } catch (e) { cont.textContent = e.message; return; }
+  const tipos = tipo === "unidad" ? TIPOS_DOC_UNIDAD : TIPOS_DOC_CHOFER;
+  const filas = docs.length
+    ? docs.map((d) => `<tr>
+        <td>${d.tipoDocumento.replace(/_/g, " ")}${d.categoriaLicencia ? " (" + d.categoriaLicencia + ")" : ""}</td>
+        <td>${escapar(d.numeroDocumento || "—")}</td>
+        <td>vence ${d.fechaVencimiento}</td>
+        <td>${esAdmin() ? `<button class="tenue chico" data-doc-del="${tipo}:${id}:${d.id}">Borrar</button>` : ""}</td>
+      </tr>`).join("")
+    : `<tr><td colspan="4" class="muted">Sin documentos cargados.</td></tr>`;
+  cont.innerHTML = `
+    <table><tbody>${filas}</tbody></table>
+    ${esAdmin() ? `
+    <div class="fila" style="margin-top:10px">
+      <div><label>Tipo</label><select id="nd-tipo-${tipo}-${id}">${tipos.map((t) => `<option>${t}</option>`).join("")}</select></div>
+      <div id="nd-cat-wrap-${tipo}-${id}" ${tipo === "chofer" ? "" : "hidden"}>
+        <label>Categoría licencia</label>
+        <select id="nd-cat-${tipo}-${id}"><option value="">—</option>${CATEGORIAS_LICENCIA.map((c) => `<option>${c}</option>`).join("")}</select>
+      </div>
+      <div><label>N° documento</label><input id="nd-num-${tipo}-${id}" style="width:150px" /></div>
+      <div><label>Vence (AAAA-MM-DD)</label><input id="nd-ven-${tipo}-${id}" placeholder="2026-12-31" style="width:150px" /></div>
+      <button class="chico" data-doc-add="${tipo}:${id}">Agregar</button>
+    </div>` : ""}`;
+}
+async function agregarDoc(clave) {
+  const [tipo, id] = clave.split(":");
+  const cuerpo = {
+    tipoDocumento: el(`nd-tipo-${tipo}-${id}`).value,
+    numeroDocumento: el(`nd-num-${tipo}-${id}`).value.trim() || null,
+    fechaVencimiento: el(`nd-ven-${tipo}-${id}`).value.trim()
+  };
+  if (tipo === "chofer") {
+    const cat = el(`nd-cat-${tipo}-${id}`);
+    if (cat && cat.value) cuerpo.categoriaLicencia = cat.value;
+  }
+  const ruta = tipo === "unidad" ? `/api/unidades/${id}/documentos` : `/api/choferes/${id}/documentos`;
   try {
-    tickets = await api(`/api/tickets?empresaId=${estado.sesion.empresaId}`);
-  } catch (e) { aviso(e.message); return; }
-  const tb = el("tbTickets");
-  tb.innerHTML = "";
+    await api(ruta, { method: "POST", body: JSON.stringify(cuerpo) });
+    aviso("Documento agregado.", "ok");
+    await pintarDocs(`${tipo}:${id}`);
+  } catch (e) { aviso(e.message); }
+}
+async function borrarDoc(tipo, id, docId) {
+  const ruta = tipo === "unidad" ? `/api/unidades/${id}/documentos/${docId}` : `/api/choferes/${id}/documentos/${docId}`;
+  try { await api(ruta, { method: "DELETE" }); await pintarDocs(`${tipo}:${id}`); }
+  catch (e) { aviso(e.message); }
+}
+
+// ---------- tickets ----------
+async function cargarTickets() {
+  const tickets = await api("/api/tickets");
+  const tb = el("tbTickets"); tb.innerHTML = "";
   el("vacioTickets").hidden = tickets.length > 0;
   for (const t of tickets) {
+    const puede = t.estadoSunat === "ACEPTADO" && t.estadoOperativo !== "ANULADO";
+    const acc = [];
+    if (puede && t.estadoOperativo === "GENERADO") acc.push(`<button class="chico" data-avanzar="${t.id}:EN_TRANSITO">Despachar</button>`);
+    if (puede && t.estadoOperativo === "EN_TRANSITO") acc.push(`<button class="chico" data-avanzar="${t.id}:ENTREGADO">Entregado</button>`);
+    if (t.estadoOperativo !== "ANULADO" && t.estadoOperativo !== "ENTREGADO") acc.push(`<button class="tenue chico" data-avanzar="${t.id}:ANULADO">Anular</button>`);
     const tr = document.createElement("tr");
-    const puedeAvanzar = t.estadoSunat === "ACEPTADO" && t.estadoOperativo !== "ANULADO";
-    const acciones = [];
-    if (puedeAvanzar && t.estadoOperativo === "GENERADO")
-      acciones.push(`<button class="chico" data-avanzar="${t.id}" data-a="EN_TRANSITO">Despachar</button>`);
-    if (puedeAvanzar && t.estadoOperativo === "EN_TRANSITO")
-      acciones.push(`<button class="chico" data-avanzar="${t.id}" data-a="ENTREGADO">Marcar entregado</button>`);
-    if (t.estadoOperativo !== "ANULADO" && t.estadoOperativo !== "ENTREGADO")
-      acciones.push(`<button class="tenue chico" data-avanzar="${t.id}" data-a="ANULADO">Anular</button>`);
     tr.innerHTML = `
       <td><strong>${t.codigoInterno}</strong></td>
-      <td>${t.origen} → ${t.destino}</td>
-      <td>${t.placa}</td>
-      <td>${t.choferNombres}</td>
+      <td>${escapar(t.origen)} → ${escapar(t.destino)}</td>
+      <td>${escapar(t.placa)}</td>
+      <td>${escapar(t.choferNombres)}</td>
       <td>${Number(t.pesoBrutoKg).toLocaleString("es-PE")} kg</td>
-      <td>${pillGre(t.estadoSunat)}${t.serieCorrelativoGre ? `<div class="muted">${t.serieCorrelativoGre}</div>` : ""}${t.motivoRechazo ? `<div class="muted">${t.motivoRechazo}</div>` : ""}</td>
+      <td>${pillGre(t.estadoSunat)}${t.serieCorrelativoGre ? `<div class="muted">${t.serieCorrelativoGre}</div>` : ""}${t.motivoRechazo ? `<div class="muted">${escapar(t.motivoRechazo)}</div>` : ""}</td>
       <td>${pillOperativo(t.estadoOperativo)}</td>
-      <td>${acciones.join(" ") || "—"}</td>`;
+      <td>${acc.join(" ") || "—"}</td>`;
     tb.appendChild(tr);
   }
 }
-
-// ---------- acciones ----------
-async function login() {
-  aviso("");
-  try {
-    const u = await api("/api/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ username: el("loginUser").value.trim(), password: el("loginPass").value })
-    });
-    guardarSesion(u);
-    render();
-  } catch (e) { aviso(e.message); }
-}
-
-async function registrar() {
-  aviso("");
-  try {
-    await api("/api/auth/registro", {
-      method: "POST",
-      body: JSON.stringify({
-        empresaId: el("regEmpresa").value.trim(),
-        username: el("regUser").value.trim(),
-        password: el("regPass").value,
-        nombreCompleto: el("regNombre").value.trim(),
-        rol: el("regRol").value
-      })
-    });
-    aviso("Usuario creado. Ya puedes ingresar.", "ok");
-    el("bloqueRegistro").hidden = true;
-  } catch (e) { aviso(e.message); }
-}
-
-async function crearUnidad() {
-  aviso("");
-  try {
-    await api("/api/unidades", {
-      method: "POST",
-      body: JSON.stringify({
-        empresaId: estado.sesion.empresaId,
-        placa: el("uPlaca").value.trim(),
-        marca: el("uMarca").value.trim(),
-        modelo: el("uModelo").value.trim(),
-        anioFabricacion: el("uAnio").value ? Number(el("uAnio").value) : null,
-        categoriaMtc: el("uCategoria").value,
-        configuracionVehicular: el("uConfig").value
-      })
-    });
-    ["uPlaca","uMarca","uModelo","uAnio"].forEach((id) => { el(id).value = ""; });
-    aviso("Unidad registrada.", "ok");
-    await cargarUnidades();
-  } catch (e) { aviso(e.message); }
-}
-
-async function crearChofer() {
-  aviso("");
-  try {
-    await api("/api/choferes", {
-      method: "POST",
-      body: JSON.stringify({
-        empresaId: estado.sesion.empresaId,
-        dni: el("cDni").value.trim(),
-        nombres: el("cNombres").value.trim(),
-        apellidos: el("cApellidos").value.trim()
-      })
-    });
-    ["cDni","cNombres","cApellidos"].forEach((id) => { el(id).value = ""; });
-    aviso("Chofer registrado.", "ok");
-    await cargarChoferes();
-  } catch (e) { aviso(e.message); }
-}
-
 async function crearTicket() {
-  aviso("");
-  const btn = el("btnCrearTicket");
-  const info = el("tEstadoEmision");
-  btn.disabled = true;
-  info.textContent = "Generando ticket…";
+  const btn = el("btnCrearTicket"), info = el("tEstadoEmision");
+  btn.disabled = true; info.textContent = "Generando…";
   try {
-    const ticket = await api("/api/tickets", {
-      method: "POST",
-      body: JSON.stringify({
-        empresaId: estado.sesion.empresaId,
-        unidadId: el("tUnidad").value,
-        choferId: el("tChofer").value,
-        origen: el("tOrigen").value.trim(),
-        destino: el("tDestino").value.trim(),
-        motivo: el("tMotivo").value,
-        descripcionMercancia: el("tMercancia").value.trim(),
-        pesoBrutoKg: Number(el("tPeso").value)
-      })
-    });
+    const t = await api("/api/tickets", { method: "POST", body: JSON.stringify({
+      unidadId: el("tUnidad").value, choferId: el("tChofer").value,
+      origen: el("tOrigen").value.trim(), destino: el("tDestino").value.trim(),
+      motivo: el("tMotivo").value, descripcionMercancia: el("tMercancia").value.trim(),
+      pesoBrutoKg: Number(el("tPeso").value)
+    }) });
     ["tOrigen","tDestino","tMercancia","tPeso"].forEach((id) => { el(id).value = ""; });
-    // La emisión de la GRE es asíncrona: consultamos el ticket hasta que
-    // deje de estar "ENVIANDO" (máximo ~8 s).
-    info.textContent = `Ticket ${ticket.codigoInterno} creado. Emitiendo GRE…`;
+    info.textContent = `Ticket ${t.codigoInterno} creado. Emitiendo GRE…`;
     await cargarTickets();
     for (let i = 0; i < 16; i++) {
       await esperar(500);
-      const t = await api(`/api/tickets/${ticket.id}`);
-      if (t.estadoSunat !== "ENVIANDO") {
-        info.textContent = t.estadoSunat === "ACEPTADO"
-          ? `GRE aceptada: ${t.serieCorrelativoGre}`
-          : `GRE ${t.estadoSunat}: ${t.motivoRechazo || ""}`;
+      const x = await api(`/api/tickets/${t.id}`);
+      if (x.estadoSunat !== "ENVIANDO") {
+        info.textContent = x.estadoSunat === "ACEPTADO" ? `GRE aceptada: ${x.serieCorrelativoGre}` : `GRE ${x.estadoSunat}: ${x.motivoRechazo || ""}`;
         break;
       }
     }
     await cargarTickets();
-  } catch (e) {
-    aviso(e.message);
-    info.textContent = "";
-  } finally {
-    btn.disabled = false;
+  } catch (e) { aviso(e.message); info.textContent = ""; }
+  finally { btn.disabled = false; }
+}
+async function avanzar(id, nuevo) {
+  try { await api(`/api/tickets/${id}/avanzar`, { method: "POST", body: JSON.stringify({ estadoOperativo: nuevo }) }); await cargarTickets(); }
+  catch (e) { aviso(e.message); }
+}
+
+// ---------- vencimientos ----------
+async function cargarVencimientos() {
+  const dias = Number(el("vDias").value) || 30;
+  let filas = [];
+  try { filas = await api(`/api/vencimientos?dias=${dias}`); } catch (e) { aviso(e.message); return; }
+  const tb = el("tbVencimientos"); tb.innerHTML = "";
+  el("vacioVencimientos").hidden = filas.length > 0;
+  for (const f of filas) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${f.tipo}</td><td>${escapar(f.referencia)}</td><td>${String(f.documento).replace(/_/g, " ")}</td>
+      <td>${String(f.fechaVencimiento).slice(0, 10)}</td><td>${pillDias(f.diasRestantes)}</td>`;
+    tb.appendChild(tr);
   }
 }
 
-async function avanzar(id, nuevoEstado) {
+// ---------- altas simples ----------
+async function crearUnidad() {
+  try {
+    await api("/api/unidades", { method: "POST", body: JSON.stringify({
+      placa: el("uPlaca").value.trim(), marca: el("uMarca").value.trim(), modelo: el("uModelo").value.trim(),
+      anioFabricacion: el("uAnio").value ? Number(el("uAnio").value) : null,
+      categoriaMtc: el("uCategoria").value, configuracionVehicular: el("uConfig").value
+    }) });
+    ["uPlaca","uMarca","uModelo","uAnio"].forEach((id) => { el(id).value = ""; });
+    aviso("Unidad registrada.", "ok"); await cargarUnidades();
+  } catch (e) { aviso(e.message); }
+}
+async function crearChofer() {
+  try {
+    await api("/api/choferes", { method: "POST", body: JSON.stringify({
+      dni: el("cDni").value.trim(), nombres: el("cNombres").value.trim(), apellidos: el("cApellidos").value.trim()
+    }) });
+    ["cDni","cNombres","cApellidos"].forEach((id) => { el(id).value = ""; });
+    aviso("Chofer registrado.", "ok"); await cargarChoferes();
+  } catch (e) { aviso(e.message); }
+}
+async function crearUsuario() {
+  try {
+    await api("/api/auth/registro", { method: "POST", body: JSON.stringify({
+      username: el("nuUser").value.trim(), password: el("nuPass").value,
+      nombreCompleto: el("nuNombre").value.trim(), rol: el("nuRol").value
+    }) });
+    ["nuUser","nuPass","nuNombre"].forEach((id) => { el(id).value = ""; });
+    aviso("Usuario creado.", "ok");
+  } catch (e) { aviso(e.message); }
+}
+async function login() {
   aviso("");
   try {
-    await api(`/api/tickets/${id}/avanzar`, {
-      method: "POST",
-      body: JSON.stringify({ estadoOperativo: nuevoEstado })
-    });
-    await cargarTickets();
+    const u = await api("/api/auth/login", { method: "POST", body: JSON.stringify({
+      username: el("loginUser").value.trim(), password: el("loginPass").value
+    }) });
+    guardarSesion(u); render();
   } catch (e) { aviso(e.message); }
 }
 
-async function desactivar(tipo, id) {
-  aviso("");
-  try {
-    await api(`/api/${tipo}/${id}/desactivar`, { method: "POST" });
-    if (tipo === "unidades") await cargarUnidades(); else await cargarChoferes();
-  } catch (e) { aviso(e.message); }
-}
-
-// ---------- enganche de eventos ----------
+// ---------- eventos ----------
 el("uConfig").innerHTML = CONFIG_VEHICULAR.map((c) => `<option>${c}</option>`).join("");
-
 el("apiUrl").addEventListener("change", (e) => {
   estado.api = e.target.value.trim().replace(/\/$/, "");
-  localStorage.setItem("transguia.api", estado.api);
-  render();
+  localStorage.setItem("transguia.api", estado.api); render();
 });
-el("btnSalir").addEventListener("click", cerrarSesion);
+el("btnSalir").addEventListener("click", () => cerrarSesion());
 el("btnLogin").addEventListener("click", login);
 el("loginPass").addEventListener("keydown", (e) => { if (e.key === "Enter") login(); });
-el("btnMostrarRegistro").addEventListener("click", () => {
-  el("bloqueRegistro").hidden = !el("bloqueRegistro").hidden;
-});
-el("btnRegistro").addEventListener("click", registrar);
 el("btnCrearUnidad").addEventListener("click", crearUnidad);
 el("btnCrearChofer").addEventListener("click", crearChofer);
 el("btnCrearTicket").addEventListener("click", crearTicket);
+el("btnCrearUsuario").addEventListener("click", crearUsuario);
+el("btnVencimientos").addEventListener("click", cargarVencimientos);
+document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => mostrarVista(b.dataset.tab)));
 
-document.querySelectorAll(".tabs button").forEach((b) => {
-  b.addEventListener("click", () => mostrarVista(b.dataset.tab));
+document.body.addEventListener("change", (e) => {
+  const t = e.target;
+  if (t.id && t.id.startsWith("nd-tipo-")) {
+    const resto = t.id.slice("nd-tipo-".length); // "chofer-<id>" o "unidad-<id>"
+    const wrap = el("nd-cat-wrap-" + resto);
+    if (wrap) wrap.hidden = !(resto.startsWith("chofer-") && t.value === "LICENCIA_CONDUCIR");
+  }
 });
-
 document.body.addEventListener("click", (e) => {
   const t = e.target;
+  if (t.dataset.docs) toggleDocs(t.dataset.docs);
+  if (t.dataset.docAdd) agregarDoc(t.dataset.docAdd);
+  if (t.dataset.docDel) { const [tp, id, docId] = t.dataset.docDel.split(":"); borrarDoc(tp, id, docId); }
   if (t.dataset.avanzar) {
-    const q = t.dataset.a === "ANULADO" ? "¿Anular este ticket? No se puede deshacer." : null;
-    if (q && !confirm(q)) return;
-    avanzar(t.dataset.avanzar, t.dataset.a);
+    const [id, nuevo] = t.dataset.avanzar.split(":");
+    if (nuevo === "ANULADO" && !confirm("¿Anular este ticket? No se puede deshacer.")) return;
+    avanzar(id, nuevo);
   }
-  if (t.dataset.desactivarUnidad) desactivar("unidades", t.dataset.desactivarUnidad);
-  if (t.dataset.desactivarChofer) desactivar("choferes", t.dataset.desactivarChofer);
+  if (t.dataset.desactivar) {
+    const [rec, id] = t.dataset.desactivar.split(":");
+    api(`/api/${rec}/${id}/desactivar`, { method: "POST" })
+      .then(() => rec === "unidades" ? cargarUnidades() : cargarChoferes())
+      .catch((err) => aviso(err.message));
+  }
 });
 
 render();
