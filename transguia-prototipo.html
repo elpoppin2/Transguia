@@ -748,28 +748,38 @@ function chartHorizontal(cont, datos, fmt) {
       <div class="bar-row-val">${fmt ? fmt(d.valor) : d.valor}</div>
     </div>`).join("");
 }
-// Gráfico de línea: evolución de una serie temporal ya continua (sin huecos).
+// Gráfico de línea de evolución temporal. Cada dato lleva `t` (posición en el
+// eje de tiempo, p. ej. epoch del día). Solo se dibujan los períodos que tienen
+// datos: la línea "une" directamente esos puntos y salta los días en cero,
+// pero la separación horizontal respeta el calendario.
 function chartLinea(cont, datos) {
   cont.className = "chart-l";
   if (!datos.length) { cont.className = ""; cont.innerHTML = `<p class="muted">Sin datos.</p>`; return; }
   const n = datos.length;
   const max = Math.max(...datos.map((d) => d.valor), 1);
   const techo = max <= 4 ? max : Math.ceil(max * 1.1);
-  const xp = (i) => (n === 1 ? 50 : (i / (n - 1)) * 100);
+  const tMin = datos[0].t;
+  const span = (datos[n - 1].t - tMin) || 1;
+  const xp = (d) => (n === 1 ? 50 : ((d.t - tMin) / span) * 100);
   const yp = (v) => (1 - v / techo) * 100;
-  const linea = datos.map((d, i) => `${i ? "L" : "M"}${xp(i).toFixed(2)},${yp(d.valor).toFixed(2)}`).join(" ");
-  const area = `${linea} L${xp(n - 1).toFixed(2)},100 L${xp(0).toFixed(2)},100 Z`;
+  const pts = datos.map((d) => [xp(d), yp(d.valor)]);
+  const linea = pts.map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(2)},${p[1].toFixed(2)}`).join(" ");
+  const area = `${linea} L${pts[n - 1][0].toFixed(2)},100 L${pts[0][0].toFixed(2)},100 Z`;
   const guias = [0, techo / 2, techo]
     .map((v) => `<line x1="0" y1="${yp(v).toFixed(2)}" x2="100" y2="${yp(v).toFixed(2)}" class="chl-guia"/>`)
     .join("");
-  const ult = datos[n - 1];
+  const dots = (n <= 45 ? pts : [pts[0], pts[n - 1]])
+    .map((p) => `<span class="chl-punto" style="left:${p[0].toFixed(2)}%;top:${p[1].toFixed(2)}%"></span>`)
+    .join("");
   const paso = Math.max(1, Math.round(n / 7));
   let xlab = "";
-  for (let i = 0; i < n; i += paso) xlab += `<span style="left:${xp(i).toFixed(2)}%">${escapar(datos[i].label)}</span>`;
-  if (n > 1 && (n - 1) % paso !== 0) xlab += `<span style="left:100%">${escapar(ult.label)}</span>`;
-  const hits = datos
-    .map((d, i) => `<div title="${escapar(d.titulo)}" style="left:${(i / n * 100).toFixed(3)}%;width:${(100 / n).toFixed(3)}%"></div>`)
-    .join("");
+  for (let i = 0; i < n; i += paso) xlab += `<span style="left:${pts[i][0].toFixed(2)}%">${escapar(datos[i].label)}</span>`;
+  if (n > 1 && (n - 1) % paso !== 0) xlab += `<span style="left:100%">${escapar(datos[n - 1].label)}</span>`;
+  const hits = datos.map((d, i) => {
+    const x0 = i === 0 ? 0 : (pts[i - 1][0] + pts[i][0]) / 2;
+    const x1 = i === n - 1 ? 100 : (pts[i][0] + pts[i + 1][0]) / 2;
+    return `<div title="${escapar(d.titulo)}" style="left:${x0.toFixed(2)}%;width:${(x1 - x0).toFixed(2)}%"></div>`;
+  }).join("");
   cont.innerHTML = `
     <div class="chl-plot">
       <svg viewBox="0 0 100 100" preserveAspectRatio="none">
@@ -777,37 +787,11 @@ function chartLinea(cont, datos) {
         <path d="${area}" class="chl-area"/>
         <path d="${linea}" class="chl-linea"/>
       </svg>
-      <span class="chl-punto" style="left:${xp(n - 1).toFixed(2)}%;top:${yp(ult.valor).toFixed(2)}%"></span>
+      ${dots}
       <div class="chl-ymax">${max}</div>
       <div class="chl-hits">${hits}</div>
     </div>
     <div class="chl-xlab">${xlab}</div>`;
-}
-
-// Rellena los días/meses sin traslados con cero, entre el primer y el último
-// período con datos, para que la línea muestre el evolutivo real de calendario.
-function serieContinua(rows, agrupar) {
-  if (!rows.length) return [];
-  const val = new Map(rows.map((r) => [r.periodo, r.cantidad]));
-  const out = [];
-  if (agrupar === "mes") {
-    let [y, m] = rows[0].periodo.split("-").map(Number);
-    const [ey, em] = rows[rows.length - 1].periodo.split("-").map(Number);
-    for (let g = 0; g < 240 && (y < ey || (y === ey && m <= em)); g++) {
-      const key = `${y}-${String(m).padStart(2, "0")}`;
-      out.push({ periodo: key, cantidad: val.get(key) || 0 });
-      if (++m > 12) { m = 1; y++; }
-    }
-  } else {
-    const parse = (s) => { const [y, m, d] = s.split("-").map(Number); return Date.UTC(y, m - 1, d); };
-    let t = parse(rows[0].periodo);
-    const fin = parse(rows[rows.length - 1].periodo);
-    for (let g = 0; g < 400 && t <= fin; g++, t += 86400000) {
-      const key = new Date(t).toISOString().slice(0, 10);
-      out.push({ periodo: key, cantidad: val.get(key) || 0 });
-    }
-  }
-  return out;
 }
 
 const MESES_ABREV = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
@@ -822,19 +806,21 @@ async function cargarDashboard() {
   catch (e) { aviso(e.message); el("dashAlcance").textContent = ""; return; }
   el("dashAlcance").textContent = `— ${d.alcance}`;
 
-  const serieTraslados = serieContinua(d.trasladosPorPeriodo, agr);
-  chartLinea(el("chTraslados"), serieTraslados.map((r) => {
+  chartLinea(el("chTraslados"), d.trasladosPorPeriodo.map((r) => {
     const plural = r.cantidad === 1 ? "traslado" : "traslados";
+    const [y, m, dd] = r.periodo.split("-").map(Number);
     if (agr === "mes") {
       return {
-        label: MESES_ABREV[+r.periodo.slice(5, 7) - 1],
-        titulo: `${r.periodo.slice(5, 7)}/${r.periodo.slice(0, 4)}: ${r.cantidad} ${plural}`,
+        t: y * 12 + (m - 1),
+        label: MESES_ABREV[m - 1],
+        titulo: `${r.periodo.slice(5, 7)}/${y}: ${r.cantidad} ${plural}`,
         valor: r.cantidad
       };
     }
     return {
-      label: `${+r.periodo.slice(8)}/${+r.periodo.slice(5, 7)}`,
-      titulo: `${r.periodo.slice(8)}/${r.periodo.slice(5, 7)}/${r.periodo.slice(0, 4)}: ${r.cantidad} ${plural}`,
+      t: Date.UTC(y, m - 1, dd),
+      label: `${dd}/${m}`,
+      titulo: `${r.periodo.slice(8)}/${r.periodo.slice(5, 7)}/${y}: ${r.cantidad} ${plural}`,
       valor: r.cantidad
     };
   }));
