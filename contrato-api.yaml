@@ -46,6 +46,7 @@ tags:
   - name: Sistema
   - name: Autenticación
   - name: Plataforma
+  - name: Dashboard
   - name: Unidades
   - name: Choferes
   - name: Documentos
@@ -157,6 +158,32 @@ paths:
           content:
             application/json: { schema: { $ref: "#/components/schemas/EmpresaCreada" } }
         "400": { $ref: "#/components/responses/ErrorValidacion" }
+        "403": { $ref: "#/components/responses/SinPermiso" }
+
+  /api/dashboard:
+    get:
+      tags: [Dashboard]
+      summary: Métricas para el dashboard *(admin_empresa o superadmin)*
+      description: >
+        `admin_empresa`: su empresa (del token). `superadmin`:
+        `?empresaId=<uuid>` para una empresa, o sin él / `todas` para la
+        vista acumulada de toda la plataforma.
+      parameters:
+        - name: agrupar
+          in: query
+          required: false
+          schema: { type: string, enum: [dia, mes], default: dia }
+          description: Agrupación del gráfico de traslados por período.
+        - name: empresaId
+          in: query
+          required: false
+          schema: { type: string }
+          description: "Solo superadmin: uuid de una empresa, o 'todas'. Ignorado para otros roles."
+      responses:
+        "200":
+          description: Datos del dashboard
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/Dashboard" } }
         "403": { $ref: "#/components/responses/SinPermiso" }
 
   /api/unidades:
@@ -548,6 +575,48 @@ components:
             razonSocial: { type: string }
             creadoEn: { type: string, format: date-time }
         admin: { $ref: "#/components/schemas/UsuarioPublico" }
+
+    Dashboard:
+      type: object
+      properties:
+        alcance: { type: string, example: "Todas las empresas" }
+        agrupacion: { type: string, enum: [dia, mes] }
+        trasladosPorPeriodo:
+          type: array
+          items:
+            type: object
+            properties:
+              periodo: { type: string, example: "2026-09-08" }
+              cantidad: { type: integer }
+        porEstadoOperativo:
+          type: object
+          properties:
+            GENERADO: { type: integer }
+            EN_TRANSITO: { type: integer }
+            ENTREGADO: { type: integer }
+            ANULADO: { type: integer }
+        toneladasPorMaterial:
+          type: array
+          items:
+            type: object
+            properties:
+              material: { type: string, example: "Repuestos industriales" }
+              toneladas: { type: number, example: 24.6 }
+              traslados: { type: integer }
+        tiempoFinalizacion:
+          type: object
+          properties:
+            promedioHoras: { type: [number, "null"] }
+            minHoras: { type: [number, "null"] }
+            maxHoras: { type: [number, "null"] }
+            muestras: { type: integer }
+            recientes:
+              type: array
+              items:
+                type: object
+                properties:
+                  codigo: { type: string, example: "TCK-000010" }
+                  horas: { type: number, example: 14.2 }
 
     NuevaUnidad:
       type: object

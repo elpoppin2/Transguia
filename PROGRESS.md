@@ -34,6 +34,9 @@ grandes o instalar cosas nuevas.
   `empresaDeLaPeticion(req)` (del token, o de `?empresaId=` si es superadmin).
 - `src/empresas/` — vistas de plataforma para el superadmin (listar
   empresas con resumen, crear empresa + primer admin, totales globales).
+- `src/dashboard/` — métricas agregadas para la pestaña Dashboard
+  (traslados por día/mes, tickets por estado, toneladas por material,
+  tiempo de finalización). `GET /api/dashboard`.
 - `src/db/migraciones.js` — ajustes de esquema idempotentes que corren al
   arrancar (secuencia del ticket, rol `superadmin`, `empresa_id` nullable).
 - 3 roles: `operador`, `admin_empresa`, `superadmin` (este último ve
@@ -173,6 +176,20 @@ o certificado digital; punto 9: piloto con transportistas reales).
    prepara en la 1ª petición; el pool `pg` usa `max: 1` y hace falta la
    cadena **Transaction pooler** (6543) de Supabase. Con `demo` es
    instantáneo. Pasos en `DESPLIEGUE.md`.
+6h. [x] **Dashboard con gráficos** (2026-09-10, decisión del usuario).
+   Nuevo `src/dashboard/` (service + repo Postgres) y `GET /api/dashboard`
+   (`admin_empresa` y `superadmin`; `operador` 403). 4 métricas:
+   (1) unidades trasladadas por día, con opción de agrupar por mes;
+   (2) tickets por estado (en tránsito / finalizados / …);
+   (3) toneladas por material (`descripcion_mercancia`);
+   (4) tiempo de finalización (`fecha_entrega − fecha_traslado`):
+   promedio/mín/máx + barra por ticket. Pestaña "Dashboard" en el
+   prototipo con gráficos de barras hechos en CSS (sin librería). El
+   superadmin tiene un **segmentador de empresa** (Todas / cada una) que
+   también gobierna las demás pestañas; cada admin ve solo su empresa.
+   `sembrar-datos.js` ahora crea 8 tickets repartidos en el tiempo y en
+   varios estados para que el dashboard demuestre algo.
+
 6g. [x] **Superadmin / dashboard multi-empresa** (2026-09-09, decisión del
    usuario). Rol nuevo `superadmin` (enum + `usuarios.empresa_id` ahora
    nullable, migraciones idempotentes en `src/db/migraciones.js`). No

@@ -18,6 +18,8 @@ const { AuthService } = require('./auth/authService');
 const { UsuariosRepositorioPostgres } = require('./auth/usuariosRepoPostgres');
 const { EmpresasService } = require('./empresas/empresasService');
 const { EmpresasRepositorioPostgres } = require('./empresas/empresasRepoPostgres');
+const { DashboardService } = require('./dashboard/dashboardService');
+const { DashboardRepositorioPostgres } = require('./dashboard/dashboardRepoPostgres');
 const { UnidadesService } = require('./unidades/unidadesService');
 const { UnidadesRepositorioPostgres } = require('./unidades/unidadesRepoPostgres');
 const { ChoferesService } = require('./choferes/choferesService');
@@ -43,10 +45,12 @@ const choferesRepo = new ChoferesRepositorioPostgres();
 const documentosRepo = new DocumentosRepositorioPostgres();
 const ticketsRepo = new TicketsRepositorioPostgres();
 
+const empresasRepo = new EmpresasRepositorioPostgres();
 const authService = new AuthService(usuariosRepo);
-const empresasService = new EmpresasService({
-  repositorioEmpresas: new EmpresasRepositorioPostgres(),
-  authService
+const empresasService = new EmpresasService({ repositorioEmpresas: empresasRepo, authService });
+const dashboardService = new DashboardService({
+  repositorioDashboard: new DashboardRepositorioPostgres(),
+  repositorioEmpresas: empresasRepo
 });
 const unidadesService = new UnidadesService(unidadesRepo);
 const choferesService = new ChoferesService(choferesRepo);
@@ -142,6 +146,22 @@ app.get('/api/empresas', requiereSesion, requiereRol('superadmin'), h(async (req
 app.post('/api/empresas', requiereSesion, requiereRol('superadmin'), h(async (req, res) => {
   const { ruc, razonSocial, admin } = req.body || {};
   res.status(201).json(await empresasService.crearConAdmin({ ruc, razonSocial, admin }));
+}));
+
+// ==================== DASHBOARD ====================
+// admin_empresa: su empresa (del token).
+// superadmin: ?empresaId=<uuid> para una empresa, o sin él / "todas" para
+// la vista acumulada de toda la plataforma.
+
+app.get('/api/dashboard', requiereSesion, requiereRol('admin_empresa', 'superadmin'), h(async (req, res) => {
+  let empresaId;
+  if (req.sesion.rol === 'superadmin') {
+    const q = req.query.empresaId;
+    empresaId = (!q || q === 'todas') ? null : String(q);
+  } else {
+    empresaId = req.sesion.empresaId;
+  }
+  res.json(await dashboardService.generar({ empresaId, agrupar: req.query.agrupar }));
 }));
 
 // ==================== UNIDADES ====================

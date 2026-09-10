@@ -258,6 +258,12 @@ El contrato formal está en `contrato-api.yaml` (OpenAPI 3.1, pegable en
 > normales (`GET /api/unidades`, `/api/tickets`, `/api/vencimientos`…)
 > agregando `?empresaId=<uuid>`.
 
+### Dashboard (`admin_empresa` y `superadmin`)
+
+| Método y ruta | Para qué sirve |
+|---|---|
+| `GET /api/dashboard?agrupar=dia\|mes` | Datos para los 4 gráficos de barras: traslados por día/mes, tickets por estado, toneladas por material, y tiempo de finalización (promedio + por ticket). Para `admin_empresa` es su empresa; para `superadmin`, `?empresaId=<uuid>` una empresa o `todas` (acumulado). El `operador` no tiene acceso (403). |
+
 > La contraseña se guarda como *hash* scrypt. El token va firmado con
 > HMAC-SHA256 (secreto `SESSION_SECRET`, ver `.env`) y no lleva nada
 > sensible. Es *stateless*: no hay tabla de sesiones, así que funciona

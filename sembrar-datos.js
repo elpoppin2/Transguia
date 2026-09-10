@@ -61,9 +61,18 @@ const CHOFERES = [
   { dni: '46512388', nombres: 'Miguel Ángel',  apellidos: 'Flores Ccahua' }
 ];
 
+// `diasAtras` / `estado` / `horas*` son para que el dashboard tenga
+// datos repartidos en el tiempo y en varios estados. En un uso real
+// esto lo hace el operador desde la interfaz.
 const TICKETS = [
-  { placa: 'ABC-756', dni: '45678912', origen: 'Lima', destino: 'Arequipa', motivo: 'VENTA', descripcionMercancia: 'Repuestos industriales', pesoBrutoKg: 8200 },
-  { placa: 'CDF-903', dni: '47001122', origen: 'Lima', destino: 'Trujillo', motivo: 'TRASLADO_ENTRE_ESTABLECIMIENTOS', descripcionMercancia: 'Materiales de construcción', pesoBrutoKg: 15000 }
+  { placa: 'ABC-756', dni: '45678912', origen: 'Lima', destino: 'Arequipa', motivo: 'VENTA', descripcionMercancia: 'Repuestos industriales', pesoBrutoKg: 8200, diasAtras: 24, estado: 'ENTREGADO', horasTransito: 3, horasEntrega: 19 },
+  { placa: 'CDF-903', dni: '47001122', origen: 'Lima', destino: 'Trujillo', motivo: 'TRASLADO_ENTRE_ESTABLECIMIENTOS', descripcionMercancia: 'Materiales de construcción', pesoBrutoKg: 15000, diasAtras: 21, estado: 'ENTREGADO', horasTransito: 2, horasEntrega: 11 },
+  { placa: 'D2W-118', dni: '43980017', origen: 'Arequipa', destino: 'Cusco', motivo: 'VENTA', descripcionMercancia: 'Alimentos envasados', pesoBrutoKg: 6400, diasAtras: 18, estado: 'ENTREGADO', horasTransito: 4, horasEntrega: 26 },
+  { placa: 'F7K-402', dni: '46512388', origen: 'Lima', destino: 'Ica', motivo: 'VENTA', descripcionMercancia: 'Repuestos industriales', pesoBrutoKg: 3100, diasAtras: 14, estado: 'ENTREGADO', horasTransito: 2, horasEntrega: 9 },
+  { placa: 'ABC-756', dni: '45678912', origen: 'Lima', destino: 'Chiclayo', motivo: 'TRASLADO_ENTRE_ESTABLECIMIENTOS', descripcionMercancia: 'Materiales de construcción', pesoBrutoKg: 12800, diasAtras: 10, estado: 'ENTREGADO', horasTransito: 3, horasEntrega: 22 },
+  { placa: 'CDF-903', dni: '47001122', origen: 'Lima', destino: 'Huancayo', motivo: 'VENTA', descripcionMercancia: 'Bebidas', pesoBrutoKg: 9700, diasAtras: 6, estado: 'EN_TRANSITO', horasTransito: 3 },
+  { placa: 'D2W-118', dni: '43980017', origen: 'Lima', destino: 'Piura', motivo: 'VENTA', descripcionMercancia: 'Alimentos envasados', pesoBrutoKg: 5200, diasAtras: 3, estado: 'EN_TRANSITO', horasTransito: 5 },
+  { placa: 'F7K-402', dni: '46512388', origen: 'Lima', destino: 'Arequipa', motivo: 'VENTA', descripcionMercancia: 'Repuestos industriales', pesoBrutoKg: 4300, diasAtras: 1, estado: 'GENERADO' }
 ];
 
 const dias = (n) => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10);
@@ -173,8 +182,10 @@ function esperarEmision(ticketService, datos) {
   if (cuenta[0].n > 0) {
     console.log(`la empresa ya tiene ${cuenta[0].n} ticket(s); no se crean más`);
   } else {
+    // Emisor "demo" sin rechazos para que la siembra sea predecible.
+    const { EmisorGREDemo } = require('./src/gre/EmisorGREDemo');
     const ticketService = new TicketService({
-      emisorGRE: crearEmisorGRE(),
+      emisorGRE: new EmisorGREDemo({ serie: 'T001', correlativoInicial: 160, probabilidadRechazo: 0, demoraMs: 20 }),
       repositorioTickets: ticketsRepo,
       repositorioUnidades: unidadesRepo,
       repositorioChoferes: choferesRepo,
@@ -189,7 +200,16 @@ function esperarEmision(ticketService, datos) {
         origen: t.origen, destino: t.destino, motivo: t.motivo,
         descripcionMercancia: t.descripcionMercancia, pesoBrutoKg: t.pesoBrutoKg
       });
-      console.log(`ticket creado: ${creado.codigoInterno}  ${creado.origen}→${creado.destino}  GRE ${creado.estadoSunat} ${creado.serieCorrelativoGre || ''}`);
+
+      // Backdatea y fija el estado directamente (es data de demo; en uso
+      // real esto lo hace el operador con "avanzar").
+      const creadoEn = `now() - interval '${t.diasAtras} days'`;
+      const sets = [`creado_en = ${creadoEn}`, `estado_operativo = '${t.estado}'`];
+      if (t.horasTransito != null) sets.push(`fecha_traslado = ${creadoEn} + interval '${t.horasTransito} hours'`);
+      if (t.estado === 'ENTREGADO') sets.push(`fecha_entrega = ${creadoEn} + interval '${(t.horasTransito || 0) + t.horasEntrega} hours'`);
+      await pool.query(`update tickets_traslado set ${sets.join(', ')} where id = $1`, [creado.id]);
+
+      console.log(`ticket: ${creado.codigoInterno}  ${creado.origen}→${creado.destino}  ${t.estado}  (hace ${t.diasAtras} d)`);
     }
   }
 
@@ -202,26 +222,33 @@ function esperarEmision(ticketService, datos) {
   }
 
   // --- Segunda empresa (para que el dashboard tenga otra opción) ---
-  const empresasSvc = new EmpresasService({
-    repositorioEmpresas: new EmpresasRepositorioPostgres(),
-    authService: auth
-  });
-  let empresa2 = await new EmpresasRepositorioPostgres().buscarPorRuc(EMPRESA_2.ruc);
+  const empresasRepo = new EmpresasRepositorioPostgres();
+  const empresasSvc = new EmpresasService({ repositorioEmpresas: empresasRepo, authService: auth });
+  let empresa2 = await empresasRepo.buscarPorRuc(EMPRESA_2.ruc);
   if (!empresa2) {
     const creada = await empresasSvc.crearConAdmin({
       ruc: EMPRESA_2.ruc, razonSocial: EMPRESA_2.razonSocial, admin: EMPRESA_2.admin
     });
     empresa2 = creada.empresa;
     console.log('empresa 2 creada:', empresa2.razonSocial, '/ admin', EMPRESA_2.admin.username);
-    for (const u of EMPRESA_2.unidades) {
-      await unidades.registrarUnidad({ empresaId: empresa2.id, ...u });
-    }
-    for (const c of EMPRESA_2.choferes) {
-      await choferes.registrarChofer({ empresaId: empresa2.id, ...c });
-    }
-    console.log(`  + ${EMPRESA_2.unidades.length} unidades, ${EMPRESA_2.choferes.length} choferes`);
   } else {
     console.log('empresa 2 ya existía:', EMPRESA_2.razonSocial);
+    if (!(await usuariosRepo.buscarPorUsername(EMPRESA_2.admin.username))) {
+      await auth.registrarUsuario({ empresaId: empresa2.id, ...EMPRESA_2.admin, rol: 'admin_empresa' });
+      console.log('  admin', EMPRESA_2.admin.username, 'recreado');
+    }
+  }
+  for (const u of EMPRESA_2.unidades) {
+    if (!(await unidadesRepo.buscarPorPlaca(u.placa))) {
+      await unidades.registrarUnidad({ empresaId: empresa2.id, ...u });
+      console.log('  unidad empresa 2:', u.placa);
+    }
+  }
+  for (const c of EMPRESA_2.choferes) {
+    if (!(await choferesRepo.buscarPorDni(empresa2.id, c.dni))) {
+      await choferes.registrarChofer({ empresaId: empresa2.id, ...c });
+      console.log('  chofer empresa 2:', c.dni);
+    }
   }
 
   console.log('\nListo. Ingresá en http://localhost:3001');

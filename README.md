@@ -10,6 +10,7 @@ proveedor después sin tocar el resto del sistema.
 src/
   auth/        registro/login, hash de contraseña, token de sesión (HMAC), middleware de rol
   empresas/    vistas de plataforma para el superadmin (listar/crear empresas, totales)
+  dashboard/   métricas agregadas para la pestaña Dashboard (gráficos)
   unidades/    alta/listado/baja de vehículos + validaciones del MTC
   choferes/    alta/listado/baja de choferes
   documentos/  papeles con vencimiento (SOAT, licencias...) + vista de vencimientos
@@ -56,6 +57,7 @@ cualquiera con `?empresaId=<uuid>` (solo lectura).
 
 - **Auth:** `POST /api/auth/login`, `POST /api/auth/registro` *(admin)*
 - **Plataforma *(superadmin)*:** `GET /api/resumen`, `GET/POST /api/empresas`
+- **Dashboard *(admin / superadmin)*:** `GET /api/dashboard?agrupar=dia|mes`
 - **Unidades:** `GET/POST /api/unidades`, `POST /api/unidades/:id/desactivar`,
   `GET/POST/DELETE /api/unidades/:id/documentos[/:docId]`
 - **Choferes:** `GET/POST /api/choferes`, `POST /api/choferes/:id/desactivar`,
