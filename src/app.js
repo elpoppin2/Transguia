@@ -12,10 +12,12 @@ const express = require('express');
 
 const { crearEmisorGRE } = require('./gre/crearEmisorGRE');
 const { crearToken, DURACION_MS } = require('./auth/sesion');
-const { requiereSesion, requiereRol } = require('./auth/middleware');
+const { requiereSesion, requiereRol, empresaDeLaPeticion } = require('./auth/middleware');
 
 const { AuthService } = require('./auth/authService');
 const { UsuariosRepositorioPostgres } = require('./auth/usuariosRepoPostgres');
+const { EmpresasService } = require('./empresas/empresasService');
+const { EmpresasRepositorioPostgres } = require('./empresas/empresasRepoPostgres');
 const { UnidadesService } = require('./unidades/unidadesService');
 const { UnidadesRepositorioPostgres } = require('./unidades/unidadesRepoPostgres');
 const { ChoferesService } = require('./choferes/choferesService');
@@ -42,6 +44,10 @@ const documentosRepo = new DocumentosRepositorioPostgres();
 const ticketsRepo = new TicketsRepositorioPostgres();
 
 const authService = new AuthService(usuariosRepo);
+const empresasService = new EmpresasService({
+  repositorioEmpresas: new EmpresasRepositorioPostgres(),
+  authService
+});
 const unidadesService = new UnidadesService(unidadesRepo);
 const choferesService = new ChoferesService(choferesRepo);
 const documentosService = new DocumentosService({
@@ -79,7 +85,7 @@ app.use((req, res, next) => {
 // Envuelve un handler async para no repetir try/catch en cada ruta.
 const h = (fn) => (req, res) => {
   Promise.resolve(fn(req, res)).catch((error) => {
-    if (!res.headersSent) res.status(400).json({ error: error.message });
+    if (!res.headersSent) res.status(error.status || 400).json({ error: error.message });
   });
 };
 
@@ -121,10 +127,27 @@ app.post('/api/auth/registro', requiereSesion, requiereRol('admin_empresa'), h(a
   res.status(201).json(usuario);
 }));
 
+// ==================== PLATAFORMA (solo superadmin) ====================
+// El superadmin ve todas las empresas. Para consultar los datos de UNA
+// empresa usa las rutas normales con ?empresaId=<uuid>.
+
+app.get('/api/resumen', requiereSesion, requiereRol('superadmin'), h(async (req, res) => {
+  res.json(await empresasService.resumen());
+}));
+
+app.get('/api/empresas', requiereSesion, requiereRol('superadmin'), h(async (req, res) => {
+  res.json(await empresasService.listar());
+}));
+
+app.post('/api/empresas', requiereSesion, requiereRol('superadmin'), h(async (req, res) => {
+  const { ruc, razonSocial, admin } = req.body || {};
+  res.status(201).json(await empresasService.crearConAdmin({ ruc, razonSocial, admin }));
+}));
+
 // ==================== UNIDADES ====================
 
 app.get('/api/unidades', requiereSesion, h(async (req, res) => {
-  res.json(await unidadesService.listarUnidades(req.sesion.empresaId));
+  res.json(await unidadesService.listarUnidades(empresaDeLaPeticion(req)));
 }));
 
 app.post('/api/unidades', requiereSesion, requiereRol('admin_empresa'), h(async (req, res) => {
@@ -137,7 +160,7 @@ app.post('/api/unidades/:id/desactivar', requiereSesion, requiereRol('admin_empr
 }));
 
 app.get('/api/unidades/:id/documentos', requiereSesion, h(async (req, res) => {
-  res.json(await documentosService.listarDeUnidad(req.sesion.empresaId, req.params.id));
+  res.json(await documentosService.listarDeUnidad(empresaDeLaPeticion(req), req.params.id));
 }));
 
 app.post('/api/unidades/:id/documentos', requiereSesion, requiereRol('admin_empresa'), h(async (req, res) => {
@@ -153,7 +176,7 @@ app.delete('/api/unidades/:id/documentos/:docId', requiereSesion, requiereRol('a
 // ==================== CHOFERES ====================
 
 app.get('/api/choferes', requiereSesion, h(async (req, res) => {
-  res.json(await choferesService.listarChoferes(req.sesion.empresaId));
+  res.json(await choferesService.listarChoferes(empresaDeLaPeticion(req)));
 }));
 
 app.post('/api/choferes', requiereSesion, requiereRol('admin_empresa'), h(async (req, res) => {
@@ -166,7 +189,7 @@ app.post('/api/choferes/:id/desactivar', requiereSesion, requiereRol('admin_empr
 }));
 
 app.get('/api/choferes/:id/documentos', requiereSesion, h(async (req, res) => {
-  res.json(await documentosService.listarDeChofer(req.sesion.empresaId, req.params.id));
+  res.json(await documentosService.listarDeChofer(empresaDeLaPeticion(req), req.params.id));
 }));
 
 app.post('/api/choferes/:id/documentos', requiereSesion, requiereRol('admin_empresa'), h(async (req, res) => {
@@ -182,12 +205,12 @@ app.delete('/api/choferes/:id/documentos/:docId', requiereSesion, requiereRol('a
 // ==================== VENCIMIENTOS ====================
 
 app.get('/api/vencimientos', requiereSesion, h(async (req, res) => {
-  res.json(await documentosService.vencimientosProximos(req.sesion.empresaId, req.query.dias));
+  res.json(await documentosService.vencimientosProximos(empresaDeLaPeticion(req), req.query.dias));
 }));
 
 // ==================== TICKETS ====================
 
-app.post('/api/tickets', requiereSesion, h(async (req, res) => {
+app.post('/api/tickets', requiereSesion, requiereRol('admin_empresa', 'operador'), h(async (req, res) => {
   const ticket = await ticketService.crearTicket({
     ...req.body,
     empresaId: req.sesion.empresaId,
@@ -197,18 +220,18 @@ app.post('/api/tickets', requiereSesion, h(async (req, res) => {
 }));
 
 app.get('/api/tickets', requiereSesion, h(async (req, res) => {
-  res.json(await ticketService.listarTickets(req.sesion.empresaId));
+  res.json(await ticketService.listarTickets(empresaDeLaPeticion(req)));
 }));
 
 app.get('/api/tickets/:id', requiereSesion, h(async (req, res) => {
   const ticket = await ticketService.obtenerTicket(req.params.id);
-  if (!ticket || ticket.empresaId !== req.sesion.empresaId) {
+  if (!ticket || ticket.empresaId !== empresaDeLaPeticion(req)) {
     return res.status(404).json({ error: 'Ticket no encontrado' });
   }
   res.json(ticket);
 }));
 
-app.post('/api/tickets/:id/avanzar', requiereSesion, h(async (req, res) => {
+app.post('/api/tickets/:id/avanzar', requiereSesion, requiereRol('admin_empresa', 'operador'), h(async (req, res) => {
   const actual = await ticketService.obtenerTicket(req.params.id);
   if (!actual || actual.empresaId !== req.sesion.empresaId) {
     return res.status(404).json({ error: 'Ticket no encontrado' });

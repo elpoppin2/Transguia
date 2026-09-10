@@ -11,9 +11,12 @@
 
 require('dotenv').config();
 const { pool } = require('./src/db/pool');
+const { prepararEsquema } = require('./src/db/migraciones');
 const { crearEmisorGRE } = require('./src/gre/crearEmisorGRE');
 const { AuthService } = require('./src/auth/authService');
 const { UsuariosRepositorioPostgres } = require('./src/auth/usuariosRepoPostgres');
+const { EmpresasService } = require('./src/empresas/empresasService');
+const { EmpresasRepositorioPostgres } = require('./src/empresas/empresasRepoPostgres');
 const { UnidadesService } = require('./src/unidades/unidadesService');
 const { UnidadesRepositorioPostgres } = require('./src/unidades/unidadesRepoPostgres');
 const { ChoferesService } = require('./src/choferes/choferesService');
@@ -25,6 +28,24 @@ const { TicketsRepositorioPostgres } = require('./src/tickets/ticketsRepoPostgre
 
 const EMPRESA = { ruc: '20548712369', razonSocial: 'Transportes Andina S.A.C.' };
 const USUARIO = { username: 'andina', password: 'demo2026seguro', nombreCompleto: 'María Andina', rol: 'admin_empresa' };
+
+// Usuario de plataforma: ve todas las empresas en el dashboard.
+const SUPERADMIN = { username: 'super', password: 'superdemo2026', nombreCompleto: 'Plataforma TransGuía' };
+
+// Segunda empresa (más chica) para que el dashboard tenga algo que elegir.
+const EMPRESA_2 = {
+  ruc: '20600123456',
+  razonSocial: 'Logística del Sur E.I.R.L.',
+  admin: { username: 'delsur', password: 'delsur2026seguro', nombreCompleto: 'Rosa Del Sur' },
+  unidades: [
+    { placa: 'B5T-221', marca: 'Iveco', modelo: 'Tector', anioFabricacion: 2020, categoriaMtc: 'N2', configuracionVehicular: 'C3' },
+    { placa: 'G8M-770', marca: 'Volkswagen', modelo: 'Delivery', anioFabricacion: 2021, categoriaMtc: 'N1', configuracionVehicular: 'C2' }
+  ],
+  choferes: [
+    { dni: '41222333', nombres: 'Elena', apellidos: 'Ticona Vilca' },
+    { dni: '42555666', nombres: 'Raúl', apellidos: 'Condori Apaza' }
+  ]
+};
 
 const UNIDADES = [
   { placa: 'ABC-756', marca: 'Volvo',      modelo: 'FH 460',   anioFabricacion: 2021, categoriaMtc: 'N3', configuracionVehicular: 'T3S3' },
@@ -68,6 +89,8 @@ function esperarEmision(ticketService, datos) {
 }
 
 (async () => {
+  await prepararEsquema(); // rol superadmin, secuencia, etc.
+
   // --- Empresa ---
   let { rows } = await pool.query('select id, razon_social from empresas where ruc = $1', [EMPRESA.ruc]);
   if (rows.length === 0) {
@@ -170,10 +193,41 @@ function esperarEmision(ticketService, datos) {
     }
   }
 
-  console.log('\nListo. Para el prototipo (transguia-prototipo.html):');
-  console.log(`  Usuario:    ${USUARIO.username}`);
-  console.log(`  Contraseña: ${USUARIO.password}`);
-  console.log(`  Empresa ID: ${empresaId}`);
+  // --- Superadmin (ve todas las empresas) ---
+  if (!(await usuariosRepo.buscarPorUsername(SUPERADMIN.username))) {
+    await auth.registrarUsuario({ ...SUPERADMIN, rol: 'superadmin' });
+    console.log('superadmin creado:', SUPERADMIN.username);
+  } else {
+    console.log('superadmin ya existía:', SUPERADMIN.username);
+  }
+
+  // --- Segunda empresa (para que el dashboard tenga otra opción) ---
+  const empresasSvc = new EmpresasService({
+    repositorioEmpresas: new EmpresasRepositorioPostgres(),
+    authService: auth
+  });
+  let empresa2 = await new EmpresasRepositorioPostgres().buscarPorRuc(EMPRESA_2.ruc);
+  if (!empresa2) {
+    const creada = await empresasSvc.crearConAdmin({
+      ruc: EMPRESA_2.ruc, razonSocial: EMPRESA_2.razonSocial, admin: EMPRESA_2.admin
+    });
+    empresa2 = creada.empresa;
+    console.log('empresa 2 creada:', empresa2.razonSocial, '/ admin', EMPRESA_2.admin.username);
+    for (const u of EMPRESA_2.unidades) {
+      await unidades.registrarUnidad({ empresaId: empresa2.id, ...u });
+    }
+    for (const c of EMPRESA_2.choferes) {
+      await choferes.registrarChofer({ empresaId: empresa2.id, ...c });
+    }
+    console.log(`  + ${EMPRESA_2.unidades.length} unidades, ${EMPRESA_2.choferes.length} choferes`);
+  } else {
+    console.log('empresa 2 ya existía:', EMPRESA_2.razonSocial);
+  }
+
+  console.log('\nListo. Ingresá en http://localhost:3001');
+  console.log(`  Empresa (admin):  ${USUARIO.username} / ${USUARIO.password}`);
+  console.log(`  Segunda empresa:  ${EMPRESA_2.admin.username} / ${EMPRESA_2.admin.password}`);
+  console.log(`  Superadmin:       ${SUPERADMIN.username} / ${SUPERADMIN.password}`);
 
   await pool.end();
 })().catch((error) => {

@@ -45,11 +45,11 @@ erDiagram
 
     usuarios {
         uuid id PK
-        uuid empresa_id FK
+        uuid empresa_id FK "nulo si rol = superadmin"
         text username UK
         text password_hash "scrypt, nunca texto plano"
         text nombre_completo
-        enum rol "admin_empresa | operador"
+        enum rol "admin_empresa | operador | superadmin"
         bool activo
         timestamptz creado_en
         timestamptz ultimo_acceso
@@ -178,8 +178,8 @@ En palabras simples:
 
 | Tabla | ¿La usa el backend hoy? |
 |---|---|
-| `empresas` | Sí (se consulta; se crea por SQL o `sembrar-datos.js`) |
-| `usuarios` | Sí — registro / login |
+| `empresas` | Sí — el superadmin las lista/crea (`/api/empresas`); un admin de empresa se crea con `crear-empresa.js` |
+| `usuarios` | Sí — registro / login. `empresa_id` nulo para el superadmin |
 | `configuraciones_vehiculares` | Sí — la referencian las unidades (13 códigos ya cargados; el peso máximo está en NULL a propósito) |
 | `unidades` | Sí — alta / listado / baja lógica |
 | `choferes` | Sí — alta / listado / baja lógica |
@@ -226,9 +226,17 @@ El contrato formal está en `contrato-api.yaml` (OpenAPI 3.1, pegable en
 - **Público:** solo `GET /api/health` y `POST /api/auth/login`.
 - Todo lo demás exige la cabecera **`Authorization: Bearer <token>`**. El
   token lo devuelve el login y dura **12 horas**.
-- El **`empresaId` sale del token**, nunca del cliente: no se manda en la
-  URL ni en el cuerpo. Un usuario jamás ve datos de otra empresa.
+- El **`empresaId` sale del token**, nunca del cliente. Un usuario jamás
+  ve datos de otra empresa.
 - Rutas marcadas **(admin)**: devuelven **403** si el rol es `operador`.
+
+### Los tres roles
+
+| Rol | Qué puede hacer |
+|---|---|
+| `operador` | Crear y mover tickets de su empresa. |
+| `admin_empresa` | Todo lo del operador + registrar unidades, choferes, documentos y usuarios de su empresa. |
+| `superadmin` | Rol de plataforma, **sin empresa propia** (`empresa_id` nulo). Ve **todas** las empresas (`GET /api/empresas`, `GET /api/resumen`) y consulta los datos de cualquiera pasando `?empresaId=<uuid>` en las rutas de lectura. **Solo lectura**: no puede crear/editar datos de empresa (403). |
 
 ### Sistema y autenticación
 
@@ -237,6 +245,18 @@ El contrato formal está en `contrato-api.yaml` (OpenAPI 3.1, pegable en
 | `GET /api/health` | Ping del servicio (para el hosting). Público. | — | `{ ok, servicio, gre }` |
 | `POST /api/auth/login` | Ingresar. Público. | `username`, `password` | `{ id, empresaId, username, nombreCompleto, rol, token, expiraEnMs }` |
 | `POST /api/auth/registro` **(admin)** | Crear un usuario en **mi misma empresa**. | `username`, `password` (mín. 8), `nombreCompleto`, `rol` opcional (por defecto `operador`) | El usuario creado (sin contraseña) |
+
+### Plataforma (solo `superadmin`)
+
+| Método y ruta | Para qué sirve | Salida |
+|---|---|---|
+| `GET /api/resumen` | Totales de toda la plataforma (empresas, unidades, choferes, tickets por estado, documentos vencidos). | `{ empresas, unidadesActivas, ... }` |
+| `GET /api/empresas` | Todas las empresas con su resumen (unidades, choferes, tickets, docs vencidos). | Arreglo de empresas |
+| `POST /api/empresas` | Crear una empresa **y su primer administrador** de una vez. | `{ empresa, admin }` |
+
+> Para ver el detalle de **una** empresa, el superadmin usa las rutas
+> normales (`GET /api/unidades`, `/api/tickets`, `/api/vencimientos`…)
+> agregando `?empresaId=<uuid>`.
 
 > La contraseña se guarda como *hash* scrypt. El token va firmado con
 > HMAC-SHA256 (secreto `SESSION_SECRET`, ver `.env`) y no lleva nada
@@ -321,9 +341,17 @@ node sembrar-datos.js   # empresa + usuario andina/demo2026seguro + unidades, ch
 npm run probar          # corre todos los scripts de prueba contra la base
 ```
 
-Luego abrir **http://localhost:3001** en el navegador (ingresar con
-`andina` / `demo2026seguro`). El backend sirve la interfaz; las llamadas
-son relativas al mismo servidor. Para crear otra empresa con su primer
-admin: `node crear-empresa.js <RUC> "<Razón>" <usuario> <clave> "<Nombre>"`.
+Luego abrir **http://localhost:3001** y entrar con alguno de los usuarios
+que crea `sembrar-datos.js`:
+
+| Usuario | Contraseña | Rol |
+|---|---|---|
+| `andina` | `demo2026seguro` | admin de "Transportes Andina" |
+| `delsur` | `delsur2026seguro` | admin de "Logística del Sur" |
+| `super` | `superdemo2026` | superadmin (ve las dos empresas) |
+
+- Otra empresa + su admin: `node crear-empresa.js <RUC> "<Razón>" <usuario> <clave> "<Nombre>"`
+  (o desde el panel del superadmin).
+- Otro superadmin: `node crear-superadmin.js <usuario> <clave> "<Nombre>"`.
 
 El despliegue a internet está documentado en `DESPLIEGUE.md`.

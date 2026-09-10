@@ -8,8 +8,10 @@ class AuthService {
     this.repo = repositorioUsuarios;
   }
 
-  async registrarUsuario({ empresaId, username, password, nombreCompleto, rol = 'operador' }) {
-    if (!empresaId || !username || !password || !nombreCompleto) {
+  async registrarUsuario({ empresaId = null, username, password, nombreCompleto, rol = 'operador' }) {
+    // El superadmin es de plataforma: no pertenece a ninguna empresa.
+    const esSuperadmin = rol === 'superadmin';
+    if (!username || !password || !nombreCompleto || (!empresaId && !esSuperadmin)) {
       throw new Error('empresaId, username, password y nombreCompleto son obligatorios');
     }
     if (password.length < 8) {
@@ -21,7 +23,10 @@ class AuthService {
     }
 
     const passwordHash = await hashPassword(password);
-    const usuario = await this.repo.crearUsuario({ empresaId, username, passwordHash, nombreCompleto, rol });
+    const usuario = await this.repo.crearUsuario({
+      empresaId: esSuperadmin ? null : empresaId,
+      username, passwordHash, nombreCompleto, rol
+    });
 
     // Nunca devolvemos passwordHash, ni siquiera al front-end propio.
     return { id: usuario.id, username: usuario.username, nombreCompleto: usuario.nombreCompleto, rol: usuario.rol };

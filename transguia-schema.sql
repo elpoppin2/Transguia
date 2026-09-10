@@ -211,7 +211,15 @@ join choferes c on c.id = d.chofer_id;
 -- where empresa_id = :empresa_id and fecha_vencimiento <= now() + interval '30 days'
 -- order by fecha_vencimiento;
 
--- ---------- Secuencia del código interno de ticket ----------
--- La crea también el backend al arrancar (create ... if not exists),
--- así que no es obligatorio correr esta línea a mano.
+-- ---------- Ajustes que el backend aplica solo al arrancar ----------
+-- (src/db/migraciones.js — todos idempotentes). No es obligatorio
+-- correrlos a mano; están acá para dejar el esquema documentado.
+
+-- Correlativo del código interno de ticket (TCK-000001).
 create sequence if not exists transguia_ticket_codigo_seq;
+
+-- Rol de plataforma: ve todas las empresas (dashboard a selección).
+alter type rol_usuario add value if not exists 'superadmin';
+
+-- El superadmin no pertenece a ninguna empresa.
+alter table usuarios alter column empresa_id drop not null;

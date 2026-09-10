@@ -31,4 +31,23 @@ function requiereRol(...rolesPermitidos) {
   };
 }
 
-module.exports = { requiereSesion, requiereRol };
+/**
+ * De qué empresa son los datos que pide esta petición:
+ *  - usuario normal (admin_empresa / operador): su propia empresa (del token).
+ *  - superadmin: la que indique en ?empresaId=<uuid> (obligatorio).
+ * Se usa en las rutas de LECTURA; las de escritura siguen atadas al token.
+ */
+function empresaDeLaPeticion(req) {
+  if (req.sesion.rol === 'superadmin') {
+    const id = req.query.empresaId || (req.body && req.body.empresaId);
+    if (!id) {
+      const e = new Error('Como superadmin, indica la empresa con ?empresaId=<uuid>');
+      e.status = 400;
+      throw e;
+    }
+    return String(id);
+  }
+  return req.sesion.empresaId;
+}
+
+module.exports = { requiereSesion, requiereRol, empresaDeLaPeticion };

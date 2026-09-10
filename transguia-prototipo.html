@@ -75,6 +75,13 @@
   code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; font-size: 12.5px; }
   .sub-panel { background: var(--panel-2); border-radius: 8px; padding: 12px; }
   .solo-admin.oculto { display: none; }
+  .stats { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+  .stat { background: var(--panel-2); border: 1px solid var(--borde); border-radius: 8px; padding: 12px 14px; }
+  .stat .n { font-size: 22px; font-weight: 600; }
+  .stat .t { font-size: 12px; color: var(--texto-suave); }
+  .stat.alerta .n { color: var(--err-tx); }
+  tr.clic { cursor: pointer; }
+  tr.clic:hover td { background: var(--panel-2); }
 </style>
 </head>
 <body>
@@ -98,8 +105,46 @@
     <div class="fila" style="margin-top:12px"><button id="btnLogin">Ingresar</button></div>
   </section>
 
+  <!-- ==================== PANEL DE PLATAFORMA (superadmin) ==================== -->
+  <div id="panelPlataforma" hidden>
+    <section class="panel">
+      <h2>Panel de plataforma <span class="sub">— todas las empresas</span></h2>
+      <div class="stats" id="statsGlobal"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Empresas <span class="sub">— elige una para ver su operación</span></h2>
+      <div class="tabla-scroll">
+        <table>
+          <thead><tr>
+            <th>Empresa</th><th>RUC</th><th>Unidades</th><th>Choferes</th>
+            <th>Tickets</th><th>En tránsito</th><th>Docs vencidos</th><th></th>
+          </tr></thead>
+          <tbody id="tbEmpresas"></tbody>
+        </table>
+      </div>
+      <div class="vacio" id="vacioEmpresas" hidden>Todavía no hay empresas. Crea una abajo.</div>
+    </section>
+
+    <section class="panel">
+      <h2>Nueva empresa <span class="sub">— se crea junto con su primer administrador</span></h2>
+      <div class="grid">
+        <div><label>RUC (11 dígitos)</label><input id="neRuc" placeholder="20512345678" /></div>
+        <div><label>Razón social</label><input id="neRazon" placeholder="Transportes El Sol S.A.C." /></div>
+        <div><label>Usuario admin</label><input id="neUser" /></div>
+        <div><label>Contraseña (mín. 8)</label><input id="nePass" type="password" /></div>
+        <div><label>Nombre del admin</label><input id="neNombre" /></div>
+      </div>
+      <div class="fila" style="margin-top:12px"><button id="btnCrearEmpresa">Crear empresa</button></div>
+    </section>
+  </div>
+
   <!-- ==================== APP ==================== -->
   <div id="app" hidden>
+    <div id="bannerEmpresa" class="aviso ok" hidden style="display:flex;align-items:center;gap:12px;justify-content:space-between">
+      <span id="bannerEmpresaTxt"></span>
+      <button class="tenue chico" id="btnVolverPanel">← Volver al panel</button>
+    </div>
     <div class="tabs">
       <button data-tab="unidades" class="activa">Unidades</button>
       <button data-tab="choferes">Choferes</button>
@@ -153,23 +198,25 @@
 
     <!-- TICKETS -->
     <section class="panel" data-vista="tickets" hidden>
-      <h2>Nuevo ticket de traslado <span class="sub">— elige una unidad y un chofer ya registrados</span></h2>
-      <div class="grid">
-        <div><label>Unidad</label><select id="tUnidad"></select></div>
-        <div><label>Chofer</label><select id="tChofer"></select></div>
-        <div><label>Origen</label><input id="tOrigen" placeholder="Lima" /></div>
-        <div><label>Destino</label><input id="tDestino" placeholder="Arequipa" /></div>
-        <div><label>Motivo</label><select id="tMotivo">
-          <option value="VENTA">Venta</option>
-          <option value="TRASLADO_ENTRE_ESTABLECIMIENTOS">Traslado entre establecimientos</option>
-          <option value="OTROS">Otros</option>
-        </select></div>
-        <div><label>Mercancía</label><input id="tMercancia" placeholder="Repuestos industriales" /></div>
-        <div><label>Peso bruto (kg)</label><input id="tPeso" type="number" placeholder="8200" /></div>
-      </div>
-      <div class="fila" style="margin-top:12px">
-        <button id="btnCrearTicket">Generar ticket y emitir GRE</button>
-        <span class="muted" id="tEstadoEmision"></span>
+      <div id="ticketForm">
+        <h2>Nuevo ticket de traslado <span class="sub">— elige una unidad y un chofer ya registrados</span></h2>
+        <div class="grid">
+          <div><label>Unidad</label><select id="tUnidad"></select></div>
+          <div><label>Chofer</label><select id="tChofer"></select></div>
+          <div><label>Origen</label><input id="tOrigen" placeholder="Lima" /></div>
+          <div><label>Destino</label><input id="tDestino" placeholder="Arequipa" /></div>
+          <div><label>Motivo</label><select id="tMotivo">
+            <option value="VENTA">Venta</option>
+            <option value="TRASLADO_ENTRE_ESTABLECIMIENTOS">Traslado entre establecimientos</option>
+            <option value="OTROS">Otros</option>
+          </select></div>
+          <div><label>Mercancía</label><input id="tMercancia" placeholder="Repuestos industriales" /></div>
+          <div><label>Peso bruto (kg)</label><input id="tPeso" type="number" placeholder="8200" /></div>
+        </div>
+        <div class="fila" style="margin-top:12px">
+          <button id="btnCrearTicket">Generar ticket y emitir GRE</button>
+          <span class="muted" id="tEstadoEmision"></span>
+        </div>
       </div>
       <div class="tabla-scroll" style="margin-top:16px">
         <table>
@@ -228,18 +275,24 @@ const estado = {
   // otro servidor con  localStorage.setItem("transguia.api", "http://localhost:3001")
   api: localStorage.getItem("transguia.api") || "",
   sesion: JSON.parse(localStorage.getItem("transguia.sesion") || "null"),
+  empresaSel: JSON.parse(localStorage.getItem("transguia.empresaSel") || "null"), // superadmin: empresa que está viendo
   unidades: [], choferes: []
 };
 
 const el = (id) => document.getElementById(id);
 const esAdmin = () => estado.sesion && estado.sesion.rol === "admin_empresa";
+const esSuper = () => estado.sesion && estado.sesion.rol === "superadmin";
+// El superadmin mirando una empresa es de solo lectura.
+const soloLectura = () => esSuper();
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 const escapar = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
 
 function guardarSesion(s) { estado.sesion = s; localStorage.setItem("transguia.sesion", JSON.stringify(s)); }
 function cerrarSesion(msg) {
   estado.sesion = null;
+  estado.empresaSel = null;
   localStorage.removeItem("transguia.sesion");
+  localStorage.removeItem("transguia.empresaSel");
   render();
   if (msg) aviso(msg);
 }
@@ -257,7 +310,15 @@ function aviso(mensaje, tipo = "err") {
 async function api(ruta, opciones = {}) {
   const headers = { "Content-Type": "application/json", ...(opciones.headers || {}) };
   if (estado.sesion && estado.sesion.token) headers.Authorization = "Bearer " + estado.sesion.token;
-  const resp = await fetch(estado.api + ruta, { ...opciones, headers });
+  let url = estado.api + ruta;
+  // El superadmin consulta los datos de una empresa concreta: se le
+  // agrega ?empresaId a las lecturas (no a /api/empresas ni /api/resumen).
+  const metodo = (opciones.method || "GET").toUpperCase();
+  if (metodo === "GET" && esSuper() && estado.empresaSel &&
+      ruta.startsWith("/api/") && !ruta.startsWith("/api/empresas") && !ruta.startsWith("/api/resumen")) {
+    url += (ruta.includes("?") ? "&" : "?") + "empresaId=" + encodeURIComponent(estado.empresaSel.id);
+  }
+  const resp = await fetch(url, { ...opciones, headers });
   if (resp.status === 401 && estado.sesion) { cerrarSesion("Tu sesión expiró. Ingresa de nuevo."); throw new Error("sesión expirada"); }
   let cuerpo = null;
   try { cuerpo = await resp.json(); } catch (_) {}
@@ -280,17 +341,40 @@ function pillDias(d) {
   return `<span class="pill ${clase}">${txt}</span>`;
 }
 
+function guardarEmpresaSel(e) {
+  estado.empresaSel = e;
+  if (e) localStorage.setItem("transguia.empresaSel", JSON.stringify(e));
+  else localStorage.removeItem("transguia.empresaSel");
+}
+
 // ---------- render ----------
 function render() {
   const dentro = !!(estado.sesion && estado.sesion.token);
+  const superViendo = esSuper() && !!estado.empresaSel;
+  const superEnPanel = esSuper() && !estado.empresaSel;
+
   el("panelLogin").hidden = dentro;
-  el("app").hidden = !dentro;
+  el("panelPlataforma").hidden = !superEnPanel;
+  el("app").hidden = !dentro || superEnPanel;
   el("btnSalir").hidden = !dentro;
+
   el("quien").textContent = dentro
-    ? `${estado.sesion.nombreCompleto || estado.sesion.username} · ${estado.sesion.rol} · empresa ${String(estado.sesion.empresaId).slice(0, 8)}…`
+    ? (esSuper()
+        ? `${estado.sesion.nombreCompleto} · superadmin`
+        : `${estado.sesion.nombreCompleto || estado.sesion.username} · ${estado.sesion.rol}`)
     : "";
+
+  // Banner "estás viendo la empresa X" (solo superadmin)
+  el("bannerEmpresa").hidden = !superViendo;
+  if (superViendo) el("bannerEmpresaTxt").textContent = `Viendo: ${estado.empresaSel.razonSocial} (solo lectura)`;
+
+  // Formulario de tickets: oculto para el superadmin (solo mira)
+  if (el("ticketForm")) el("ticketForm").hidden = soloLectura();
+
   document.querySelectorAll(".solo-admin").forEach((n) => n.classList.toggle("oculto", !esAdmin()));
-  if (dentro) recargarTodo();
+
+  if (superEnPanel) cargarPlataforma();
+  else if (dentro) recargarTodo();
 }
 function mostrarVista(nombre) {
   document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("activa", b.dataset.tab === nombre));
@@ -425,9 +509,11 @@ async function cargarTickets() {
   for (const t of tickets) {
     const puede = t.estadoSunat === "ACEPTADO" && t.estadoOperativo !== "ANULADO";
     const acc = [];
-    if (puede && t.estadoOperativo === "GENERADO") acc.push(`<button class="chico" data-avanzar="${t.id}:EN_TRANSITO">Despachar</button>`);
-    if (puede && t.estadoOperativo === "EN_TRANSITO") acc.push(`<button class="chico" data-avanzar="${t.id}:ENTREGADO">Entregado</button>`);
-    if (t.estadoOperativo !== "ANULADO" && t.estadoOperativo !== "ENTREGADO") acc.push(`<button class="tenue chico" data-avanzar="${t.id}:ANULADO">Anular</button>`);
+    if (!soloLectura()) {
+      if (puede && t.estadoOperativo === "GENERADO") acc.push(`<button class="chico" data-avanzar="${t.id}:EN_TRANSITO">Despachar</button>`);
+      if (puede && t.estadoOperativo === "EN_TRANSITO") acc.push(`<button class="chico" data-avanzar="${t.id}:ENTREGADO">Entregado</button>`);
+      if (t.estadoOperativo !== "ANULADO" && t.estadoOperativo !== "ENTREGADO") acc.push(`<button class="tenue chico" data-avanzar="${t.id}:ANULADO">Anular</button>`);
+    }
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td><strong>${t.codigoInterno}</strong></td>
@@ -523,7 +609,69 @@ async function login() {
     const u = await api("/api/auth/login", { method: "POST", body: JSON.stringify({
       username: el("loginUser").value.trim(), password: el("loginPass").value
     }) });
-    guardarSesion(u); render();
+    guardarSesion(u);
+    guardarEmpresaSel(null); // el superadmin arranca en el panel
+    render();
+  } catch (e) { aviso(e.message); }
+}
+
+// ---------- plataforma (superadmin) ----------
+function stat(n, t, alerta) {
+  return `<div class="stat${alerta && Number(n) > 0 ? " alerta" : ""}"><div class="n">${n}</div><div class="t">${t}</div></div>`;
+}
+async function cargarPlataforma() {
+  try {
+    const [resumen, empresas] = await Promise.all([api("/api/resumen"), api("/api/empresas")]);
+    el("statsGlobal").innerHTML =
+      stat(resumen.empresas, "Empresas") +
+      stat(resumen.unidadesActivas, "Unidades activas") +
+      stat(resumen.choferesActivos, "Choferes activos") +
+      stat(resumen.tickets, "Tickets") +
+      stat(resumen.ticketsEnTransito, "En tránsito") +
+      stat(resumen.documentosVencidos, "Docs vencidos", true);
+
+    const tb = el("tbEmpresas"); tb.innerHTML = "";
+    el("vacioEmpresas").hidden = empresas.length > 0;
+    for (const e of empresas) {
+      const tr = document.createElement("tr");
+      tr.className = "clic";
+      tr.dataset.verEmpresa = JSON.stringify({ id: e.id, razonSocial: e.razonSocial });
+      tr.innerHTML = `
+        <td><strong>${escapar(e.razonSocial)}</strong></td>
+        <td>${escapar(e.ruc)}</td>
+        <td>${e.unidadesActivas}</td>
+        <td>${e.choferesActivos}</td>
+        <td>${e.tickets}</td>
+        <td>${e.ticketsEnTransito}</td>
+        <td>${e.documentosVencidos > 0 ? `<span class="pill err">${e.documentosVencidos}</span>` : "0"}</td>
+        <td><button class="sec chico">Ver</button></td>`;
+      tb.appendChild(tr);
+    }
+  } catch (e) { aviso(e.message); }
+}
+function verEmpresa(empresa) {
+  guardarEmpresaSel(empresa);
+  mostrarVista("unidades");
+  render();
+}
+function volverAlPanel() {
+  guardarEmpresaSel(null);
+  render();
+}
+async function crearEmpresa() {
+  try {
+    const r = await api("/api/empresas", { method: "POST", body: JSON.stringify({
+      ruc: el("neRuc").value.trim(),
+      razonSocial: el("neRazon").value.trim(),
+      admin: {
+        username: el("neUser").value.trim(),
+        password: el("nePass").value,
+        nombreCompleto: el("neNombre").value.trim()
+      }
+    }) });
+    ["neRuc","neRazon","neUser","nePass","neNombre"].forEach((id) => { el(id).value = ""; });
+    aviso(`Empresa "${r.empresa.razonSocial}" creada con el admin "${r.admin.username}".`, "ok");
+    await cargarPlataforma();
   } catch (e) { aviso(e.message); }
 }
 
@@ -537,6 +685,8 @@ el("btnCrearChofer").addEventListener("click", crearChofer);
 el("btnCrearTicket").addEventListener("click", crearTicket);
 el("btnCrearUsuario").addEventListener("click", crearUsuario);
 el("btnVencimientos").addEventListener("click", cargarVencimientos);
+el("btnCrearEmpresa").addEventListener("click", crearEmpresa);
+el("btnVolverPanel").addEventListener("click", volverAlPanel);
 document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => mostrarVista(b.dataset.tab)));
 
 document.body.addEventListener("change", (e) => {
@@ -549,6 +699,8 @@ document.body.addEventListener("change", (e) => {
 });
 document.body.addEventListener("click", (e) => {
   const t = e.target;
+  const fila = t.closest && t.closest("[data-ver-empresa]");
+  if (fila) { verEmpresa(JSON.parse(fila.dataset.verEmpresa)); return; }
   if (t.dataset.docs) toggleDocs(t.dataset.docs);
   if (t.dataset.docAdd) agregarDoc(t.dataset.docAdd);
   if (t.dataset.docDel) { const [tp, id, docId] = t.dataset.docDel.split(":"); borrarDoc(tp, id, docId); }

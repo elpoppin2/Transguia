@@ -1,28 +1,20 @@
 // Ejecutar con:  node borrar-datos-demo.js
 //
-// Borra TODO lo que siembra sembrar-datos.js para la empresa de demo
-// (RUC 20548712369): sus tickets (con sus emisiones e historial), sus
-// unidades, sus choferes y el usuario "andina".
+// Borra TODO lo que siembra sembrar-datos.js: las dos empresas de demo
+// (con sus tickets, documentos, unidades, choferes y usuarios) y el
+// usuario superadmin "super".
 //
-// Por defecto NO borra la empresa. Para borrarla también:
+// Por defecto NO borra las empresas (fila `empresas`). Para borrarlas:
 //   node borrar-datos-demo.js --empresa
 
 require('dotenv').config();
 const { pool } = require('./src/db/pool');
 
-const RUC_DEMO = '20548712369';
+const RUCS_DEMO = ['20548712369', '20600123456'];
+const SUPERADMIN = 'super';
 const BORRAR_EMPRESA = process.argv.includes('--empresa');
 
-(async () => {
-  const { rows } = await pool.query('select id, razon_social from empresas where ruc = $1', [RUC_DEMO]);
-  if (rows.length === 0) {
-    console.log('No existe la empresa de demo; no hay nada que borrar.');
-    await pool.end();
-    return;
-  }
-  const empresaId = rows[0].id;
-  console.log('Empresa de demo:', rows[0].razon_social, `(${empresaId})`);
-
+async function limpiarEmpresa(empresaId, nombre) {
   const { rows: tickets } = await pool.query(
     'select id from tickets_traslado where empresa_id = $1', [empresaId]
   );
@@ -30,32 +22,30 @@ const BORRAR_EMPRESA = process.argv.includes('--empresa');
     await pool.query('delete from emisiones_gre where ticket_id = $1', [t.id]);
     await pool.query('delete from historial_estado_ticket where ticket_id = $1', [t.id]);
   }
-  const borrados = await pool.query('delete from tickets_traslado where empresa_id = $1', [empresaId]);
-  console.log(`tickets borrados: ${borrados.rowCount}`);
-
-  const du = await pool.query(
-    'delete from documentos_unidad where unidad_id in (select id from unidades where empresa_id = $1)', [empresaId]
-  );
-  const dc = await pool.query(
-    'delete from documentos_chofer where chofer_id in (select id from choferes where empresa_id = $1)', [empresaId]
-  );
-  console.log(`documentos borrados: ${du.rowCount + dc.rowCount}`);
-
-  const u = await pool.query('delete from unidades where empresa_id = $1', [empresaId]);
-  console.log(`unidades borradas: ${u.rowCount}`);
-
-  const c = await pool.query('delete from choferes where empresa_id = $1', [empresaId]);
-  console.log(`choferes borrados: ${c.rowCount}`);
-
+  const tk = await pool.query('delete from tickets_traslado where empresa_id = $1', [empresaId]);
+  await pool.query('delete from documentos_unidad where unidad_id in (select id from unidades where empresa_id = $1)', [empresaId]);
+  await pool.query('delete from documentos_chofer where chofer_id in (select id from choferes where empresa_id = $1)', [empresaId]);
+  const un = await pool.query('delete from unidades where empresa_id = $1', [empresaId]);
+  const ch = await pool.query('delete from choferes where empresa_id = $1', [empresaId]);
   const us = await pool.query('delete from usuarios where empresa_id = $1', [empresaId]);
-  console.log(`usuarios borrados: ${us.rowCount}`);
-
+  console.log(`${nombre}: ${tk.rowCount} tickets, ${un.rowCount} unidades, ${ch.rowCount} choferes, ${us.rowCount} usuarios`);
   if (BORRAR_EMPRESA) {
     await pool.query('delete from empresas where id = $1', [empresaId]);
-    console.log('empresa borrada');
-  } else {
-    console.log('empresa conservada (usa --empresa para borrarla también)');
+    console.log(`  empresa borrada`);
   }
+}
+
+(async () => {
+  for (const ruc of RUCS_DEMO) {
+    const { rows } = await pool.query('select id, razon_social from empresas where ruc = $1', [ruc]);
+    if (rows.length === 0) { console.log(`(RUC ${ruc}: no existe)`); continue; }
+    await limpiarEmpresa(rows[0].id, rows[0].razon_social);
+  }
+
+  const sa = await pool.query('delete from usuarios where username = $1', [SUPERADMIN]);
+  console.log(`superadmin borrado: ${sa.rowCount}`);
+
+  if (!BORRAR_EMPRESA) console.log('\nempresas conservadas (usa --empresa para borrarlas también)');
 
   await pool.end();
 })().catch((error) => {

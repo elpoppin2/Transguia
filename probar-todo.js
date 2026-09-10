@@ -10,7 +10,8 @@ const PRUEBAS = [
   'probar-unidades-db.js',
   'probar-choferes-db.js',
   'probar-tickets-db.js',
-  'probar-documentos-db.js'
+  'probar-documentos-db.js',
+  'probar-superadmin-db.js'
 ];
 
 let fallos = 0;

@@ -22,6 +22,11 @@ info:
     - `operador`: crea y mueve tickets.
     - `admin_empresa`: además registra unidades, choferes, documentos y
       usuarios. Las rutas marcadas *(admin)* devuelven 403 para un operador.
+    - `superadmin`: rol de plataforma, sin empresa propia. Ve todas las
+      empresas (`/api/empresas`, `/api/resumen`) y consulta los datos de
+      una empresa cualquiera pasando `?empresaId=<uuid>` en las rutas de
+      lectura. No puede escribir datos de empresa (403 en las rutas *(admin)*
+      y en crear/avanzar tickets). Rutas *(superadmin)*: 403 para los demás.
 
     ## Emisión de la GRE
 
@@ -40,6 +45,7 @@ security:
 tags:
   - name: Sistema
   - name: Autenticación
+  - name: Plataforma
   - name: Unidades
   - name: Choferes
   - name: Documentos
@@ -115,10 +121,52 @@ paths:
                 nombreCompleto: { type: string }
                 rol: { $ref: "#/components/schemas/RolUsuario" }
 
+  /api/resumen:
+    get:
+      tags: [Plataforma]
+      summary: Totales globales de todas las empresas *(superadmin)*
+      responses:
+        "200":
+          description: Contadores agregados
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/ResumenGlobal" } }
+        "403": { $ref: "#/components/responses/SinPermiso" }
+
+  /api/empresas:
+    get:
+      tags: [Plataforma]
+      summary: Listar todas las empresas con su resumen *(superadmin)*
+      responses:
+        "200":
+          description: Lista de empresas
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/EmpresaResumen" } }
+        "403": { $ref: "#/components/responses/SinPermiso" }
+    post:
+      tags: [Plataforma]
+      summary: Crear una empresa junto con su primer administrador *(superadmin)*
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NuevaEmpresa" }
+      responses:
+        "201":
+          description: Empresa y admin creados
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/EmpresaCreada" } }
+        "400": { $ref: "#/components/responses/ErrorValidacion" }
+        "403": { $ref: "#/components/responses/SinPermiso" }
+
   /api/unidades:
     get:
       tags: [Unidades]
       summary: Listar las unidades de mi empresa
+      description: >
+        Un superadmin debe indicar `?empresaId=<uuid>` (obligatorio para
+        ese rol; ignorado para los demás).
+      parameters: [{ $ref: "#/components/parameters/EmpresaSuperadmin" }]
       responses:
         "200":
           description: Lista de unidades
@@ -204,6 +252,7 @@ paths:
     get:
       tags: [Choferes]
       summary: Listar los choferes de mi empresa
+      parameters: [{ $ref: "#/components/parameters/EmpresaSuperadmin" }]
       responses:
         "200":
           description: Lista de choferes
@@ -292,6 +341,7 @@ paths:
           required: false
           schema: { type: integer, default: 30, minimum: 1, maximum: 365 }
           description: Rango hacia adelante. Incluye también los ya vencidos.
+        - { $ref: "#/components/parameters/EmpresaSuperadmin" }
       responses:
         "200":
           description: Lista ordenada por fecha de vencimiento
@@ -304,6 +354,7 @@ paths:
     get:
       tags: [Tickets]
       summary: Listar los tickets de mi empresa (más recientes primero)
+      parameters: [{ $ref: "#/components/parameters/EmpresaSuperadmin" }]
       responses:
         "200":
           description: Lista de tickets
@@ -388,6 +439,12 @@ components:
       in: path
       required: true
       schema: { type: string, format: uuid }
+    EmpresaSuperadmin:
+      name: empresaId
+      in: query
+      required: false
+      description: Obligatorio si el token es de un superadmin; ignorado para otros roles.
+      schema: { type: string, format: uuid }
 
   responses:
     ErrorValidacion:
@@ -409,7 +466,7 @@ components:
       properties:
         error: { type: string, example: "Faltan campos obligatorios: origen, destino" }
 
-    RolUsuario: { type: string, enum: [admin_empresa, operador] }
+    RolUsuario: { type: string, enum: [admin_empresa, operador, superadmin] }
     CategoriaMtc: { type: string, enum: [N1, N2, N3] }
     ConfiguracionVehicular:
       type: string
@@ -434,12 +491,63 @@ components:
       type: object
       properties:
         id: { type: string, format: uuid }
-        empresaId: { type: string, format: uuid }
+        empresaId: { type: [string, "null"], format: uuid, description: "null para un superadmin" }
         username: { type: string }
         nombreCompleto: { type: string }
         rol: { $ref: "#/components/schemas/RolUsuario" }
         token: { type: string, description: "Enviar como 'Authorization: Bearer <token>'" }
         expiraEnMs: { type: integer, example: 43200000 }
+
+    ResumenGlobal:
+      type: object
+      properties:
+        empresas: { type: integer }
+        unidadesActivas: { type: integer }
+        choferesActivos: { type: integer }
+        tickets: { type: integer }
+        ticketsGenerados: { type: integer }
+        ticketsEnTransito: { type: integer }
+        ticketsEntregados: { type: integer }
+        documentosVencidos: { type: integer }
+
+    EmpresaResumen:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        ruc: { type: string }
+        razonSocial: { type: string }
+        creadoEn: { type: string, format: date-time }
+        unidadesActivas: { type: integer }
+        choferesActivos: { type: integer }
+        tickets: { type: integer }
+        ticketsEnTransito: { type: integer }
+        documentosVencidos: { type: integer }
+
+    NuevaEmpresa:
+      type: object
+      required: [ruc, razonSocial, admin]
+      properties:
+        ruc: { type: string, pattern: "^[0-9]{11}$", example: "20512345678" }
+        razonSocial: { type: string, example: "Transportes El Sol S.A.C." }
+        admin:
+          type: object
+          required: [username, password, nombreCompleto]
+          properties:
+            username: { type: string }
+            password: { type: string, format: password, minLength: 8 }
+            nombreCompleto: { type: string }
+
+    EmpresaCreada:
+      type: object
+      properties:
+        empresa:
+          type: object
+          properties:
+            id: { type: string, format: uuid }
+            ruc: { type: string }
+            razonSocial: { type: string }
+            creadoEn: { type: string, format: date-time }
+        admin: { $ref: "#/components/schemas/UsuarioPublico" }
 
     NuevaUnidad:
       type: object

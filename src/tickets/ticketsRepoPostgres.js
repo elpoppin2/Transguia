@@ -1,4 +1,5 @@
 const { pool, enTransaccion } = require('../db/pool');
+const { prepararEsquema } = require('../db/migraciones');
 
 /**
  * Mismo contrato que TicketsRepositorioMemoria, pero repartido en las 3
@@ -56,11 +57,12 @@ const SELECT_VISTA = `
 
 class TicketsRepositorioPostgres {
   /**
-   * Crea la secuencia del código interno si todavía no existe. Se llama
-   * una vez al arrancar el servidor (o el script de prueba).
+   * Aplica los ajustes de esquema idempotentes (secuencia del código de
+   * ticket, rol superadmin, etc.). Se llama al arrancar el servidor y en
+   * los scripts de prueba.
    */
   async asegurarEsquema() {
-    await pool.query(`create sequence if not exists ${SECUENCIA_CODIGO}`);
+    await prepararEsquema();
   }
 
   async crear({ empresaId, unidad, chofer, origen, destino, motivo, descripcionMercancia, pesoBrutoKg, proveedorGre, creadoPor }) {

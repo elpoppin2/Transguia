@@ -30,7 +30,14 @@ grandes o instalar cosas nuevas.
   el `empresaId` sale del token. Rol `operador` vs `admin_empresa`.
 - `src/auth/sesion.js` — token de sesión firmado con HMAC (sin librerías,
   sin tabla; dura 12 h). Secreto en `SESSION_SECRET` del `.env`.
-- `src/auth/middleware.js` — `requiereSesion` y `requiereRol(...)`.
+- `src/auth/middleware.js` — `requiereSesion`, `requiereRol(...)` y
+  `empresaDeLaPeticion(req)` (del token, o de `?empresaId=` si es superadmin).
+- `src/empresas/` — vistas de plataforma para el superadmin (listar
+  empresas con resumen, crear empresa + primer admin, totales globales).
+- `src/db/migraciones.js` — ajustes de esquema idempotentes que corren al
+  arrancar (secuencia del ticket, rol `superadmin`, `empresa_id` nullable).
+- 3 roles: `operador`, `admin_empresa`, `superadmin` (este último ve
+  todas las empresas y es de solo lectura).
 - `src/documentos/` — SOAT, revisión técnica, licencias, certificados
   médicos (tablas `documentos_unidad` / `documentos_chofer`) + la vista
   `vencimientos_proximos`. La licencia vigente del chofer se manda en la GRE.
@@ -87,8 +94,9 @@ o certificado digital; punto 9: piloto con transportistas reales).
 
 ### Para levantar y demostrar ahora mismo (local)
 1. `node server.js`
-2. `node sembrar-datos.js` — empresa + usuario `andina`/`demo2026seguro`
-   + 4 unidades + 4 choferes + documentos + 2 tickets. Idempotente.
+2. `node sembrar-datos.js` — 2 empresas con sus datos + 3 usuarios:
+   `andina`/`demo2026seguro` (admin), `delsur`/`delsur2026seguro`
+   (admin de la 2ª), `super`/`superdemo2026` (superadmin). Idempotente.
 3. Abrir **http://localhost:3001** en el navegador. El backend sirve la
    interfaz; ya no hay que configurar ninguna URL de API (las llamadas
    son relativas al mismo servidor).
@@ -165,6 +173,21 @@ o certificado digital; punto 9: piloto con transportistas reales).
    prepara en la 1ª petición; el pool `pg` usa `max: 1` y hace falta la
    cadena **Transaction pooler** (6543) de Supabase. Con `demo` es
    instantáneo. Pasos en `DESPLIEGUE.md`.
+6g. [x] **Superadmin / dashboard multi-empresa** (2026-09-09, decisión del
+   usuario). Rol nuevo `superadmin` (enum + `usuarios.empresa_id` ahora
+   nullable, migraciones idempotentes en `src/db/migraciones.js`). No
+   pertenece a ninguna empresa; ve todas. Nuevo `src/empresas/`
+   (service + repo Postgres). Endpoints: `GET /api/resumen` (totales
+   globales), `GET /api/empresas` (lista con resumen por empresa),
+   `POST /api/empresas` (crea empresa + primer admin). En las rutas de
+   LECTURA el `empresaId` lo resuelve `empresaDeLaPeticion(req)`: del
+   token para todos, de `?empresaId=` solo para superadmin (a los demás
+   se les ignora). El superadmin es **solo lectura** (403 en escrituras).
+   Prototipo: panel de plataforma (stats + tabla de empresas + "nueva
+   empresa"), al elegir una entra en modo lectura con banner "← Volver".
+   Scripts: `crear-superadmin.js`; `sembrar-datos.js` crea `super` +
+   una 2ª empresa "Logística del Sur". Prueba: `probar-superadmin-db.js`.
+
 6f. [x] **Front y back integrados** (2026-09-09, decisión del usuario).
    `src/app.js` sirve `transguia-prototipo.html` en `/`, `/index.html` y
    `/prototipo`. El prototipo hace `fetch("/api/...")` relativo (default

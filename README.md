@@ -9,12 +9,13 @@ proveedor después sin tocar el resto del sistema.
 ```
 src/
   auth/        registro/login, hash de contraseña, token de sesión (HMAC), middleware de rol
+  empresas/    vistas de plataforma para el superadmin (listar/crear empresas, totales)
   unidades/    alta/listado/baja de vehículos + validaciones del MTC
   choferes/    alta/listado/baja de choferes
   documentos/  papeles con vencimiento (SOAT, licencias...) + vista de vencimientos
   tickets/     ticketService (orquesta) + repos memoria/postgres
   gre/         interfaz EmisorGRE + implementaciones (demo / pse / directo)
-  db/          pool de conexión a Postgres + helper de transacciones
+  db/          pool de conexión a Postgres + transacciones + migraciones idempotentes
   app.js       arma la app Express (rutas + servicios + sirve el prototipo en /), sin listen
 server.js                 levanta la app como proceso normal (local / Render / Railway)
 api/index.js              entrada para Vercel (misma app, serverless)
@@ -50,9 +51,11 @@ npm run demo              # demo de consola, todo en memoria, sin base ni creden
 Público: `GET /api/health`, `POST /api/auth/login`. Todo lo demás exige
 `Authorization: Bearer <token>` (el token lo da el login, dura 12 h). El
 `empresaId` sale del token. Rutas de configuración: solo rol
-`admin_empresa`.
+`admin_empresa`. Rol `superadmin`: ve todas las empresas y consulta
+cualquiera con `?empresaId=<uuid>` (solo lectura).
 
 - **Auth:** `POST /api/auth/login`, `POST /api/auth/registro` *(admin)*
+- **Plataforma *(superadmin)*:** `GET /api/resumen`, `GET/POST /api/empresas`
 - **Unidades:** `GET/POST /api/unidades`, `POST /api/unidades/:id/desactivar`,
   `GET/POST/DELETE /api/unidades/:id/documentos[/:docId]`
 - **Choferes:** `GET/POST /api/choferes`, `POST /api/choferes/:id/desactivar`,
