@@ -53,6 +53,8 @@ function esperarEmision(ticketService, datos) {
     marca: 'Scania', modelo: 'R 450', anioFabricacion: 2022,
     categoriaMtc: 'N3', configuracionVehicular: 'T3S3'
   });
+  // La unidad nace PENDIENTE; para poder emitir tickets hay que liberarla.
+  await pool.query("update unidades set estado_registro = 'APROBADA' where id = $1", [unidad.id]);
   const chofer = await choferes.registrarChofer({
     empresaId: empresa.id,
     dni: ('4' + s + '0').slice(0, 8),

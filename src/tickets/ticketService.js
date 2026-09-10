@@ -64,6 +64,9 @@ class TicketService {
     if (unidad.activo === false) {
       throw new Error('La unidad indicada está inactiva; reactívala antes de usarla');
     }
+    if (unidad.estadoRegistro && unidad.estadoRegistro !== 'APROBADA') {
+      throw new Error('La unidad todavía no fue liberada por la plataforma; no se puede usar para traslados');
+    }
 
     const chofer = await this.choferes.buscarPorId(limpio.choferId);
     if (!chofer || chofer.empresaId !== limpio.empresaId) {

@@ -325,6 +325,13 @@ async function generarTickets(ctx, empresaId, ruc, adminId) {
     await altaUnidades(unidadesSvc, unidadesRepo, empresaId, unidadesLista, etiqueta);
     await altaChoferes(choferesSvc, choferesRepo, empresaId, choferesLista, etiqueta);
 
+    // Flota de demo: liberada por la plataforma (si no, no se pueden emitir tickets).
+    await pool.query(
+      `update unidades set estado_registro = 'APROBADA'
+       where empresa_id = $1 and estado_registro <> 'APROBADA'`,
+      [empresaId]
+    );
+
     const unidades = await unidadesSvc.listarUnidades(empresaId);
     const choferes = await choferesSvc.listarChoferes(empresaId);
     await altaDocumentos(documentosSvc, documentosRepo, empresaId, unidades, choferes);

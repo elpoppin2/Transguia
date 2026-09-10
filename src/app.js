@@ -198,6 +198,27 @@ app.post('/api/unidades', requiereSesion, requiereRol('admin_empresa'), h(async 
   res.status(201).json(avisos.length ? { ...unidad, avisos } : unidad);
 }));
 
+// Solicitudes de registro pendientes de todas las empresas (superadmin).
+// Va antes de las rutas con :id para que "pendientes" no se tome como id.
+app.get('/api/unidades/pendientes', requiereSesion, requiereRol('superadmin'), h(async (req, res) => {
+  res.json(await unidadesService.listarPendientes());
+}));
+
+// Editar la ficha: admin_empresa (su unidad, si está pendiente o
+// rechazada) o superadmin (cualquiera, sin cambiar el estado).
+app.put('/api/unidades/:id', requiereSesion, requiereRol('admin_empresa', 'superadmin'), h(async (req, res) => {
+  res.json(await unidadesService.editarUnidad(req.params.id, req.body || {}, req.sesion));
+}));
+
+// El superadmin libera o rechaza (con motivo) una solicitud.
+app.post('/api/unidades/:id/aprobar', requiereSesion, requiereRol('superadmin'), h(async (req, res) => {
+  res.json(await unidadesService.aprobarUnidad(req.params.id, req.sesion));
+}));
+
+app.post('/api/unidades/:id/rechazar', requiereSesion, requiereRol('superadmin'), h(async (req, res) => {
+  res.json(await unidadesService.rechazarUnidad(req.params.id, (req.body || {}).motivo, req.sesion));
+}));
+
 app.post('/api/unidades/:id/desactivar', requiereSesion, requiereRol('admin_empresa'), h(async (req, res) => {
   res.json(await unidadesService.desactivarUnidad(req.params.id));
 }));

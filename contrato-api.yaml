@@ -205,7 +205,9 @@ paths:
       tags: [Unidades]
       summary: Registrar una unidad *(admin)*
       description: >
-        Obligatorios: placa, rucPropietario, dniTransportista. Si vienen
+        La unidad nace en `estadoRegistro: "PENDIENTE"` y no se puede usar
+        para tickets hasta que el superadmin la libere. Obligatorios:
+        placa, rucPropietario, dniTransportista. Si vienen
         nroSoat/vigenciaSoat o nroCitv/vigenciaCitv, se crean como
         documentos de la unidad (tipos SOAT y REVISION_TECNICA); si alguno
         está mal cargado, la unidad igual se crea y la respuesta trae `avisos`.
@@ -216,7 +218,87 @@ paths:
             schema: { $ref: "#/components/schemas/NuevaUnidad" }
       responses:
         "201":
-          description: Unidad registrada
+          description: Solicitud registrada (queda PENDIENTE)
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/Unidad" } }
+        "400": { $ref: "#/components/responses/ErrorValidacion" }
+        "401": { $ref: "#/components/responses/NoAutenticado" }
+        "403": { $ref: "#/components/responses/SinPermiso" }
+
+  /api/unidades/pendientes:
+    get:
+      tags: [Unidades]
+      summary: Solicitudes de registro pendientes de todas las empresas *(superadmin)*
+      responses:
+        "200":
+          description: Unidades en estado PENDIENTE (con `empresaRazonSocial`)
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Unidad" } }
+        "401": { $ref: "#/components/responses/NoAutenticado" }
+        "403": { $ref: "#/components/responses/SinPermiso" }
+
+  /api/unidades/{id}:
+    put:
+      tags: [Unidades]
+      summary: Editar la ficha de una unidad *(admin o superadmin)*
+      description: >
+        admin_empresa: solo su unidad y solo si está PENDIENTE o RECHAZADA;
+        si estaba RECHAZADA, al guardar vuelve a PENDIENTE (reenvío).
+        superadmin: cualquier unidad, sin cambiar el estado. Solo actualiza
+        los campos de ficha que se envían (no borra los omitidos). No toca
+        placa ni los documentos SOAT/CITV.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NuevaUnidad" }
+      responses:
+        "200":
+          description: Unidad actualizada
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/Unidad" } }
+        "400": { $ref: "#/components/responses/ErrorValidacion" }
+        "401": { $ref: "#/components/responses/NoAutenticado" }
+        "403": { $ref: "#/components/responses/SinPermiso" }
+
+  /api/unidades/{id}/aprobar:
+    post:
+      tags: [Unidades]
+      summary: Liberar una solicitud de registro *(superadmin)*
+      description: Deja la unidad en `APROBADA`; recién ahí se puede usar para tickets.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Unidad aprobada
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/Unidad" } }
+        "401": { $ref: "#/components/responses/NoAutenticado" }
+        "403": { $ref: "#/components/responses/SinPermiso" }
+
+  /api/unidades/{id}/rechazar:
+    post:
+      tags: [Unidades]
+      summary: Rechazar una solicitud de registro con un motivo *(superadmin)*
+      description: >
+        Deja la unidad en `RECHAZADA` con `motivoRechazo`. El admin de la
+        empresa puede corregir la ficha (PUT) y así vuelve a PENDIENTE.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [motivo]
+              properties: { motivo: { type: string, example: "Falta el N° de CITV" } }
+      responses:
+        "200":
+          description: Unidad rechazada
           content:
             application/json: { schema: { $ref: "#/components/schemas/Unidad" } }
         "400": { $ref: "#/components/responses/ErrorValidacion" }
@@ -769,11 +851,22 @@ components:
         nroCitv: { type: string }
         vigenciaCitv: { type: string, format: date }
 
+    EstadoRegistroUnidad:
+      type: string
+      description: >
+        PENDIENTE: la cargó el admin, falta que la plataforma la libere.
+        APROBADA: liberada por el superadmin, ya se puede usar para tickets.
+        RECHAZADA: el superadmin la rechazó (ver motivoRechazo); el admin
+        puede corregirla y vuelve a PENDIENTE.
+      enum: [PENDIENTE, APROBADA, RECHAZADA]
+
     Unidad:
       description: >
         Como NuevaUnidad (sin nroSoat/vigenciaSoat/nroCitv/vigenciaCitv,
-        que viven en documentos_unidad) más id, empresaId, activo, creadoEn.
-        En un alta con SOAT/CITV mal cargados, la respuesta incluye `avisos`.
+        que viven en documentos_unidad) más id, empresaId, activo, creadoEn
+        y el estado de aprobación. En un alta con SOAT/CITV mal cargados,
+        la respuesta incluye `avisos`. En GET /api/unidades/pendientes
+        también trae `empresaRazonSocial`.
       allOf:
         - $ref: "#/components/schemas/NuevaUnidad"
         - type: object
@@ -782,6 +875,11 @@ components:
             empresaId: { type: string, format: uuid }
             activo: { type: boolean }
             creadoEn: { type: string, format: date-time }
+            estadoRegistro: { $ref: "#/components/schemas/EstadoRegistroUnidad" }
+            motivoRechazo: { type: [string, "null"] }
+            revisadoPor: { type: [string, "null"], format: uuid }
+            revisadoEn: { type: [string, "null"], format: date-time }
+            empresaRazonSocial: { type: string }
             avisos: { type: array, items: { type: string } }
 
     NuevoChofer:

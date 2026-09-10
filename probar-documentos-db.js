@@ -46,6 +46,7 @@ const enDias = (n) => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10
     rucPropietario: '20548712369', dniTransportista: '45678912',
     marca: 'MAN', modelo: 'TGX', anioFabricacion: 2023, categoriaMtc: 'N3', configuracionVehicular: 'T3S3'
   });
+  await pool.query("update unidades set estado_registro = 'APROBADA' where id = $1", [unidad.id]);
   const chofer = await choferes.registrarChofer({
     empresaId: empresa.id, dni: ('5' + s + '0').slice(0, 8), nombres: 'Ana', apellidos: 'Ríos Paz'
   });

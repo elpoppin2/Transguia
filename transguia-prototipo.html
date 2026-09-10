@@ -222,6 +222,11 @@
       <div class="vacio" id="vacioEmpresas" hidden>Todavía no hay empresas.</div>
     </section>
     <section class="panel" data-vista="empresas" hidden>
+      <h2>Solicitudes de registro de unidades <span class="sub">— el admin de la empresa carga la unidad; acá se libera o se rechaza</span></h2>
+      <div id="tbSolicitudes"></div>
+      <div class="vacio" id="vacioSolicitudes" hidden>No hay solicitudes pendientes.</div>
+    </section>
+    <section class="panel" data-vista="empresas" hidden>
       <h2>Nueva empresa <span class="sub">— se crea junto con su primer administrador</span></h2>
       <div class="grid">
         <div><label>RUC (11 dígitos)</label><input id="neRuc" placeholder="20512345678" /></div>
@@ -539,7 +544,7 @@ function mostrarVista(nombre) {
   if (bloqueado) return;
 
   if (nombre === "dashboard") cargarDashboard();
-  else if (nombre === "empresas") cargarPlataforma();
+  else if (nombre === "empresas") { cargarPlataforma(); cargarSolicitudes(); }
   else if (nombre === "unidades") cargarUnidades().catch((e) => aviso(e.message));
   else if (nombre === "choferes") cargarChoferes().catch((e) => aviso(e.message));
   else if (nombre === "tickets") cargarTickets().catch((e) => aviso(e.message));
@@ -582,12 +587,106 @@ function toggleFicha(id) {
   if (!fila.hidden) el(`ficha-${id}`).innerHTML = fichaUnidadHTML(estado.unidades.find((u) => u.id === id) || {});
 }
 
+function pillEstadoRegistro(u) {
+  if (u.estadoRegistro === "APROBADA") return '<span class="pill ok">aprobada</span>';
+  if (u.estadoRegistro === "RECHAZADA") return '<span class="pill err">rechazada</span>';
+  return '<span class="pill warn">pendiente</span>';
+}
+
+// Definición de los campos editables de la ficha (los usa el formulario de
+// corrección del admin y el de revisión del superadmin). El formulario de
+// alta nueva es HTML estático más arriba: si se agrega/quita un campo,
+// tocar también ese <section> y la función crearUnidad().
+const FICHA_SPEC = [
+  { k: "rucPropietario", label: "RUC del dueño *", t: "text" },
+  { k: "nombrePropietario", label: "Nombre del dueño", t: "text" },
+  { k: "direccionPropietario", label: "Dirección", t: "text" },
+  { k: "dniTransportista", label: "DNI del transportista *", t: "text" },
+  { k: "departamento", label: "Departamento", t: "text" },
+  { k: "provincia", label: "Provincia", t: "text" },
+  { k: "distrito", label: "Distrito", t: "text" },
+  { k: "tipoVehiculo", label: "Tipo de vehículo", t: "sel", cat: "tiposVehiculo" },
+  { k: "marca", label: "Marca", t: "text" },
+  { k: "modelo", label: "Modelo", t: "text" },
+  { k: "anioFabricacion", label: "Año de fabricación", t: "num" },
+  { k: "categoriaMtc", label: "Categoría MTC", t: "sel", opts: ["N1", "N2", "N3"] },
+  { k: "configuracionVehicular", label: "Config. vehicular", t: "sel", opts: CONFIG_VEHICULAR },
+  { k: "nroEjes", label: "N° de ejes", t: "num" },
+  { k: "rodadaEjeDelantero", label: "Rodada eje delantero", t: "sel", cat: "tiposRodada" },
+  { k: "rodadaC1", label: "Rodada C1", t: "sel", cat: "tiposRodada" },
+  { k: "rodadaC2", label: "Rodada C2", t: "sel", cat: "tiposRodada" },
+  { k: "pesoSecoKg", label: "Peso seco (kg)", t: "num" },
+  { k: "tolvaCerrada", label: "Tolva cerrada", t: "bool" },
+  { k: "carretaConPiston", label: "Carreta con pistón", t: "bool" },
+  { k: "unidadAGas", label: "Unidad a gas", t: "bool" },
+  { k: "formaApertura", label: "Forma de apertura", t: "sel", cat: "formasApertura" },
+  { k: "alturaM", label: "Altura (m)", t: "num" },
+  { k: "anchoM", label: "Ancho (m)", t: "num" },
+  { k: "largoM", label: "Largo (m)", t: "num" },
+  { k: "alturaPlataformaM", label: "Altura de plataforma (m)", t: "num" }
+];
+
+function camposUnidadHTML(pfx, u) {
+  const cats = estado.catalogos || {};
+  const uno = (s) => {
+    const id = `${pfx}-${s.k}`;
+    const v = u[s.k];
+    if (s.t === "bool") {
+      return `<div><label>${s.label}</label><select id="${id}">
+        <option value=""${v == null ? " selected" : ""}>—</option>
+        <option value="SI"${v === true ? " selected" : ""}>Sí</option>
+        <option value="NO"${v === false ? " selected" : ""}>No</option></select></div>`;
+    }
+    if (s.t === "sel") {
+      const lista = s.opts || cats[s.cat] || [];
+      const cur = v == null ? "" : String(v);
+      return `<div><label>${s.label}</label><select id="${id}"><option value="">—</option>${
+        lista.map((o) => `<option${String(o) === cur ? " selected" : ""}>${escapar(o)}</option>`).join("")}</select></div>`;
+    }
+    return `<div><label>${s.label}</label><input id="${id}" type="${s.t === "num" ? "number" : "text"}" value="${v == null ? "" : escapar(v)}" /></div>`;
+  };
+  return `<div class="grid">${FICHA_SPEC.map(uno).join("")}</div>`;
+}
+
+function leerCamposUnidad(pfx) {
+  const o = {};
+  for (const s of FICHA_SPEC) {
+    const e = el(`${pfx}-${s.k}`);
+    if (!e) continue;
+    const raw = String(e.value).trim();
+    if (raw === "") continue;
+    o[s.k] = s.t === "num" ? Number(raw) : raw;
+  }
+  return o;
+}
+
+function toggleEditUnidad(id) {
+  const fila = document.querySelector(`[data-edit-row="${id}"]`);
+  if (!fila) return;
+  fila.hidden = !fila.hidden;
+  if (!fila.hidden) {
+    const u = estado.unidades.find((x) => x.id === id) || {};
+    el(`edit-${id}`).innerHTML =
+      (u.motivoRechazo ? `<div class="aviso">Motivo del rechazo: ${escapar(u.motivoRechazo)}</div>` : "") +
+      camposUnidadHTML(`ed-${id}`, u) +
+      `<div class="fila" style="margin-top:10px"><button class="chico" data-reenviar-unidad="${id}">Corregir y reenviar</button></div>`;
+  }
+}
+async function reenviarUnidad(id) {
+  try {
+    await api(`/api/unidades/${id}`, { method: "PUT", body: JSON.stringify(leerCamposUnidad(`ed-${id}`)) });
+    aviso("Solicitud corregida y reenviada. Queda pendiente de aprobación.", "ok");
+    await cargarUnidades();
+  } catch (e) { aviso(e.message); }
+}
+
 async function cargarUnidades() {
   await cargarCatalogos();
   estado.unidades = await api("/api/unidades");
   const tb = el("tbUnidades"); tb.innerHTML = "";
   el("vacioUnidades").hidden = estado.unidades.length > 0;
   for (const u of estado.unidades) {
+    const aprobada = u.estadoRegistro === "APROBADA";
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td><strong>${escapar(u.placa)}</strong></td>
@@ -595,25 +694,92 @@ async function cargarUnidades() {
       <td>${escapar([u.marca, u.anioFabricacion].filter(Boolean).join(" · ") || "—")}</td>
       <td>${escapar(u.nombrePropietario || u.rucPropietario || "—")}</td>
       <td>${escapar(u.dniTransportista || "—")}</td>
-      <td>${u.activo ? '<span class="pill ok">activa</span>' : '<span class="pill gris">inactiva</span>'}
-          ${u.activo && esAdmin() ? `<button class="tenue chico" data-desactivar="unidades:${u.id}">Desactivar</button>` : ""}</td>
+      <td>${pillEstadoRegistro(u)}
+          ${aprobada && !u.activo ? ' <span class="pill gris">inactiva</span>' : ""}
+          ${aprobada && u.activo && esAdmin() ? `<button class="tenue chico" data-desactivar="unidades:${u.id}">Desactivar</button>` : ""}</td>
       <td class="fila" style="gap:6px">
         <button class="sec chico" data-ficha="${u.id}">Ficha</button>
+        ${u.estadoRegistro === "RECHAZADA" && esAdmin() ? `<button class="sec chico" data-editar-unidad="${u.id}">Corregir</button>` : ""}
         <button class="sec chico" data-docs="unidad:${u.id}">Documentos</button></td>`;
     tb.appendChild(tr);
     const trFicha = document.createElement("tr");
     trFicha.hidden = true; trFicha.dataset.fichaRow = u.id;
     trFicha.innerHTML = `<td colspan="7"><div class="sub-panel" id="ficha-${u.id}">…</div></td>`;
     tb.appendChild(trFicha);
+    const trEdit = document.createElement("tr");
+    trEdit.hidden = true; trEdit.dataset.editRow = u.id;
+    trEdit.innerHTML = `<td colspan="7"><div class="sub-panel" id="edit-${u.id}">…</div></td>`;
+    tb.appendChild(trEdit);
     const trDoc = document.createElement("tr");
     trDoc.hidden = true; trDoc.dataset.docsRow = "unidad:" + u.id;
     trDoc.innerHTML = `<td colspan="7"><div class="sub-panel" id="docs-unidad-${u.id}">…</div></td>`;
     tb.appendChild(trDoc);
   }
   const sel = el("tUnidad");
-  sel.innerHTML = estado.unidades.filter((u) => u.activo)
+  const usables = estado.unidades.filter((u) => u.activo && u.estadoRegistro === "APROBADA");
+  sel.innerHTML = usables
     .map((u) => `<option value="${u.id}">${escapar(u.placa)} — ${escapar(descUnidad(u))}</option>`).join("")
-    || `<option value="">(registra una unidad primero)</option>`;
+    || `<option value="">(no hay unidades aprobadas todavía)</option>`;
+}
+
+// ---------- solicitudes de registro (superadmin) ----------
+async function cargarSolicitudes() {
+  if (!esSuper()) return;
+  await cargarCatalogos();
+  let pend = [];
+  try { pend = await api("/api/unidades/pendientes"); } catch (e) { aviso(e.message); return; }
+  estado.solicitudes = pend;
+  el("vacioSolicitudes").hidden = pend.length > 0;
+  el("tbSolicitudes").innerHTML = pend.length ? `<div class="tabla-scroll"><table>
+    <thead><tr><th>Empresa</th><th>Placa</th><th>Tipo</th><th>Dueño (RUC)</th><th>DNI transp.</th><th></th></tr></thead>
+    <tbody>${pend.map((u) => `
+      <tr>
+        <td>${escapar(u.empresaRazonSocial || "—")}</td>
+        <td><strong>${escapar(u.placa)}</strong></td>
+        <td>${escapar(u.tipoVehiculo || "—")}</td>
+        <td>${escapar(u.rucPropietario || "—")}</td>
+        <td>${escapar(u.dniTransportista || "—")}</td>
+        <td class="fila" style="gap:6px">
+          <button class="sec chico" data-revisar-sol="${u.id}">Revisar / editar</button>
+          <button class="chico" data-aprobar-sol="${u.id}">Liberar</button>
+          <button class="tenue chico" data-rechazar-sol="${u.id}">Rechazar</button></td>
+      </tr>
+      <tr hidden data-sol-row="${u.id}"><td colspan="6"><div class="sub-panel" id="sol-${u.id}">…</div></td></tr>`).join("")}
+    </tbody></table></div>` : "";
+}
+function toggleRevisarSol(id) {
+  const fila = document.querySelector(`[data-sol-row="${id}"]`);
+  if (!fila) return;
+  fila.hidden = !fila.hidden;
+  if (!fila.hidden) {
+    const u = (estado.solicitudes || []).find((x) => x.id === id) || {};
+    el(`sol-${id}`).innerHTML =
+      `<p class="muted">Placa ${escapar(u.placa)} — corregí lo que haga falta antes de liberar.</p>` +
+      camposUnidadHTML(`sol-${id}`, u) +
+      `<div class="fila" style="margin-top:10px">
+        <button class="sec chico" data-guardar-sol="${id}">Guardar cambios</button>
+        <button class="chico" data-liberar-sol="${id}">Guardar y liberar</button>
+      </div>`;
+  }
+}
+async function guardarSol(id, liberar) {
+  try {
+    if (el(`sol-${id}-rucPropietario`)) {
+      await api(`/api/unidades/${id}`, { method: "PUT", body: JSON.stringify(leerCamposUnidad(`sol-${id}`)) });
+    }
+    if (liberar) await api(`/api/unidades/${id}/aprobar`, { method: "POST" });
+    aviso(liberar ? "Solicitud liberada. La unidad ya se puede usar." : "Cambios guardados.", "ok");
+    await cargarSolicitudes();
+  } catch (e) { aviso(e.message); }
+}
+async function rechazarSol(id) {
+  const motivo = prompt("Motivo del rechazo (lo verá el admin de la empresa):");
+  if (motivo == null || !motivo.trim()) return;
+  try {
+    await api(`/api/unidades/${id}/rechazar`, { method: "POST", body: JSON.stringify({ motivo }) });
+    aviso("Solicitud rechazada.", "ok");
+    await cargarSolicitudes();
+  } catch (e) { aviso(e.message); }
 }
 
 // ---------- choferes ----------
@@ -713,6 +879,7 @@ async function cargarCatalogos() {
       el(id).innerHTML = (conVacio ? `<option value="">—</option>` : "") +
         (arr || []).map((v) => `<option>${escapar(v)}</option>`).join("");
     };
+    estado.catalogos = c;
     fill("tMercancia", c.mercancias);
     fill("tOrigen", c.centrosOrigen);
     fill("tDestino", c.destinos);
@@ -825,8 +992,8 @@ async function crearUnidad() {
     };
     const r = await api("/api/unidades", { method: "POST", body: JSON.stringify(cuerpo) });
     CAMPOS_UNIDAD.forEach((id) => { if (el(id)) el(id).value = ""; });
-    if (r.avisos && r.avisos.length) aviso("Unidad guardada, pero: " + r.avisos.join(" · "));
-    else aviso("Unidad registrada.", "ok");
+    const base = "Solicitud enviada. La unidad queda pendiente de que la plataforma la libere.";
+    aviso(r.avisos && r.avisos.length ? base + " Además: " + r.avisos.join(" · ") : base, "ok");
     await cargarUnidades();
   } catch (e) { aviso(e.message); }
   finally { b.disabled = false; }
@@ -1036,6 +1203,7 @@ async function cargarPlataforma() {
     el("statsGlobal").innerHTML =
       stat(resumen.empresas, "Empresas") +
       stat(resumen.unidadesActivas, "Unidades activas") +
+      stat(resumen.unidadesPendientes ?? 0, "Solicitudes pend.", true) +
       stat(resumen.choferesActivos, "Choferes activos") +
       stat(resumen.tickets, "Tickets") +
       stat(resumen.ticketsEnTransito, "En tránsito") +
@@ -1050,7 +1218,7 @@ async function cargarPlataforma() {
       tr.innerHTML = `
         <td><strong>${escapar(e.razonSocial)}</strong></td>
         <td>${escapar(e.ruc)}</td>
-        <td>${e.unidadesActivas}</td>
+        <td>${e.unidadesActivas}${e.unidadesPendientes > 0 ? ` <span class="pill warn">${e.unidadesPendientes} pend.</span>` : ""}</td>
         <td>${e.choferesActivos}</td>
         <td>${e.tickets}</td>
         <td>${e.ticketsEnTransito}</td>
@@ -1112,6 +1280,13 @@ document.body.addEventListener("click", (e) => {
   const fila = t.closest && t.closest("[data-ver-empresa]");
   if (fila) { verEmpresa(JSON.parse(fila.dataset.verEmpresa)); return; }
   if (t.dataset.ficha) toggleFicha(t.dataset.ficha);
+  if (t.dataset.editarUnidad) toggleEditUnidad(t.dataset.editarUnidad);
+  if (t.dataset.reenviarUnidad) reenviarUnidad(t.dataset.reenviarUnidad);
+  if (t.dataset.revisarSol) toggleRevisarSol(t.dataset.revisarSol);
+  if (t.dataset.aprobarSol) guardarSol(t.dataset.aprobarSol, true);
+  if (t.dataset.guardarSol) guardarSol(t.dataset.guardarSol, false);
+  if (t.dataset.liberarSol) guardarSol(t.dataset.liberarSol, true);
+  if (t.dataset.rechazarSol) rechazarSol(t.dataset.rechazarSol);
   if (t.dataset.docs) toggleDocs(t.dataset.docs);
   if (t.dataset.docAdd) agregarDoc(t.dataset.docAdd);
   if (t.dataset.docDel) { const [tp, id, docId] = t.dataset.docDel.split(":"); borrarDoc(tp, id, docId); }

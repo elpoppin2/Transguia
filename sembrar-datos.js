@@ -259,6 +259,26 @@ function esperarEmision(ticketService, datos) {
     }
   }
 
+  // La flota de demo ya viene "liberada" por la plataforma (si no, no se
+  // podría emitir ningún ticket de demo).
+  const apr = await pool.query(
+    `update unidades set estado_registro = 'APROBADA'
+     where estado_registro <> 'APROBADA'
+       and empresa_id in (select id from empresas where ruc = any($1))`,
+    [[EMPRESA.ruc, EMPRESA_2.ruc]]
+  );
+  if (apr.rowCount) console.log(`unidades marcadas como aprobadas: ${apr.rowCount}`);
+
+  // Una solicitud que queda PENDIENTE, para que el superadmin tenga algo
+  // que revisar/liberar en la demo.
+  if (!(await unidadesRepo.buscarPorPlaca('PEN-001'))) {
+    await unidades.registrarUnidad({
+      empresaId, placa: 'PEN-001', ...fichaVehiculoDemo(rand),
+      marca: 'Scania', anioFabricacion: 2023, tipoVehiculo: 'Volquete', nroEjes: 4
+    });
+    console.log('solicitud de unidad pendiente creada: PEN-001');
+  }
+
   console.log('\nListo. Ingresá en http://localhost:3001');
   console.log(`  Empresa (admin):  ${USUARIO.username} / ${USUARIO.password}`);
   console.log(`  Segunda empresa:  ${EMPRESA_2.admin.username} / ${EMPRESA_2.admin.password}`);

@@ -39,9 +39,24 @@ const MAPA_COLUMNAS = {
   alturaPlataformaM: 'altura_plataforma_m'
 };
 
-const SELECT = ['id', 'activo', 'creado_en as "creadoEn"']
-  .concat(Object.entries(MAPA_COLUMNAS).map(([js, col]) => (col === js ? col : `${col} as "${js}"`)))
-  .join(', ');
+// Columnas gestionadas por métodos propios (no por crearUnidad/actualizar).
+const COLUMNAS_ESTADO = {
+  estadoRegistro: 'estado_registro',
+  motivoRechazo: 'motivo_rechazo',
+  revisadoPor: 'revisado_por',
+  revisadoEn: 'revisado_en'
+};
+
+// Lista de columnas -> alias camelCase, opcionalmente con prefijo de tabla
+// (para consultas con JOIN donde `id`/`creado_en` serían ambiguos).
+function armarSelect(prefijo = '') {
+  const p = prefijo ? `${prefijo}.` : '';
+  const base = { id: 'id', activo: 'activo', creadoEn: 'creado_en' };
+  return Object.entries({ ...base, ...MAPA_COLUMNAS, ...COLUMNAS_ESTADO })
+    .map(([js, col]) => `${p}${col} as "${js}"`)
+    .join(', ');
+}
+const SELECT = armarSelect();
 
 class UnidadesRepositorioPostgres {
   async listarPorEmpresa(empresaId) {
@@ -83,6 +98,50 @@ class UnidadesRepositorioPostgres {
     } catch (error) {
       throw traducirErrorPostgres(error);
     }
+  }
+
+  async actualizar(id, datos) {
+    const sets = [];
+    const valores = [id];
+    for (const [js, col] of Object.entries(MAPA_COLUMNAS)) {
+      if (js === 'empresaId' || js === 'placa' || datos[js] === undefined) continue;
+      valores.push(datos[js]);
+      sets.push(`${col} = $${valores.length}`);
+    }
+    if (!sets.length) return this.buscarPorId(id);
+    try {
+      const { rows } = await pool.query(
+        `update unidades set ${sets.join(', ')} where id = $1 returning ${SELECT}`,
+        valores
+      );
+      if (rows.length === 0) throw new Error('La unidad indicada no existe');
+      return rows[0];
+    } catch (error) {
+      throw traducirErrorPostgres(error);
+    }
+  }
+
+  async cambiarEstadoRegistro(id, estadoRegistro, { motivoRechazo = null, revisadoPor = null } = {}) {
+    const { rows } = await pool.query(
+      `update unidades
+         set estado_registro = $2, motivo_rechazo = $3,
+             revisado_por = $4, revisado_en = now()
+       where id = $1 returning ${SELECT}`,
+      [id, estadoRegistro, motivoRechazo, revisadoPor]
+    );
+    if (rows.length === 0) throw new Error('La unidad indicada no existe');
+    return rows[0];
+  }
+
+  /** Solicitudes pendientes de todas las empresas (para el superadmin). */
+  async listarPendientes() {
+    const { rows } = await pool.query(
+      `select ${armarSelect('u')}, e.razon_social as "empresaRazonSocial"
+       from unidades u join empresas e on e.id = u.empresa_id
+       where u.estado_registro = 'PENDIENTE'
+       order by u.creado_en`
+    );
+    return rows;
   }
 
   async cambiarActivo(id, activo) {

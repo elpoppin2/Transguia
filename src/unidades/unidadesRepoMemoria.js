@@ -41,6 +41,27 @@ class UnidadesRepositorioMemoria {
     return unidad;
   }
 
+  async actualizar(id, datos) {
+    const unidad = this.unidades.get(id);
+    if (!unidad) throw new Error('La unidad indicada no existe');
+    for (const [k, v] of Object.entries(datos)) {
+      if (k === 'empresaId' || k === 'placa' || v === undefined) continue;
+      unidad[k] = v;
+    }
+    return unidad;
+  }
+
+  async cambiarEstadoRegistro(id, estadoRegistro, { motivoRechazo = null, revisadoPor = null } = {}) {
+    const unidad = this.unidades.get(id);
+    if (!unidad) throw new Error('La unidad indicada no existe');
+    Object.assign(unidad, { estadoRegistro, motivoRechazo, revisadoPor, revisadoEn: new Date().toISOString() });
+    return unidad;
+  }
+
+  async listarPendientes() {
+    return Array.from(this.unidades.values()).filter((u) => u.estadoRegistro === 'PENDIENTE');
+  }
+
   async cambiarActivo(id, activo) {
     const unidad = this.unidades.get(id);
     if (!unidad) throw new Error('La unidad indicada no existe');

@@ -1,4 +1,5 @@
 const CATEGORIAS_MTC = ['N1', 'N2', 'N3'];
+const ESTADOS_REGISTRO = ['PENDIENTE', 'APROBADA', 'RECHAZADA'];
 
 /**
  * Reglas de negocio para registrar y listar unidades (vehículos de
@@ -30,6 +31,60 @@ class UnidadesService {
     }
 
     return this.repo.crearUnidad(unidad);
+  }
+
+  /** Solicitudes de registro pendientes de todas las empresas (superadmin). */
+  async listarPendientes() {
+    return this.repo.listarPendientes();
+  }
+
+  /**
+   * Edita la ficha de una unidad.
+   *  - admin_empresa: solo su empresa y solo si está PENDIENTE o RECHAZADA.
+   *    Si estaba RECHAZADA, al guardar vuelve a PENDIENTE (reenvío).
+   *  - superadmin: cualquier unidad, sin cambiar el estado.
+   */
+  async editarUnidad(id, datos, sesion = {}) {
+    const actual = await this.repo.buscarPorId(id);
+    if (!actual) throw new Error('La unidad indicada no existe');
+
+    const esAdmin = sesion.rol === 'admin_empresa';
+    if (esAdmin) {
+      if (actual.empresaId !== sesion.empresaId) {
+        throw new Error('Esa unidad no pertenece a tu empresa');
+      }
+      if (!['PENDIENTE', 'RECHAZADA'].includes(actual.estadoRegistro)) {
+        throw new Error('Solo se puede editar una solicitud pendiente o rechazada');
+      }
+    } else if (sesion.rol !== 'superadmin') {
+      throw new Error('No tenés permiso para editar unidades');
+    }
+
+    const combinado = normalizarYValidar({ ...actual, ...datos, empresaId: actual.empresaId });
+    let unidad = await this.repo.actualizar(id, combinado);
+
+    if (esAdmin && actual.estadoRegistro === 'RECHAZADA') {
+      unidad = await this.repo.cambiarEstadoRegistro(id, 'PENDIENTE', { revisadoPor: null });
+    }
+    return unidad;
+  }
+
+  /** El superadmin libera una solicitud: queda APROBADA y ya se puede usar. */
+  async aprobarUnidad(id, sesion = {}) {
+    const actual = await this.repo.buscarPorId(id);
+    if (!actual) throw new Error('La unidad indicada no existe');
+    return this.repo.cambiarEstadoRegistro(id, 'APROBADA', { revisadoPor: sesion.usuarioId || null });
+  }
+
+  /** El superadmin rechaza una solicitud con un motivo. El admin puede corregir y reenviar. */
+  async rechazarUnidad(id, motivo, sesion = {}) {
+    const texto = String(motivo || '').trim();
+    if (!texto) throw new Error('El rechazo necesita un motivo');
+    const actual = await this.repo.buscarPorId(id);
+    if (!actual) throw new Error('La unidad indicada no existe');
+    return this.repo.cambiarEstadoRegistro(id, 'RECHAZADA', {
+      motivoRechazo: texto, revisadoPor: sesion.usuarioId || null
+    });
   }
 
   async desactivarUnidad(id) {
@@ -142,4 +197,4 @@ function normalizarYValidar(datos = {}) {
   return out;
 }
 
-module.exports = { UnidadesService, CATEGORIAS_MTC };
+module.exports = { UnidadesService, CATEGORIAS_MTC, ESTADOS_REGISTRO };

@@ -40,7 +40,15 @@ const { UnidadesRepositorioPostgres } = require('./src/unidades/unidadesRepoPost
     pesoSecoKg: 14500,
     tolvaCerrada: 'NO'
   });
-  console.log('[unidad creada en Supabase, de verdad]', creada);
+  console.log('[unidad creada en Supabase, de verdad] estado_registro =', creada.estadoRegistro,
+    creada.estadoRegistro === 'PENDIENTE' ? '[OK: nace pendiente]' : '[ERROR: debió nacer pendiente]');
+
+  // El superadmin la rechaza y después la libera.
+  const rechazada = await unidades.rechazarUnidad(creada.id, 'Falta el N° de CITV', { usuarioId: null });
+  console.log('[rechazada]', rechazada.estadoRegistro, '-', rechazada.motivoRechazo);
+  const aprobada = await unidades.aprobarUnidad(creada.id, { usuarioId: null });
+  console.log('[liberada]', aprobada.estadoRegistro,
+    aprobada.estadoRegistro === 'APROBADA' && !aprobada.motivoRechazo ? '[OK]' : '[ERROR]');
 
   const lista = await unidades.listarUnidades(empresa.id);
   console.log(`[unidades de la empresa: ${lista.length}]`);

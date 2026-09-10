@@ -44,7 +44,19 @@ const PASOS = [
   `alter table unidades add column if not exists altura_m numeric(5,2)`,
   `alter table unidades add column if not exists ancho_m numeric(5,2)`,
   `alter table unidades add column if not exists largo_m numeric(5,2)`,
-  `alter table unidades add column if not exists altura_plataforma_m numeric(5,2)`
+  `alter table unidades add column if not exists altura_plataforma_m numeric(5,2)`,
+
+  // --- Unidades: aprobación de la plataforma ---
+  // El admin de empresa registra la unidad y queda PENDIENTE; el
+  // superadmin la libera (APROBADA) o la rechaza con motivo (RECHAZADA).
+  // Solo las APROBADAS se pueden usar para emitir tickets.
+  `alter table unidades add column if not exists estado_registro text`,
+  `update unidades set estado_registro = 'APROBADA' where estado_registro is null`,
+  `alter table unidades alter column estado_registro set default 'PENDIENTE'`,
+  `alter table unidades alter column estado_registro set not null`,
+  `alter table unidades add column if not exists motivo_rechazo text`,
+  `alter table unidades add column if not exists revisado_por uuid`,
+  `alter table unidades add column if not exists revisado_en timestamptz`
 ];
 
 let listo = null;

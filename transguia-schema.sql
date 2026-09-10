@@ -119,6 +119,14 @@ create table unidades (
   largo_m numeric(5,2),
   altura_plataforma_m numeric(5,2),
 
+  -- Aprobación de la plataforma: el admin de empresa registra (PENDIENTE)
+  -- y el superadmin libera (APROBADA) o rechaza con motivo (RECHAZADA).
+  -- Solo las APROBADAS se pueden usar para emitir tickets.
+  estado_registro text not null default 'PENDIENTE',
+  motivo_rechazo text,
+  revisado_por uuid,
+  revisado_en timestamptz,
+
   activo boolean not null default true,
   creado_en timestamptz not null default now()
 );

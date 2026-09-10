@@ -92,10 +92,16 @@ erDiagram
         numeric ancho_m
         numeric largo_m
         numeric altura_plataforma_m
+        text estado_registro "PENDIENTE | APROBADA | RECHAZADA"
+        text motivo_rechazo
+        uuid revisado_por
+        timestamptz revisado_en
         bool activo "baja lógica"
         timestamptz creado_en
     }
-    %% SOAT y CITV van en documentos_unidad, no acá
+    %% SOAT y CITV van en documentos_unidad, no acá.
+    %% El admin registra (PENDIENTE); el superadmin libera (APROBADA) o
+    %% rechaza con motivo (RECHAZADA). Solo las APROBADAS emiten tickets.
 
     choferes {
         uuid id PK
@@ -295,8 +301,12 @@ El contrato formal está en `contrato-api.yaml` (OpenAPI 3.1, pegable en
 
 | Método y ruta | Para qué sirve | Entrada | Salida |
 |---|---|---|---|
-| `GET /api/unidades` | Listar las unidades de mi empresa (activas e inactivas), por placa. | — | Arreglo de unidades |
-| `POST /api/unidades` **(admin)** | Registrar una unidad con su ficha (dueño, transportista + ubicación, datos técnicos, medidas). **Obligatorios: `placa`, `rucPropietario` (11 díg), `dniTransportista` (8 díg)**; el resto es opcional. Si vienen `nroSoat`/`vigenciaSoat` o `nroCitv`/`vigenciaCitv` se guardan como documentos de la unidad (tipos SOAT y REVISION_TECNICA). | ver `NuevaUnidad` en `contrato-api.yaml` | La unidad creada (con `avisos` si algún SOAT/CITV quedó mal) |
+| `GET /api/unidades` | Listar las unidades de mi empresa (todas, con su `estadoRegistro`), por placa. | — | Arreglo de unidades |
+| `POST /api/unidades` **(admin)** | Registrar una unidad con su ficha (dueño, transportista + ubicación, datos técnicos, medidas). **Nace en `estadoRegistro: PENDIENTE`** — no sirve para tickets hasta que el superadmin la libere. **Obligatorios: `placa`, `rucPropietario` (11 díg), `dniTransportista` (8 díg)**; el resto opcional. `nroSoat`/`vigenciaSoat` y `nroCitv`/`vigenciaCitv` se guardan como documentos (SOAT y REVISION_TECNICA). | ver `NuevaUnidad` en `contrato-api.yaml` | La unidad creada (con `avisos` si algún SOAT/CITV quedó mal) |
+| `GET /api/unidades/pendientes` **(superadmin)** | Solicitudes `PENDIENTE` de todas las empresas, con `empresaRazonSocial`. | — | Arreglo de unidades |
+| `PUT /api/unidades/:id` **(admin / superadmin)** | Editar la ficha. Admin: su unidad, solo si está PENDIENTE o RECHAZADA (si estaba rechazada, al guardar vuelve a PENDIENTE). Superadmin: cualquiera, sin cambiar el estado. Solo pisa los campos enviados. | campos de ficha | La unidad actualizada |
+| `POST /api/unidades/:id/aprobar` **(superadmin)** | Libera la solicitud: `estadoRegistro = APROBADA`. Recién ahí se puede usar para tickets. | `id` en la URL | La unidad actualizada |
+| `POST /api/unidades/:id/rechazar` **(superadmin)** | Rechaza con `motivo` (obligatorio): `estadoRegistro = RECHAZADA`. El admin corrige y vuelve a PENDIENTE. | `{ "motivo": "…" }` | La unidad actualizada |
 | `POST /api/unidades/:id/desactivar` **(admin)** | Baja lógica (`activo = false`): sigue en tickets viejos, ya no se elige para nuevos. | `id` en la URL | La unidad actualizada |
 
 ### Choferes
