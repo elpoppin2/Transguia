@@ -15,10 +15,10 @@ src/
   tickets/     ticketService (orquesta) + repos memoria/postgres
   gre/         interfaz EmisorGRE + implementaciones (demo / pse / directo)
   db/          pool de conexión a Postgres + helper de transacciones
-  app.js       arma la app Express (rutas + servicios), sin listen
+  app.js       arma la app Express (rutas + servicios + sirve el prototipo en /), sin listen
 server.js                 levanta la app como proceso normal (local / Render / Railway)
 api/index.js              entrada para Vercel (misma app, serverless)
-transguia-prototipo.html  interfaz de una sola página, conectada a la API
+transguia-prototipo.html  interfaz de una sola página; la sirve el backend en /
 sembrar-datos.js          carga una demo completa en la base
 crear-empresa.js          crea una empresa nueva + su primer admin
 probar-todo.js            corre todos los scripts de prueba (npm run probar)
@@ -32,12 +32,13 @@ DESPLIEGUE.md             cómo subirlo a Render / Railway
 ```
 npm install
 cp .env.example .env      # y completar DATABASE_URL y SESSION_SECRET
-npm start                 # API en http://localhost:3001
+npm start                 # interfaz + API en http://localhost:3001
 npm run sembrar           # empresa + usuario andina/demo2026seguro + datos de demo
 ```
 
-Después, abrir `transguia-prototipo.html` en el navegador e ingresar con
-`andina` / `demo2026seguro`.
+Después, abrir **http://localhost:3001** en el navegador e ingresar con
+`andina` / `demo2026seguro`. El backend sirve el prototipo; no hay que
+configurar ninguna URL de API.
 
 ```
 npm run probar            # corre todas las pruebas contra la base real

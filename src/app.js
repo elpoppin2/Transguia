@@ -6,6 +6,8 @@
 // Seguridad: /api/health y /api/auth/login son públicos; el resto exige
 // "Authorization: Bearer <token>". El empresaId sale del token.
 
+const fs = require('fs');
+const path = require('path');
 const express = require('express');
 
 const { crearEmisorGRE } = require('./gre/crearEmisorGRE');
@@ -80,6 +82,17 @@ const h = (fn) => (req, res) => {
     if (!res.headersSent) res.status(400).json({ error: error.message });
   });
 };
+
+// ==================== INTERFAZ WEB ====================
+// El backend sirve también el prototipo, así el front y la API viven en
+// el mismo origen y las llamadas son relativas (fetch("/api/...")): no
+// hay que configurar ninguna URL de API en el navegador.
+const HTML_PROTOTIPO = fs.readFileSync(
+  path.join(__dirname, '..', 'transguia-prototipo.html'), 'utf8'
+);
+app.get(['/', '/index.html', '/prototipo'], (req, res) => {
+  res.type('html').send(HTML_PROTOTIPO);
+});
 
 // ==================== PÚBLICO ====================
 

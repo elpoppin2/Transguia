@@ -82,7 +82,6 @@
   <h1>TransGuía</h1>
   <span class="quien" id="quien"></span>
   <span class="sp"></span>
-  <span class="config">API <input id="apiUrl" spellcheck="false" /></span>
   <button class="tenue chico" id="btnSalir" hidden>Cerrar sesión</button>
 </header>
 
@@ -224,7 +223,10 @@ const TIPOS_DOC_CHOFER = ["LICENCIA_CONDUCIR","CERTIFICADO_MEDICO","OTRO"];
 const CATEGORIAS_LICENCIA = ["A-I","A-IIa","A-IIb","A-IIIa","A-IIIb","A-IIIc"];
 
 const estado = {
-  api: localStorage.getItem("transguia.api") || "http://localhost:3001",
+  // Esta página la sirve el propio backend, así que las llamadas van al
+  // mismo origen: fetch("/api/..."). Solo para desarrollo se puede forzar
+  // otro servidor con  localStorage.setItem("transguia.api", "http://localhost:3001")
+  api: localStorage.getItem("transguia.api") || "",
   sesion: JSON.parse(localStorage.getItem("transguia.sesion") || "null"),
   unidades: [], choferes: []
 };
@@ -280,7 +282,6 @@ function pillDias(d) {
 
 // ---------- render ----------
 function render() {
-  el("apiUrl").value = estado.api;
   const dentro = !!(estado.sesion && estado.sesion.token);
   el("panelLogin").hidden = dentro;
   el("app").hidden = !dentro;
@@ -528,10 +529,6 @@ async function login() {
 
 // ---------- eventos ----------
 el("uConfig").innerHTML = CONFIG_VEHICULAR.map((c) => `<option>${c}</option>`).join("");
-el("apiUrl").addEventListener("change", (e) => {
-  estado.api = e.target.value.trim().replace(/\/$/, "");
-  localStorage.setItem("transguia.api", estado.api); render();
-});
 el("btnSalir").addEventListener("click", () => cerrarSesion());
 el("btnLogin").addEventListener("click", login);
 el("loginPass").addEventListener("keydown", (e) => { if (e.key === "Enter") login(); });

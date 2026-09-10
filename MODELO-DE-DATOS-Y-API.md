@@ -316,13 +316,14 @@ El contrato formal está en `contrato-api.yaml` (OpenAPI 3.1, pegable en
 ## Cómo levantar todo (recordatorio)
 
 ```bash
-node server.js          # API en http://localhost:3001
+node server.js          # interfaz + API en http://localhost:3001
 node sembrar-datos.js   # empresa + usuario andina/demo2026seguro + unidades, choferes, documentos y tickets
 npm run probar          # corre todos los scripts de prueba contra la base
 ```
 
-Luego abrir `transguia-prototipo.html` en el navegador (ingresar con
-`andina` / `demo2026seguro`). Para crear otra empresa con su primer
+Luego abrir **http://localhost:3001** en el navegador (ingresar con
+`andina` / `demo2026seguro`). El backend sirve la interfaz; las llamadas
+son relativas al mismo servidor. Para crear otra empresa con su primer
 admin: `node crear-empresa.js <RUC> "<Razón>" <usuario> <clave> "<Nombre>"`.
 
 El despliegue a internet está documentado en `DESPLIEGUE.md`.

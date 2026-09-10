@@ -1,10 +1,9 @@
 # Desplegar TransGuía
 
-La base de datos (Supabase) ya está en la nube. Falta subir:
-
-- **el backend** (`server.js` / la API) → **Vercel** (elegido)
-- **el prototipo web** (`transguia-prototipo.html`) → cualquier hosting
-  estático (Vercel, Netlify, GitHub Pages). Es un solo archivo.
+La base de datos (Supabase) ya está en la nube. Falta subir **el backend**
+a **Vercel** (elegido). La interfaz (`transguia-prototipo.html`) **la sirve
+el propio backend** en `/`, así que con un solo despliegue quedan la web y
+la API juntas, en el mismo dominio, sin configurar ninguna URL.
 
 ---
 
@@ -56,9 +55,8 @@ en Vercel. *(El transaction pooler es el que conviene para serverless.)*
 
 ### 1.3 Probar
 
-```
-https://TU-URL.vercel.app/api/health   →   {"ok":true,...}
-```
+- `https://TU-URL.vercel.app/api/health` → `{"ok":true,...}`
+- `https://TU-URL.vercel.app/` → la interfaz de TransGuía (login).
 
 > La primera petición tras un rato de inactividad tarda ~1–2 s (arranque
 > en frío). Normal en serverless y suficiente para el piloto.
@@ -77,18 +75,11 @@ node crear-empresa.js <RUC> "<Razón social>" <usuario> <contraseña> "<Nombre>"
 
 ---
 
-## Parte 3 — El prototipo web
+## Parte 3 — La interfaz
 
-Opción simple: abrir `transguia-prototipo.html` local y en el campo
-**"API"** (arriba a la derecha) poner la URL de Vercel. Queda guardada en
-el navegador.
-
-Opción para compartir: subirlo como sitio estático.
-- **Vercel:** `vercel deploy` en una carpeta que contenga solo ese HTML
-  (renómbralo `index.html`), o arrastrarlo en vercel.com.
-- **Netlify / GitHub Pages:** igual de simple.
-
-Después, en esa página, poner la URL del backend en el campo "API".
+No hay nada que hacer: **ya está publicada** en la misma URL del
+despliegue (`https://TU-URL.vercel.app/`). Repartís ese link a las
+personas del piloto y entran con su usuario y contraseña.
 
 ---
 

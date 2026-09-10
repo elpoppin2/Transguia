@@ -11,7 +11,7 @@ const PUERTO = process.env.PORT || 3001;
 prepararEsquema()
   .then(() => {
     app.listen(PUERTO, () => {
-      console.log(`API de TransGuía escuchando en el puerto ${PUERTO}`);
+      console.log(`TransGuía en http://localhost:${PUERTO}  (interfaz web y API)`);
       console.log(`Proveedor de GRE activo: ${process.env.GRE_PROVIDER || 'demo'}` +
         (emisionSincrona ? ' (emisión síncrona)' : ''));
       if (!process.env.SESSION_SECRET) {

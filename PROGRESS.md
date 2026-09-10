@@ -54,9 +54,10 @@ grandes o instalar cosas nuevas.
   `server.js`/los scripts crean la secuencia `transguia_ticket_codigo_seq`
   si no existe — es el correlativo de `codigo_interno`.)
 - `transguia-prototipo.html` — interfaz de una sola página (sin build ni
-  dependencias) conectada a la API real. Login con token, pestañas de
-  unidades, choferes, tickets, vencimientos y (solo admin) usuarios;
-  gestión de documentos por unidad/chofer.
+  dependencias). **La sirve el propio backend** en `/` (mismo origen que
+  la API, llamadas relativas `fetch("/api/...")`, cero configuración).
+  Login con token, pestañas de unidades, choferes, tickets, vencimientos
+  y (solo admin) usuarios; gestión de documentos por unidad/chofer.
 - `contrato-api.yaml` — contrato de la API en OpenAPI 3.1 (pegable en
   editor.swagger.io).
 - `MODELO-DE-DATOS-Y-API.md` — diagrama de entidades + para qué sirve
@@ -85,11 +86,12 @@ Después quedan cosas que dependen de terceros (punto 8: contratar un PSE
 o certificado digital; punto 9: piloto con transportistas reales).
 
 ### Para levantar y demostrar ahora mismo (local)
-1. `node server.js` — API en http://localhost:3001
+1. `node server.js`
 2. `node sembrar-datos.js` — empresa + usuario `andina`/`demo2026seguro`
    + 4 unidades + 4 choferes + documentos + 2 tickets. Idempotente.
-3. Abrir `transguia-prototipo.html` (doble clic). El campo "API" ya
-   apunta a localhost:3001.
+3. Abrir **http://localhost:3001** en el navegador. El backend sirve la
+   interfaz; ya no hay que configurar ninguna URL de API (las llamadas
+   son relativas al mismo servidor).
 4. `node borrar-datos-demo.js` — limpia lo sembrado (`--empresa` borra
    también la empresa).
 
@@ -163,9 +165,17 @@ o certificado digital; punto 9: piloto con transportistas reales).
    prepara en la 1ª petición; el pool `pg` usa `max: 1` y hace falta la
    cadena **Transaction pooler** (6543) de Supabase. Con `demo` es
    instantáneo. Pasos en `DESPLIEGUE.md`.
+6f. [x] **Front y back integrados** (2026-09-09, decisión del usuario).
+   `src/app.js` sirve `transguia-prototipo.html` en `/`, `/index.html` y
+   `/prototipo`. El prototipo hace `fetch("/api/...")` relativo (default
+   `estado.api = ""`); se quitó el campo "API" del header. Un solo
+   despliegue = front + API. `vercel.json` incluye el HTML en el bundle
+   de la función (`includeFiles`). Para desarrollo se puede apuntar a
+   otro backend con `localStorage.setItem("transguia.api", "...")`.
 7. **(pendiente — necesita cuenta del usuario)** Deploy a Vercel. Todo el
    código y la config están; solo falta importar el repo en vercel.com y
-   cargar las variables de entorno. Guía en `DESPLIEGUE.md`.
+   cargar las variables de entorno. **Un solo deploy** publica la
+   interfaz y la API juntas. Guía en `DESPLIEGUE.md`.
 8. **(pendiente — externo)** Conseguir un PSE (Nubefact, EFACT…) o
    certificado digital para emitir la GRE real ante SUNAT.
 9. **(pendiente — externo)** Pilotear con 1-2 transportistas reales.
