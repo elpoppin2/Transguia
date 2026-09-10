@@ -105,6 +105,24 @@
   .resumen-linea { font-size: 13px; margin-bottom: 12px; color: var(--texto-suave); }
   .resumen-linea strong { font-size: 17px; color: var(--texto); }
   [data-agr].activa { background: var(--primario); color: var(--primario-texto); }
+  /* gráfico de línea (evolución diaria) */
+  .chart-l { padding-top: 4px; }
+  .chl-plot { position: relative; height: 150px; }
+  .chl-plot svg { width: 100%; height: 100%; display: block; overflow: visible; }
+  .chl-guia { stroke: var(--borde); stroke-width: 1; vector-effect: non-scaling-stroke; }
+  .chl-area { fill: var(--primario); opacity: .10; stroke: none; }
+  .chl-linea { fill: none; stroke: var(--primario); stroke-width: 2; vector-effect: non-scaling-stroke;
+    stroke-linejoin: round; stroke-linecap: round; }
+  .chl-punto { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: var(--primario);
+    transform: translate(-50%, -50%); box-shadow: 0 0 0 3px var(--panel-2); }
+  .chl-ymax { position: absolute; top: -3px; left: 0; font-size: 10px; color: var(--texto-suave);
+    background: var(--panel-2); padding: 0 3px; font-variant-numeric: tabular-nums; }
+  .chl-hits { position: absolute; inset: 0; }
+  .chl-hits > div { position: absolute; top: 0; bottom: 0; }
+  .chl-hits > div:hover { background: color-mix(in srgb, var(--primario) 9%, transparent); }
+  .chl-xlab { position: relative; height: 14px; margin-top: 5px; }
+  .chl-xlab span { position: absolute; transform: translateX(-50%); font-size: 9px;
+    color: var(--texto-suave); white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -730,6 +748,70 @@ function chartHorizontal(cont, datos, fmt) {
       <div class="bar-row-val">${fmt ? fmt(d.valor) : d.valor}</div>
     </div>`).join("");
 }
+// Gráfico de línea: evolución de una serie temporal ya continua (sin huecos).
+function chartLinea(cont, datos) {
+  cont.className = "chart-l";
+  if (!datos.length) { cont.className = ""; cont.innerHTML = `<p class="muted">Sin datos.</p>`; return; }
+  const n = datos.length;
+  const max = Math.max(...datos.map((d) => d.valor), 1);
+  const techo = max <= 4 ? max : Math.ceil(max * 1.1);
+  const xp = (i) => (n === 1 ? 50 : (i / (n - 1)) * 100);
+  const yp = (v) => (1 - v / techo) * 100;
+  const linea = datos.map((d, i) => `${i ? "L" : "M"}${xp(i).toFixed(2)},${yp(d.valor).toFixed(2)}`).join(" ");
+  const area = `${linea} L${xp(n - 1).toFixed(2)},100 L${xp(0).toFixed(2)},100 Z`;
+  const guias = [0, techo / 2, techo]
+    .map((v) => `<line x1="0" y1="${yp(v).toFixed(2)}" x2="100" y2="${yp(v).toFixed(2)}" class="chl-guia"/>`)
+    .join("");
+  const ult = datos[n - 1];
+  const paso = Math.max(1, Math.round(n / 7));
+  let xlab = "";
+  for (let i = 0; i < n; i += paso) xlab += `<span style="left:${xp(i).toFixed(2)}%">${escapar(datos[i].label)}</span>`;
+  if (n > 1 && (n - 1) % paso !== 0) xlab += `<span style="left:100%">${escapar(ult.label)}</span>`;
+  const hits = datos
+    .map((d, i) => `<div title="${escapar(d.titulo)}" style="left:${(i / n * 100).toFixed(3)}%;width:${(100 / n).toFixed(3)}%"></div>`)
+    .join("");
+  cont.innerHTML = `
+    <div class="chl-plot">
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+        ${guias}
+        <path d="${area}" class="chl-area"/>
+        <path d="${linea}" class="chl-linea"/>
+      </svg>
+      <span class="chl-punto" style="left:${xp(n - 1).toFixed(2)}%;top:${yp(ult.valor).toFixed(2)}%"></span>
+      <div class="chl-ymax">${max}</div>
+      <div class="chl-hits">${hits}</div>
+    </div>
+    <div class="chl-xlab">${xlab}</div>`;
+}
+
+// Rellena los días/meses sin traslados con cero, entre el primer y el último
+// período con datos, para que la línea muestre el evolutivo real de calendario.
+function serieContinua(rows, agrupar) {
+  if (!rows.length) return [];
+  const val = new Map(rows.map((r) => [r.periodo, r.cantidad]));
+  const out = [];
+  if (agrupar === "mes") {
+    let [y, m] = rows[0].periodo.split("-").map(Number);
+    const [ey, em] = rows[rows.length - 1].periodo.split("-").map(Number);
+    for (let g = 0; g < 240 && (y < ey || (y === ey && m <= em)); g++) {
+      const key = `${y}-${String(m).padStart(2, "0")}`;
+      out.push({ periodo: key, cantidad: val.get(key) || 0 });
+      if (++m > 12) { m = 1; y++; }
+    }
+  } else {
+    const parse = (s) => { const [y, m, d] = s.split("-").map(Number); return Date.UTC(y, m - 1, d); };
+    let t = parse(rows[0].periodo);
+    const fin = parse(rows[rows.length - 1].periodo);
+    for (let g = 0; g < 400 && t <= fin; g++, t += 86400000) {
+      const key = new Date(t).toISOString().slice(0, 10);
+      out.push({ periodo: key, cantidad: val.get(key) || 0 });
+    }
+  }
+  return out;
+}
+
+const MESES_ABREV = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+
 async function cargarDashboard() {
   const agr = estado.dashAgrupar;
   document.querySelectorAll("[data-agr]").forEach((b) => b.classList.toggle("activa", b.dataset.agr === agr));
@@ -740,10 +822,22 @@ async function cargarDashboard() {
   catch (e) { aviso(e.message); el("dashAlcance").textContent = ""; return; }
   el("dashAlcance").textContent = `— ${d.alcance}`;
 
-  chartVertical(el("chTraslados"), d.trasladosPorPeriodo.map((r) => ({
-    label: agr === "mes" ? r.periodo.slice(5) : r.periodo.slice(8),
-    titulo: r.periodo, valor: r.cantidad
-  })));
+  const serieTraslados = serieContinua(d.trasladosPorPeriodo, agr);
+  chartLinea(el("chTraslados"), serieTraslados.map((r) => {
+    const plural = r.cantidad === 1 ? "traslado" : "traslados";
+    if (agr === "mes") {
+      return {
+        label: MESES_ABREV[+r.periodo.slice(5, 7) - 1],
+        titulo: `${r.periodo.slice(5, 7)}/${r.periodo.slice(0, 4)}: ${r.cantidad} ${plural}`,
+        valor: r.cantidad
+      };
+    }
+    return {
+      label: `${+r.periodo.slice(8)}/${+r.periodo.slice(5, 7)}`,
+      titulo: `${r.periodo.slice(8)}/${r.periodo.slice(5, 7)}/${r.periodo.slice(0, 4)}: ${r.cantidad} ${plural}`,
+      valor: r.cantidad
+    };
+  }));
 
   const e = d.porEstadoOperativo;
   chartVertical(el("chEstados"), [
