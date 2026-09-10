@@ -27,6 +27,7 @@ const { DocumentosRepositorioPostgres } = require('./src/documentos/documentosRe
 const { TicketService } = require('./src/tickets/ticketService');
 const { TicketsRepositorioPostgres } = require('./src/tickets/ticketsRepoPostgres');
 const { EmisorGREDemo } = require('./src/gre/EmisorGREDemo');
+const { fichaVehiculoDemo } = require('./demo-ficha-vehiculo');
 
 // ------------------------------------------------------------------
 // Azar con semilla: misma demo en cada corrida.
@@ -156,6 +157,7 @@ async function altaUnidades(unidadesSvc, unidadesRepo, empresaId, lista, etiquet
   for (const [placa, marca, modelo, anio, cat, config] of lista) {
     if (await unidadesRepo.buscarPorPlaca(placa)) continue;
     await unidadesSvc.registrarUnidad({
+      ...fichaVehiculoDemo(rnd),
       empresaId, placa, marca, modelo,
       anioFabricacion: anio, categoriaMtc: cat, configuracionVehicular: config
     });

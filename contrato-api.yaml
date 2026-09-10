@@ -204,6 +204,11 @@ paths:
     post:
       tags: [Unidades]
       summary: Registrar una unidad *(admin)*
+      description: >
+        Obligatorios: placa, rucPropietario, dniTransportista. Si vienen
+        nroSoat/vigenciaSoat o nroCitv/vigenciaCitv, se crean como
+        documentos de la unidad (tipos SOAT y REVISION_TECNICA); si alguno
+        está mal cargado, la unidad igual se crea y la respuesta trae `avisos`.
       requestBody:
         required: true
         content:
@@ -380,11 +385,14 @@ paths:
   /api/catalogos:
     get:
       tags: [Tickets]
-      summary: Catálogos fijos para los desplegables del ticket
-      description: Mercancía, centro de origen y destino admitidos al crear un ticket.
+      summary: Listas para los desplegables del ticket y del registro de unidad
+      description: >
+        mercancias/centrosOrigen/destinos son cerrados (el ticket los
+        valida). tiposVehiculo/tiposRodada/formasApertura son solo
+        sugerencias para el formulario de unidad (no se validan).
       responses:
         "200":
-          description: Las tres listas
+          description: Las listas
           content:
             application/json:
               schema:
@@ -399,6 +407,63 @@ paths:
                   destinos:
                     type: array
                     items: { $ref: "#/components/schemas/Destino" }
+                  tiposVehiculo: { type: array, items: { type: string } }
+                  tiposRodada: { type: array, items: { type: string } }
+                  formasApertura: { type: array, items: { type: string } }
+
+  /api/consulta/ruc/{ruc}:
+    get:
+      tags: [Unidades]
+      summary: Autocompletar datos del dueño por RUC (SUNAT)
+      description: >
+        Todavía sin proveedor externo: responde `{ "configurado": false }`.
+        Ver src/consulta/consultaIdentidad.js.
+      parameters:
+        - { name: ruc, in: path, required: true, schema: { type: string, pattern: "^[0-9]{11}$" } }
+      responses:
+        "200":
+          description: Datos del RUC, o { configurado:false } si no hay proveedor
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties: { configurado: { const: false } }
+                  - type: object
+                    properties:
+                      configurado: { const: true }
+                      ruc: { type: string }
+                      nombre: { type: string }
+                      direccion: { type: [string, "null"] }
+        "401": { $ref: "#/components/responses/NoAutenticado" }
+
+  /api/consulta/dni/{dni}:
+    get:
+      tags: [Unidades]
+      summary: Autocompletar ubicación del transportista por DNI (RENIEC)
+      description: >
+        Todavía sin proveedor externo: responde `{ "configurado": false }`.
+      parameters:
+        - { name: dni, in: path, required: true, schema: { type: string, pattern: "^[0-9]{8}$" } }
+      responses:
+        "200":
+          description: Datos del DNI, o { configurado:false } si no hay proveedor
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties: { configurado: { const: false } }
+                  - type: object
+                    properties:
+                      configurado: { const: true }
+                      dni: { type: string }
+                      nombres: { type: string }
+                      apellidos: { type: string }
+                      departamento: { type: [string, "null"] }
+                      provincia: { type: [string, "null"] }
+                      distrito: { type: [string, "null"] }
+        "401": { $ref: "#/components/responses/NoAutenticado" }
         "401": { $ref: "#/components/responses/NoAutenticado" }
 
   /api/tickets:
@@ -663,16 +728,52 @@ components:
 
     NuevaUnidad:
       type: object
-      required: [placa, marca, modelo, categoriaMtc, configuracionVehicular]
+      description: >
+        Solo placa, rucPropietario y dniTransportista son obligatorios;
+        el resto se puede completar después. Los campos "autocompletados"
+        (nombrePropietario, direccionPropietario, departamento, provincia,
+        distrito) hoy se cargan a mano. nroSoat/vigenciaSoat y
+        nroCitv/vigenciaCitv NO se guardan en la unidad: se registran como
+        documentos con vencimiento (tipo SOAT y REVISION_TECNICA).
+      required: [placa, rucPropietario, dniTransportista]
       properties:
         placa: { type: string, description: "3 letras + 3 dígitos; se normaliza a ABC-123", example: ABC-756 }
+        rucPropietario: { type: string, pattern: "^[0-9]{11}$", description: "RUC del dueño del vehículo" }
+        nombrePropietario: { type: string }
+        direccionPropietario: { type: string }
+        dniTransportista: { type: string, pattern: "^[0-9]{8}$", description: "DNI del transportista responsable" }
+        departamento: { type: string }
+        provincia: { type: string }
+        distrito: { type: string }
+        tipoVehiculo: { type: string, description: "Ver GET /api/catalogos → tiposVehiculo" }
         marca: { type: string, example: Volvo }
         modelo: { type: string, example: "FH 460" }
         anioFabricacion: { type: [integer, "null"], minimum: 1970, example: 2021 }
         categoriaMtc: { $ref: "#/components/schemas/CategoriaMtc" }
         configuracionVehicular: { $ref: "#/components/schemas/ConfiguracionVehicular" }
+        nroEjes: { type: integer, minimum: 2, maximum: 12, example: 3 }
+        rodadaEjeDelantero: { type: string, description: "Ver GET /api/catalogos → tiposRodada" }
+        rodadaC1: { type: string }
+        rodadaC2: { type: string }
+        pesoSecoKg: { type: number, example: 14500 }
+        tolvaCerrada: { type: boolean, description: "Acepta true/false o \"SI\"/\"NO\"" }
+        carretaConPiston: { type: boolean }
+        unidadAGas: { type: boolean }
+        formaApertura: { type: string, description: "Ver GET /api/catalogos → formasApertura" }
+        alturaM: { type: number, example: 3.20 }
+        anchoM: { type: number, example: 2.60 }
+        largoM: { type: number, example: 12.30 }
+        alturaPlataformaM: { type: number, example: 1.20 }
+        nroSoat: { type: string }
+        vigenciaSoat: { type: string, format: date }
+        nroCitv: { type: string }
+        vigenciaCitv: { type: string, format: date }
 
     Unidad:
+      description: >
+        Como NuevaUnidad (sin nroSoat/vigenciaSoat/nroCitv/vigenciaCitv,
+        que viven en documentos_unidad) más id, empresaId, activo, creadoEn.
+        En un alta con SOAT/CITV mal cargados, la respuesta incluye `avisos`.
       allOf:
         - $ref: "#/components/schemas/NuevaUnidad"
         - type: object
@@ -681,6 +782,7 @@ components:
             empresaId: { type: string, format: uuid }
             activo: { type: boolean }
             creadoEn: { type: string, format: date-time }
+            avisos: { type: array, items: { type: string } }
 
     NuevoChofer:
       type: object

@@ -49,6 +49,7 @@ function esperarEmision(ticketService, datos) {
   const unidad = await unidades.registrarUnidad({
     empresaId: empresa.id,
     placa: `TT${s[0]}-${s.slice(1, 4)}`,
+    rucPropietario: '20548712369', dniTransportista: '45678912',
     marca: 'Scania', modelo: 'R 450', anioFabricacion: 2022,
     categoriaMtc: 'N3', configuracionVehicular: 'T3S3'
   });

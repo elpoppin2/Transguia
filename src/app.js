@@ -29,6 +29,8 @@ const { DocumentosRepositorioPostgres } = require('./documentos/documentosRepoPo
 const { TicketService } = require('./tickets/ticketService');
 const { TicketsRepositorioPostgres } = require('./tickets/ticketsRepoPostgres');
 const { MERCANCIAS, CENTROS_ORIGEN, DESTINOS } = require('./tickets/catalogos');
+const { TIPOS_VEHICULO, TIPOS_RODADA, FORMAS_APERTURA } = require('./unidades/catalogosUnidad');
+const { consultarRuc, consultarDni } = require('./consulta/consultaIdentidad');
 
 // En serverless (Vercel) la función se apaga apenas responde, así que la
 // emisión de la GRE debe terminar ANTES de contestar, no en segundo
@@ -172,8 +174,28 @@ app.get('/api/unidades', requiereSesion, h(async (req, res) => {
 }));
 
 app.post('/api/unidades', requiereSesion, requiereRol('admin_empresa'), h(async (req, res) => {
-  const unidad = await unidadesService.registrarUnidad({ ...req.body, empresaId: req.sesion.empresaId });
-  res.status(201).json(unidad);
+  const empresaId = req.sesion.empresaId;
+  // El SOAT y el CITV no son columnas de la unidad: se guardan como
+  // documentos con vencimiento (así los ve la pestaña "Vencimientos").
+  const { nroSoat, vigenciaSoat, nroCitv, vigenciaCitv, ...datosUnidad } = req.body || {};
+  const unidad = await unidadesService.registrarUnidad({ ...datosUnidad, empresaId });
+
+  const avisos = [];
+  const guardarDoc = async (tipo, numero, vencimiento, etiqueta) => {
+    if (!vencimiento && !numero) return;
+    if (!vencimiento) { avisos.push(`${etiqueta}: falta la fecha de vigencia, no se guardó`); return; }
+    try {
+      await documentosService.agregarAUnidad(empresaId, unidad.id, {
+        tipoDocumento: tipo, numeroDocumento: numero || null, fechaVencimiento: vencimiento
+      });
+    } catch (e) {
+      avisos.push(`${etiqueta}: ${e.message}`);
+    }
+  };
+  await guardarDoc('SOAT', nroSoat, vigenciaSoat, 'SOAT');
+  await guardarDoc('REVISION_TECNICA', nroCitv, vigenciaCitv, 'CITV');
+
+  res.status(201).json(avisos.length ? { ...unidad, avisos } : unidad);
 }));
 
 app.post('/api/unidades/:id/desactivar', requiereSesion, requiereRol('admin_empresa'), h(async (req, res) => {
@@ -234,8 +256,24 @@ app.get('/api/vencimientos', requiereSesion, h(async (req, res) => {
 // Fuente única de verdad en el backend (así el front no las duplica).
 
 app.get('/api/catalogos', requiereSesion, (req, res) => {
-  res.json({ mercancias: MERCANCIAS, centrosOrigen: CENTROS_ORIGEN, destinos: DESTINOS });
+  res.json({
+    mercancias: MERCANCIAS,
+    centrosOrigen: CENTROS_ORIGEN,
+    destinos: DESTINOS,
+    tiposVehiculo: TIPOS_VEHICULO,
+    tiposRodada: TIPOS_RODADA,
+    formasApertura: FORMAS_APERTURA
+  });
 });
+
+// Autocompletar por RUC / DNI. Hoy responde { configurado: false }
+// (todavía sin proveedor externo); ver src/consulta/consultaIdentidad.js.
+app.get('/api/consulta/ruc/:ruc', requiereSesion, h(async (req, res) => {
+  res.json(await consultarRuc(req.params.ruc));
+}));
+app.get('/api/consulta/dni/:dni', requiereSesion, h(async (req, res) => {
+  res.json(await consultarDni(req.params.dni));
+}));
 
 // ==================== TICKETS ====================
 

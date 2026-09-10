@@ -65,15 +65,37 @@ erDiagram
     unidades {
         uuid id PK
         uuid empresa_id FK
-        varchar placa UK "ABC-123"
+        varchar placa UK "ABC-123 (obligatorio)"
+        char ruc_propietario "dueño, 11 díg (obligatorio)"
+        text nombre_propietario "autocompletable por RUC"
+        text direccion_propietario "autocompletable por RUC"
+        char dni_transportista "8 díg (obligatorio)"
+        text departamento "autocompletable por DNI"
+        text provincia "autocompletable por DNI"
+        text distrito "autocompletable por DNI"
+        text tipo_vehiculo
         text marca
         text modelo
         smallint anio_fabricacion
-        enum categoria_mtc "N1 | N2 | N3"
-        text configuracion_vehicular FK
+        enum categoria_mtc "N1 | N2 | N3 (opc.)"
+        text configuracion_vehicular FK "opc."
+        smallint nro_ejes
+        text rodada_eje_delantero
+        text rodada_c1
+        text rodada_c2
+        numeric peso_seco_kg
+        bool tolva_cerrada
+        bool carreta_con_piston
+        bool unidad_a_gas
+        text forma_apertura
+        numeric altura_m
+        numeric ancho_m
+        numeric largo_m
+        numeric altura_plataforma_m
         bool activo "baja lógica"
         timestamptz creado_en
     }
+    %% SOAT y CITV van en documentos_unidad, no acá
 
     choferes {
         uuid id PK
@@ -274,7 +296,7 @@ El contrato formal está en `contrato-api.yaml` (OpenAPI 3.1, pegable en
 | Método y ruta | Para qué sirve | Entrada | Salida |
 |---|---|---|---|
 | `GET /api/unidades` | Listar las unidades de mi empresa (activas e inactivas), por placa. | — | Arreglo de unidades |
-| `POST /api/unidades` **(admin)** | Registrar una unidad. Valida placa peruana (3+3), categoría MTC `N1/N2/N3`, año 1970–próximo, y configuración vehicular del Anexo IV. | `placa`, `marca`, `modelo`, `anioFabricacion` (opc.), `categoriaMtc`, `configuracionVehicular` | La unidad creada |
+| `POST /api/unidades` **(admin)** | Registrar una unidad con su ficha (dueño, transportista + ubicación, datos técnicos, medidas). **Obligatorios: `placa`, `rucPropietario` (11 díg), `dniTransportista` (8 díg)**; el resto es opcional. Si vienen `nroSoat`/`vigenciaSoat` o `nroCitv`/`vigenciaCitv` se guardan como documentos de la unidad (tipos SOAT y REVISION_TECNICA). | ver `NuevaUnidad` en `contrato-api.yaml` | La unidad creada (con `avisos` si algún SOAT/CITV quedó mal) |
 | `POST /api/unidades/:id/desactivar` **(admin)** | Baja lógica (`activo = false`): sigue en tickets viejos, ya no se elige para nuevos. | `id` en la URL | La unidad actualizada |
 
 ### Choferes
@@ -309,7 +331,8 @@ El contrato formal está en `contrato-api.yaml` (OpenAPI 3.1, pegable en
 
 | Método y ruta | Para qué sirve | Entrada | Salida |
 |---|---|---|---|
-| `GET /api/catalogos` | Listas fijas para los desplegables del ticket: mercancía, centro de origen y destino. Fuente única de verdad (el front no las duplica). Definidas en `src/tickets/catalogos.js`. | — | `{ "mercancias": [...], "centrosOrigen": [...], "destinos": [...] }` |
+| `GET /api/catalogos` | Listas para los desplegables. Del **ticket** (cerradas, se validan): `mercancias`, `centrosOrigen`, `destinos` — en `src/tickets/catalogos.js`. De la **unidad** (solo sugerencias): `tiposVehiculo`, `tiposRodada`, `formasApertura` — en `src/unidades/catalogosUnidad.js`. | — | `{ mercancias, centrosOrigen, destinos, tiposVehiculo, tiposRodada, formasApertura }` |
+| `GET /api/consulta/ruc/:ruc` · `GET /api/consulta/dni/:dni` | Autocompletar datos del dueño (SUNAT) y ubicación del transportista (RENIEC). **Todavía sin proveedor**: responde `{ configurado: false }`. El enganche está en `src/consulta/consultaIdentidad.js`. | RUC/DNI en la URL | `{ configurado: false }` o los datos |
 | `GET /api/tickets` | Listar los tickets de mi empresa, del más nuevo al más viejo, con el estado de su GRE y los datos de unidad y chofer. | — | Arreglo de tickets |
 | `POST /api/tickets` | **Generar un ticket y disparar la GRE.** Verifica que la unidad y el chofer sean de mi empresa y estén activos. Traduce el `motivo` libre al valor oficial. `descripcionMercancia`, `origen` (centro de origen) y `destino` deben ser valores del catálogo (`GET /api/catalogos`); se aceptan sin distinguir mayúsculas/tildes/espacios y se guardan canónicos. `creadoPor` sale del token. Responde con `estadoSunat: "ENVIANDO"` — la GRE se resuelve en segundo plano (1–2 s con el simulador). | `unidadId`, `choferId`, `origen`, `destino`, `motivo` (opc.), `descripcionMercancia`, `pesoBrutoKg` | El ticket creado (`codigoInterno` tipo `TCK-000001`) |
 | `GET /api/tickets/:id` | Ver un ticket con el estado actualizado de su GRE. El frontend lo consulta en bucle tras crear, hasta que deja de estar `ENVIANDO`. | `id` en la URL | El ticket, o 404 |

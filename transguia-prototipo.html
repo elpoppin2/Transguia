@@ -123,6 +123,17 @@
   .chl-xlab { position: relative; height: 14px; margin-top: 5px; }
   .chl-xlab span { position: absolute; transform: translateX(-50%); font-size: 9px;
     color: var(--texto-suave); white-space: nowrap; }
+  /* formulario de unidad */
+  h3.grupo { font-size: 12px; text-transform: uppercase; letter-spacing: .5px;
+    color: var(--texto-suave); margin: 18px 0 8px; border-top: 1px solid var(--borde); padding-top: 12px; }
+  h3.grupo .sub { text-transform: none; letter-spacing: 0; font-weight: 400; }
+  h3.grupo:first-of-type { border-top: 0; padding-top: 0; margin-top: 4px; }
+  .conbtn { display: flex; gap: 6px; }
+  .conbtn input { flex: 1; min-width: 0; }
+  .conbtn button { white-space: nowrap; }
+  .ficha { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px 16px; }
+  .ficha > div { display: flex; flex-direction: column; font-size: 12.5px; }
+  .ficha > div > span { color: var(--texto-suave); font-size: 11px; }
 </style>
 </head>
 <body>
@@ -230,20 +241,76 @@
     <!-- UNIDADES -->
     <section class="panel" data-vista="unidades">
       <div class="solo-admin">
-        <h2>Registrar unidad</h2>
+        <h2>Registrar unidad <span class="sub">— solo Placa, RUC del dueño y DNI del transportista son obligatorios</span></h2>
+
+        <h3 class="grupo">Dueño del vehículo</h3>
         <div class="grid">
-          <div><label>Placa</label><input id="uPlaca" placeholder="ABC-123" /></div>
+          <div><label>RUC del dueño *</label>
+            <div class="conbtn"><input id="uRucProp" inputmode="numeric" placeholder="20512345678" />
+            <button type="button" class="sec chico" id="uBtnRuc">Traer datos</button></div></div>
+          <div><label>Nombre del dueño</label><input id="uNombreProp" placeholder="se completa con el RUC" /></div>
+          <div><label>Dirección</label><input id="uDireccionProp" placeholder="se completa con el RUC" /></div>
+        </div>
+
+        <h3 class="grupo">Transportista</h3>
+        <div class="grid">
+          <div><label>DNI del transportista *</label>
+            <div class="conbtn"><input id="uDni" inputmode="numeric" placeholder="45678912" />
+            <button type="button" class="sec chico" id="uBtnDni">Traer datos</button></div></div>
+          <div><label>Departamento</label><input id="uDepartamento" placeholder="se completa con el DNI" /></div>
+          <div><label>Provincia</label><input id="uProvincia" placeholder="se completa con el DNI" /></div>
+          <div><label>Distrito</label><input id="uDistrito" placeholder="se completa con el DNI" /></div>
+        </div>
+
+        <h3 class="grupo">Vehículo</h3>
+        <div class="grid">
+          <div><label>Placa *</label><input id="uPlaca" placeholder="ABC-123" /></div>
+          <div><label>Tipo de vehículo</label><select id="uTipoVehiculo"></select></div>
           <div><label>Marca</label><input id="uMarca" placeholder="Volvo" /></div>
+          <div><label>Año de fabricación</label><input id="uAnio" type="number" placeholder="2021" /></div>
+          <div><label>N° de ejes</label><input id="uNroEjes" type="number" placeholder="3" /></div>
+          <div><label>Forma de apertura</label><select id="uFormaApertura"></select></div>
+          <div><label>Rodada eje delantero</label><select id="uRodadaDel"></select></div>
+          <div><label>Rodada C1</label><select id="uRodadaC1"></select></div>
+          <div><label>Rodada C2</label><select id="uRodadaC2"></select></div>
+        </div>
+
+        <h3 class="grupo">Pesos y medidas</h3>
+        <div class="grid">
+          <div><label>Peso seco (kg)</label><input id="uPesoSeco" type="number" placeholder="14500" /></div>
+          <div><label>Altura (m)</label><input id="uAltura" type="number" step="0.01" placeholder="3.20" /></div>
+          <div><label>Ancho (m)</label><input id="uAncho" type="number" step="0.01" placeholder="2.60" /></div>
+          <div><label>Largo (m)</label><input id="uLargo" type="number" step="0.01" placeholder="12.30" /></div>
+          <div><label>Altura de plataforma (m)</label><input id="uAlturaPlataforma" type="number" step="0.01" placeholder="1.20" /></div>
+        </div>
+
+        <h3 class="grupo">Condición</h3>
+        <div class="grid">
+          <div><label>Tolva cerrada</label><select id="uTolvaCerrada"><option value="">—</option><option value="SI">Sí</option><option value="NO">No</option></select></div>
+          <div><label>Carreta con pistón</label><select id="uCarretaPiston"><option value="">—</option><option value="SI">Sí</option><option value="NO">No</option></select></div>
+          <div><label>Unidad a gas</label><select id="uUnidadGas"><option value="">—</option><option value="SI">Sí</option><option value="NO">No</option></select></div>
+        </div>
+
+        <h3 class="grupo">SOAT y CITV <span class="sub">— se registran como documentos con vencimiento</span></h3>
+        <div class="grid">
+          <div><label>N° SOAT</label><input id="uNroSoat" /></div>
+          <div><label>Vigencia SOAT</label><input id="uVigenciaSoat" type="date" /></div>
+          <div><label>N° CITV</label><input id="uNroCitv" /></div>
+          <div><label>Vigencia CITV</label><input id="uVigenciaCitv" type="date" /></div>
+        </div>
+
+        <h3 class="grupo">Opcional (para la GRE)</h3>
+        <div class="grid">
           <div><label>Modelo</label><input id="uModelo" placeholder="FH 460" /></div>
-          <div><label>Año</label><input id="uAnio" type="number" placeholder="2021" /></div>
-          <div><label>Categoría MTC</label><select id="uCategoria"><option>N1</option><option>N2</option><option selected>N3</option></select></div>
+          <div><label>Categoría MTC</label><select id="uCategoria"><option value="">—</option><option>N1</option><option>N2</option><option>N3</option></select></div>
           <div><label>Config. vehicular</label><select id="uConfig"></select></div>
         </div>
-        <div class="fila" style="margin-top:12px"><button id="btnCrearUnidad">Guardar unidad</button></div>
+
+        <div class="fila" style="margin-top:14px"><button id="btnCrearUnidad">Guardar unidad</button></div>
       </div>
       <div class="tabla-scroll" style="margin-top:16px">
         <table>
-          <thead><tr><th>Placa</th><th>Vehículo</th><th>Cat.</th><th>Config.</th><th>Estado</th><th>Documentos</th></tr></thead>
+          <thead><tr><th>Placa</th><th>Tipo</th><th>Marca / año</th><th>Dueño</th><th>DNI transp.</th><th>Estado</th><th></th></tr></thead>
           <tbody id="tbUnidades"></tbody>
         </table>
       </div>
@@ -480,7 +547,43 @@ function mostrarVista(nombre) {
 }
 
 // ---------- unidades ----------
+const siNo = (b) => (b === true ? "Sí" : b === false ? "No" : null);
+const metros = (m) => (m === null || m === undefined || m === "" ? null : Number(m).toLocaleString("es-PE") + " m");
+
+function descUnidad(u) {
+  return [u.marca, u.modelo].filter(Boolean).join(" ") || u.tipoVehiculo || "—";
+}
+
+function fichaUnidadHTML(u) {
+  const ubic = [u.distrito, u.provincia, u.departamento].filter(Boolean).join(", ");
+  const filas = [
+    ["RUC del dueño", u.rucPropietario], ["Nombre del dueño", u.nombrePropietario],
+    ["Dirección", u.direccionPropietario],
+    ["DNI transportista", u.dniTransportista], ["Ubicación", ubic],
+    ["Tipo de vehículo", u.tipoVehiculo], ["Marca", u.marca], ["Modelo", u.modelo],
+    ["Año de fabricación", u.anioFabricacion], ["Categoría MTC", u.categoriaMtc],
+    ["Config. vehicular", u.configuracionVehicular], ["N° de ejes", u.nroEjes],
+    ["Rodada eje delantero", u.rodadaEjeDelantero], ["Rodada C1", u.rodadaC1], ["Rodada C2", u.rodadaC2],
+    ["Peso seco", u.pesoSecoKg != null && u.pesoSecoKg !== "" ? Number(u.pesoSecoKg).toLocaleString("es-PE") + " kg" : null],
+    ["Tolva cerrada", siNo(u.tolvaCerrada)], ["Carreta con pistón", siNo(u.carretaConPiston)],
+    ["Unidad a gas", siNo(u.unidadAGas)], ["Forma de apertura", u.formaApertura],
+    ["Altura", metros(u.alturaM)], ["Ancho", metros(u.anchoM)], ["Largo", metros(u.largoM)],
+    ["Altura de plataforma", metros(u.alturaPlataformaM)]
+  ].filter(([, v]) => v !== null && v !== undefined && v !== "");
+  if (!filas.length) return `<p class="muted">Sin datos adicionales cargados.</p>`;
+  return `<div class="ficha">${filas.map(([k, v]) =>
+    `<div><span>${k}</span><strong>${escapar(String(v))}</strong></div>`).join("")}</div>`;
+}
+
+function toggleFicha(id) {
+  const fila = document.querySelector(`[data-ficha-row="${id}"]`);
+  if (!fila) return;
+  fila.hidden = !fila.hidden;
+  if (!fila.hidden) el(`ficha-${id}`).innerHTML = fichaUnidadHTML(estado.unidades.find((u) => u.id === id) || {});
+}
+
 async function cargarUnidades() {
+  await cargarCatalogos();
   estado.unidades = await api("/api/unidades");
   const tb = el("tbUnidades"); tb.innerHTML = "";
   el("vacioUnidades").hidden = estado.unidades.length > 0;
@@ -488,21 +591,28 @@ async function cargarUnidades() {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td><strong>${escapar(u.placa)}</strong></td>
-      <td>${escapar(u.marca)} ${escapar(u.modelo)}${u.anioFabricacion ? " · " + u.anioFabricacion : ""}</td>
-      <td>${u.categoriaMtc}</td>
-      <td>${u.configuracionVehicular}</td>
+      <td>${escapar(u.tipoVehiculo || "—")}</td>
+      <td>${escapar([u.marca, u.anioFabricacion].filter(Boolean).join(" · ") || "—")}</td>
+      <td>${escapar(u.nombrePropietario || u.rucPropietario || "—")}</td>
+      <td>${escapar(u.dniTransportista || "—")}</td>
       <td>${u.activo ? '<span class="pill ok">activa</span>' : '<span class="pill gris">inactiva</span>'}
           ${u.activo && esAdmin() ? `<button class="tenue chico" data-desactivar="unidades:${u.id}">Desactivar</button>` : ""}</td>
-      <td><button class="sec chico" data-docs="unidad:${u.id}">Ver / agregar</button></td>`;
+      <td class="fila" style="gap:6px">
+        <button class="sec chico" data-ficha="${u.id}">Ficha</button>
+        <button class="sec chico" data-docs="unidad:${u.id}">Documentos</button></td>`;
     tb.appendChild(tr);
+    const trFicha = document.createElement("tr");
+    trFicha.hidden = true; trFicha.dataset.fichaRow = u.id;
+    trFicha.innerHTML = `<td colspan="7"><div class="sub-panel" id="ficha-${u.id}">…</div></td>`;
+    tb.appendChild(trFicha);
     const trDoc = document.createElement("tr");
     trDoc.hidden = true; trDoc.dataset.docsRow = "unidad:" + u.id;
-    trDoc.innerHTML = `<td colspan="6"><div class="sub-panel" id="docs-unidad-${u.id}">…</div></td>`;
+    trDoc.innerHTML = `<td colspan="7"><div class="sub-panel" id="docs-unidad-${u.id}">…</div></td>`;
     tb.appendChild(trDoc);
   }
   const sel = el("tUnidad");
   sel.innerHTML = estado.unidades.filter((u) => u.activo)
-    .map((u) => `<option value="${u.id}">${escapar(u.placa)} — ${escapar(u.marca)} ${escapar(u.modelo)} (${u.configuracionVehicular})</option>`).join("")
+    .map((u) => `<option value="${u.id}">${escapar(u.placa)} — ${escapar(descUnidad(u))}</option>`).join("")
     || `<option value="">(registra una unidad primero)</option>`;
 }
 
@@ -591,17 +701,26 @@ async function borrarDoc(tipo, id, docId) {
   catch (e) { aviso(e.message); }
 }
 
-// ---------- tickets ----------
-// Catálogos fijos del ticket (una sola vez). Fuente: GET /api/catalogos.
+// ---------- catálogos (ticket + unidad) ----------
+// Una sola vez. Fuente: GET /api/catalogos.
+let catalogosCargados = false;
 async function cargarCatalogos() {
-  if (el("tMercancia").options.length) return;
+  if (catalogosCargados) return;
   try {
     const c = await api("/api/catalogos");
-    const opciones = (arr) => arr.map((v) => `<option>${escapar(v)}</option>`).join("");
-    el("tMercancia").innerHTML = opciones(c.mercancias);
-    el("tOrigen").innerHTML = opciones(c.centrosOrigen);
-    el("tDestino").innerHTML = opciones(c.destinos);
-  } catch (_) { /* si falla, los desplegables quedan vacíos y crearTicket avisa */ }
+    const fill = (id, arr, conVacio) => {
+      if (!el(id)) return;
+      el(id).innerHTML = (conVacio ? `<option value="">—</option>` : "") +
+        (arr || []).map((v) => `<option>${escapar(v)}</option>`).join("");
+    };
+    fill("tMercancia", c.mercancias);
+    fill("tOrigen", c.centrosOrigen);
+    fill("tDestino", c.destinos);
+    fill("uTipoVehiculo", c.tiposVehiculo, true);
+    fill("uFormaApertura", c.formasApertura, true);
+    ["uRodadaDel", "uRodadaC1", "uRodadaC2"].forEach((id) => fill(id, c.tiposRodada, true));
+    catalogosCargados = true;
+  } catch (_) { /* si falla, los desplegables quedan vacíos y el guardado avisa */ }
 }
 
 async function cargarTickets() {
@@ -676,15 +795,63 @@ async function cargarVencimientos() {
 }
 
 // ---------- altas simples ----------
+const CAMPOS_UNIDAD = [
+  "uRucProp","uNombreProp","uDireccionProp","uDni","uDepartamento","uProvincia","uDistrito",
+  "uPlaca","uTipoVehiculo","uMarca","uAnio","uNroEjes","uFormaApertura","uRodadaDel","uRodadaC1","uRodadaC2",
+  "uPesoSeco","uAltura","uAncho","uLargo","uAlturaPlataforma","uTolvaCerrada","uCarretaPiston","uUnidadGas",
+  "uNroSoat","uVigenciaSoat","uNroCitv","uVigenciaCitv","uModelo","uCategoria","uConfig"
+];
 async function crearUnidad() {
+  const b = el("btnCrearUnidad");
+  const txt = (id) => el(id).value.trim() || undefined;
+  const nro = (id) => (el(id).value === "" ? undefined : Number(el(id).value));
+  b.disabled = true;
   try {
-    await api("/api/unidades", { method: "POST", body: JSON.stringify({
-      placa: el("uPlaca").value.trim(), marca: el("uMarca").value.trim(), modelo: el("uModelo").value.trim(),
-      anioFabricacion: el("uAnio").value ? Number(el("uAnio").value) : null,
-      categoriaMtc: el("uCategoria").value, configuracionVehicular: el("uConfig").value
-    }) });
-    ["uPlaca","uMarca","uModelo","uAnio"].forEach((id) => { el(id).value = ""; });
-    aviso("Unidad registrada.", "ok"); await cargarUnidades();
+    const cuerpo = {
+      placa: el("uPlaca").value.trim(),
+      rucPropietario: el("uRucProp").value.trim(),
+      dniTransportista: el("uDni").value.trim(),
+      nombrePropietario: txt("uNombreProp"), direccionPropietario: txt("uDireccionProp"),
+      departamento: txt("uDepartamento"), provincia: txt("uProvincia"), distrito: txt("uDistrito"),
+      tipoVehiculo: txt("uTipoVehiculo"), marca: txt("uMarca"), modelo: txt("uModelo"),
+      anioFabricacion: nro("uAnio"), categoriaMtc: txt("uCategoria"), configuracionVehicular: txt("uConfig"),
+      nroEjes: nro("uNroEjes"), formaApertura: txt("uFormaApertura"),
+      rodadaEjeDelantero: txt("uRodadaDel"), rodadaC1: txt("uRodadaC1"), rodadaC2: txt("uRodadaC2"),
+      pesoSecoKg: nro("uPesoSeco"), alturaM: nro("uAltura"), anchoM: nro("uAncho"),
+      largoM: nro("uLargo"), alturaPlataformaM: nro("uAlturaPlataforma"),
+      tolvaCerrada: txt("uTolvaCerrada"), carretaConPiston: txt("uCarretaPiston"), unidadAGas: txt("uUnidadGas"),
+      nroSoat: txt("uNroSoat"), vigenciaSoat: txt("uVigenciaSoat"),
+      nroCitv: txt("uNroCitv"), vigenciaCitv: txt("uVigenciaCitv")
+    };
+    const r = await api("/api/unidades", { method: "POST", body: JSON.stringify(cuerpo) });
+    CAMPOS_UNIDAD.forEach((id) => { if (el(id)) el(id).value = ""; });
+    if (r.avisos && r.avisos.length) aviso("Unidad guardada, pero: " + r.avisos.join(" · "));
+    else aviso("Unidad registrada.", "ok");
+    await cargarUnidades();
+  } catch (e) { aviso(e.message); }
+  finally { b.disabled = false; }
+}
+async function traerPorRuc() {
+  const ruc = el("uRucProp").value.trim();
+  if (!/^\d{11}$/.test(ruc)) { aviso("Ingresá un RUC de 11 dígitos."); return; }
+  try {
+    const r = await api(`/api/consulta/ruc/${ruc}`);
+    if (!r.configurado) { aviso("La consulta automática de RUC todavía no está conectada; completá Nombre y Dirección a mano."); return; }
+    el("uNombreProp").value = r.nombre || "";
+    el("uDireccionProp").value = r.direccion || "";
+    aviso("Datos del dueño traídos de SUNAT.", "ok");
+  } catch (e) { aviso(e.message); }
+}
+async function traerPorDni() {
+  const dni = el("uDni").value.trim();
+  if (!/^\d{8}$/.test(dni)) { aviso("Ingresá un DNI de 8 dígitos."); return; }
+  try {
+    const r = await api(`/api/consulta/dni/${dni}`);
+    if (!r.configurado) { aviso("La consulta automática de DNI todavía no está conectada; completá Departamento, Provincia y Distrito a mano."); return; }
+    el("uDepartamento").value = r.departamento || "";
+    el("uProvincia").value = r.provincia || "";
+    el("uDistrito").value = r.distrito || "";
+    aviso("Ubicación del transportista traída de RENIEC.", "ok");
   } catch (e) { aviso(e.message); }
 }
 async function crearChofer() {
@@ -916,11 +1083,13 @@ async function crearEmpresa() {
 }
 
 // ---------- eventos ----------
-el("uConfig").innerHTML = CONFIG_VEHICULAR.map((c) => `<option>${c}</option>`).join("");
+el("uConfig").innerHTML = `<option value="">—</option>` + CONFIG_VEHICULAR.map((c) => `<option>${c}</option>`).join("");
 el("btnSalir").addEventListener("click", () => cerrarSesion());
 el("btnLogin").addEventListener("click", login);
 el("loginPass").addEventListener("keydown", (e) => { if (e.key === "Enter") login(); });
 el("btnCrearUnidad").addEventListener("click", crearUnidad);
+el("uBtnRuc").addEventListener("click", traerPorRuc);
+el("uBtnDni").addEventListener("click", traerPorDni);
 el("btnCrearChofer").addEventListener("click", crearChofer);
 el("btnCrearTicket").addEventListener("click", crearTicket);
 el("btnCrearUsuario").addEventListener("click", crearUsuario);
@@ -942,6 +1111,7 @@ document.body.addEventListener("click", (e) => {
   if (t.dataset.agr) { estado.dashAgrupar = t.dataset.agr; cargarDashboard(); return; }
   const fila = t.closest && t.closest("[data-ver-empresa]");
   if (fila) { verEmpresa(JSON.parse(fila.dataset.verEmpresa)); return; }
+  if (t.dataset.ficha) toggleFicha(t.dataset.ficha);
   if (t.dataset.docs) toggleDocs(t.dataset.docs);
   if (t.dataset.docAdd) agregarDoc(t.dataset.docAdd);
   if (t.dataset.docDel) { const [tp, id, docId] = t.dataset.docDel.split(":"); borrarDoc(tp, id, docId); }

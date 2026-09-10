@@ -27,21 +27,15 @@ class UnidadesRepositorioMemoria {
     return this.unidades.get(id) || null;
   }
 
-  async crearUnidad({ empresaId, placa, marca, modelo, anioFabricacion, categoriaMtc, configuracionVehicular }) {
-    if (await this.buscarPorPlaca(placa)) {
+  async crearUnidad(datos) {
+    if (await this.buscarPorPlaca(datos.placa)) {
       throw new Error('Ya existe una unidad registrada con esa placa');
     }
     const unidad = {
       id: crypto.randomUUID(),
-      empresaId,
-      placa,
-      marca,
-      modelo,
-      anioFabricacion: anioFabricacion ?? null,
-      categoriaMtc,
-      configuracionVehicular,
       activo: true,
-      creadoEn: new Date().toISOString()
+      creadoEn: new Date().toISOString(),
+      ...datos
     };
     this.unidades.set(unidad.id, unidad);
     return unidad;

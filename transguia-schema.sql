@@ -84,15 +84,47 @@ create table unidades (
   id uuid primary key default gen_random_uuid(),
   empresa_id uuid not null references empresas(id) on delete cascade,
   placa varchar(8) not null unique,
-  marca text not null,
-  modelo text not null,
+
+  -- Dueño del vehículo (se consulta por RUC).
+  ruc_propietario char(11),
+  nombre_propietario text,
+  direccion_propietario text,
+
+  -- Transportista responsable (se consulta por DNI) y su ubicación.
+  dni_transportista char(8),
+  departamento text,
+  provincia text,
+  distrito text,
+
+  -- Ficha técnica.
+  tipo_vehiculo text,
+  marca text,
+  modelo text,
   anio_fabricacion smallint,
-  categoria_mtc categoria_mtc not null,
-  configuracion_vehicular text not null references configuraciones_vehiculares(codigo),
+  categoria_mtc categoria_mtc,
+  configuracion_vehicular text references configuraciones_vehiculares(codigo),
+  nro_ejes smallint,
+  rodada_eje_delantero text,
+  rodada_c1 text,
+  rodada_c2 text,
+  peso_seco_kg numeric(10,2),
+  tolva_cerrada boolean,
+  carreta_con_piston boolean,
+  unidad_a_gas boolean,
+  forma_apertura text,
+
+  -- Dimensiones en metros.
+  altura_m numeric(5,2),
+  ancho_m numeric(5,2),
+  largo_m numeric(5,2),
+  altura_plataforma_m numeric(5,2),
+
   activo boolean not null default true,
   creado_en timestamptz not null default now()
 );
 create index idx_unidades_empresa on unidades(empresa_id);
+-- El SOAT y el CITV (revisión técnica) con sus vencimientos van en
+-- documentos_unidad, no como columnas de esta tabla.
 
 create table documentos_unidad (
   id uuid primary key default gen_random_uuid(),

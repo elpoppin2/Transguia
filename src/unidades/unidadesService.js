@@ -4,11 +4,14 @@ const CATEGORIAS_MTC = ['N1', 'N2', 'N3'];
  * Reglas de negocio para registrar y listar unidades (vehículos de
  * carga). No sabe si los datos se guardan en memoria o en Postgres: eso
  * lo decide el repositorio que recibe por constructor.
+ *
+ * Campos obligatorios al registrar: placa, rucPropietario y
+ * dniTransportista. Todo lo demás (datos del dueño, ubicación del
+ * transportista, ficha técnica, dimensiones) es opcional y se puede
+ * completar después. El SOAT y el CITV (revisión técnica) no se guardan
+ * acá: van como documentos con vencimiento de la unidad.
  */
 class UnidadesService {
-  /**
-   * @param {{ listarPorEmpresa: Function, buscarPorPlaca: Function, crearUnidad: Function, cambiarActivo: Function }} repositorioUnidades
-   */
   constructor(repositorioUnidades) {
     this.repo = repositorioUnidades;
   }
@@ -52,38 +55,91 @@ function normalizarPlaca(placa) {
   return `${limpia.slice(0, 3)}-${limpia.slice(3)}`;
 }
 
-function normalizarYValidar({ empresaId, placa, marca, modelo, anioFabricacion, categoriaMtc, configuracionVehicular }) {
-  const obligatorios = { empresaId, placa, marca, modelo, categoriaMtc, configuracionVehicular };
-  const faltantes = Object.entries(obligatorios)
-    .filter(([, valor]) => valor === undefined || valor === null || String(valor).trim() === '')
-    .map(([campo]) => campo);
-  if (faltantes.length) {
-    throw new Error(`Faltan campos obligatorios: ${faltantes.join(', ')}`);
+const vacio = (v) => v === undefined || v === null || String(v).trim() === '';
+
+function texto(v) {
+  return vacio(v) ? undefined : String(v).trim();
+}
+
+function numero(v, campo, { min = 0, max = Infinity, entero = false } = {}) {
+  if (vacio(v)) return undefined;
+  const n = Number(v);
+  if (!Number.isFinite(n) || n < min || n > max || (entero && !Number.isInteger(n))) {
+    throw new Error(`${campo} no es válido`);
+  }
+  return n;
+}
+
+/** Acepta true/false, "SI"/"NO", "sí", "1"/"0". Vacío => undefined. */
+function booleano(v, campo) {
+  if (vacio(v)) return undefined;
+  if (typeof v === 'boolean') return v;
+  const s = String(v).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+  if (['si', 'true', '1', 'x'].includes(s)) return true;
+  if (['no', 'false', '0'].includes(s)) return false;
+  throw new Error(`${campo} debe ser Sí o No`);
+}
+
+function normalizarYValidar(datos = {}) {
+  const d = datos;
+
+  if (vacio(d.empresaId)) throw new Error('empresaId es obligatorio');
+
+  const faltan = ['placa', 'rucPropietario', 'dniTransportista'].filter((c) => vacio(d[c]));
+  if (faltan.length) {
+    throw new Error(`Faltan campos obligatorios: ${faltan.join(', ')}`);
   }
 
-  const categoria = String(categoriaMtc).toUpperCase().trim();
-  if (!CATEGORIAS_MTC.includes(categoria)) {
+  const rucPropietario = String(d.rucPropietario).replace(/\D/g, '');
+  if (!/^\d{11}$/.test(rucPropietario)) {
+    throw new Error('El RUC del dueño debe tener exactamente 11 dígitos');
+  }
+  const dniTransportista = String(d.dniTransportista).replace(/\D/g, '');
+  if (!/^\d{8}$/.test(dniTransportista)) {
+    throw new Error('El DNI del transportista debe tener exactamente 8 dígitos');
+  }
+
+  const anioActual = new Date().getFullYear();
+
+  const categoriaMtc = texto(d.categoriaMtc) && String(d.categoriaMtc).toUpperCase().trim();
+  if (categoriaMtc && !CATEGORIAS_MTC.includes(categoriaMtc)) {
     throw new Error('La categoría MTC debe ser N1, N2 o N3');
   }
 
-  let anio = null;
-  if (anioFabricacion !== undefined && anioFabricacion !== null && String(anioFabricacion).trim() !== '') {
-    anio = Number(anioFabricacion);
-    const anioActual = new Date().getFullYear();
-    if (!Number.isInteger(anio) || anio < 1970 || anio > anioActual + 1) {
-      throw new Error(`El año de fabricación debe ser un número entre 1970 y ${anioActual + 1}`);
-    }
-  }
-
-  return {
-    empresaId: String(empresaId).trim(),
-    placa: normalizarPlaca(placa),
-    marca: String(marca).trim(),
-    modelo: String(modelo).trim(),
-    anioFabricacion: anio,
-    categoriaMtc: categoria,
-    configuracionVehicular: String(configuracionVehicular).toUpperCase().trim()
+  const out = {
+    empresaId: String(d.empresaId).trim(),
+    placa: normalizarPlaca(d.placa),
+    rucPropietario,
+    dniTransportista,
+    nombrePropietario: texto(d.nombrePropietario),
+    direccionPropietario: texto(d.direccionPropietario),
+    departamento: texto(d.departamento),
+    provincia: texto(d.provincia),
+    distrito: texto(d.distrito),
+    tipoVehiculo: texto(d.tipoVehiculo),
+    marca: texto(d.marca),
+    modelo: texto(d.modelo),
+    anioFabricacion: numero(d.anioFabricacion, 'El año de fabricación', { min: 1970, max: anioActual + 1, entero: true }),
+    categoriaMtc: categoriaMtc || undefined,
+    configuracionVehicular: texto(d.configuracionVehicular) && String(d.configuracionVehicular).toUpperCase().trim(),
+    nroEjes: numero(d.nroEjes, 'El número de ejes', { min: 2, max: 12, entero: true }),
+    rodadaEjeDelantero: texto(d.rodadaEjeDelantero),
+    rodadaC1: texto(d.rodadaC1),
+    rodadaC2: texto(d.rodadaC2),
+    pesoSecoKg: numero(d.pesoSecoKg, 'El peso seco', { min: 0, max: 80000 }),
+    tolvaCerrada: booleano(d.tolvaCerrada, 'Tolva cerrada'),
+    carretaConPiston: booleano(d.carretaConPiston, 'Carreta con pistón'),
+    unidadAGas: booleano(d.unidadAGas, 'Unidad a gas'),
+    formaApertura: texto(d.formaApertura),
+    alturaM: numero(d.alturaM, 'La altura', { min: 0, max: 6 }),
+    anchoM: numero(d.anchoM, 'El ancho', { min: 0, max: 4 }),
+    largoM: numero(d.largoM, 'El largo', { min: 0, max: 25 }),
+    alturaPlataformaM: numero(d.alturaPlataformaM, 'La altura de plataforma', { min: 0, max: 4 })
   };
+
+  // No mandamos claves sin valor: así el repo inserta solo lo que hay.
+  for (const k of Object.keys(out)) if (out[k] === undefined) delete out[k];
+  return out;
 }
 
 module.exports = { UnidadesService, CATEGORIAS_MTC };

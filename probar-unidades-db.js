@@ -28,11 +28,17 @@ const { UnidadesRepositorioPostgres } = require('./src/unidades/unidadesRepoPost
   const creada = await unidades.registrarUnidad({
     empresaId: empresa.id,
     placa,
+    rucPropietario: '20548712369',
+    dniTransportista: '45678912',
     marca: 'Volvo',
     modelo: 'FH 460',
     anioFabricacion: 2021,
     categoriaMtc: 'N3',
-    configuracionVehicular: 'T3S3'
+    configuracionVehicular: 'T3S3',
+    tipoVehiculo: 'Tracto',
+    nroEjes: 3,
+    pesoSecoKg: 14500,
+    tolvaCerrada: 'NO'
   });
   console.log('[unidad creada en Supabase, de verdad]', creada);
 
@@ -48,10 +54,9 @@ const { UnidadesRepositorioPostgres } = require('./src/unidades/unidadesRepoPost
     await unidades.registrarUnidad({
       empresaId: empresa.id,
       placa,
-      marca: 'X',
-      modelo: 'Y',
-      categoriaMtc: 'N2',
-      configuracionVehicular: 'C2'
+      rucPropietario: '20548712369',
+      dniTransportista: '45678912',
+      marca: 'X'
     });
     console.log('[ERROR] debió rechazar la placa duplicada y no lo hizo');
   } catch (error) {

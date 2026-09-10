@@ -25,6 +25,14 @@ const { DocumentosService } = require('./src/documentos/documentosService');
 const { DocumentosRepositorioPostgres } = require('./src/documentos/documentosRepoPostgres');
 const { TicketService } = require('./src/tickets/ticketService');
 const { TicketsRepositorioPostgres } = require('./src/tickets/ticketsRepoPostgres');
+const { fichaVehiculoDemo } = require('./demo-ficha-vehiculo');
+
+// Azar con semilla para que la ficha de cada unidad salga igual siempre.
+let _semilla = 20260910;
+const rand = () => {
+  _semilla = (_semilla * 1664525 + 1013904223) >>> 0;
+  return _semilla / 4294967296;
+};
 
 const EMPRESA = { ruc: '20548712369', razonSocial: 'Transportes Andina S.A.C.' };
 const USUARIO = { username: 'andina', password: 'demo2026seguro', nombreCompleto: 'María Andina', rol: 'admin_empresa' };
@@ -132,7 +140,7 @@ function esperarEmision(ticketService, datos) {
   for (const u of UNIDADES) {
     const existe = await unidadesRepo.buscarPorPlaca(u.placa);
     if (existe) { console.log('unidad ya existía:', u.placa); continue; }
-    await unidades.registrarUnidad({ empresaId, ...u });
+    await unidades.registrarUnidad({ empresaId, ...fichaVehiculoDemo(rand), ...u });
     console.log('unidad creada:', u.placa);
   }
 
@@ -240,7 +248,7 @@ function esperarEmision(ticketService, datos) {
   }
   for (const u of EMPRESA_2.unidades) {
     if (!(await unidadesRepo.buscarPorPlaca(u.placa))) {
-      await unidades.registrarUnidad({ empresaId: empresa2.id, ...u });
+      await unidades.registrarUnidad({ empresaId: empresa2.id, ...fichaVehiculoDemo(rand), ...u });
       console.log('  unidad empresa 2:', u.placa);
     }
   }

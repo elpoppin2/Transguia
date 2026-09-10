@@ -43,6 +43,7 @@ const enDias = (n) => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10
   const s = String(Date.now()).slice(-6);
   const unidad = await unidades.registrarUnidad({
     empresaId: empresa.id, placa: `DC${s[0]}-${s.slice(1, 4)}`,
+    rucPropietario: '20548712369', dniTransportista: '45678912',
     marca: 'MAN', modelo: 'TGX', anioFabricacion: 2023, categoriaMtc: 'N3', configuracionVehicular: 'T3S3'
   });
   const chofer = await choferes.registrarChofer({

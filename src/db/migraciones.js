@@ -15,7 +15,36 @@ const PASOS = [
   `alter type rol_usuario add value if not exists 'superadmin'`,
 
   // El superadmin no pertenece a ninguna empresa.
-  `alter table usuarios alter column empresa_id drop not null`
+  `alter table usuarios alter column empresa_id drop not null`,
+
+  // --- Unidades: ficha ampliada (dueño, transportista, técnica, medidas) ---
+  // Los únicos obligatorios pasan a ser placa, ruc_propietario y
+  // dni_transportista; el resto se puede completar después.
+  `alter table unidades alter column marca drop not null`,
+  `alter table unidades alter column modelo drop not null`,
+  `alter table unidades alter column categoria_mtc drop not null`,
+  `alter table unidades alter column configuracion_vehicular drop not null`,
+  `alter table unidades add column if not exists ruc_propietario char(11)`,
+  `alter table unidades add column if not exists nombre_propietario text`,
+  `alter table unidades add column if not exists direccion_propietario text`,
+  `alter table unidades add column if not exists dni_transportista char(8)`,
+  `alter table unidades add column if not exists departamento text`,
+  `alter table unidades add column if not exists provincia text`,
+  `alter table unidades add column if not exists distrito text`,
+  `alter table unidades add column if not exists tipo_vehiculo text`,
+  `alter table unidades add column if not exists nro_ejes smallint`,
+  `alter table unidades add column if not exists rodada_eje_delantero text`,
+  `alter table unidades add column if not exists rodada_c1 text`,
+  `alter table unidades add column if not exists rodada_c2 text`,
+  `alter table unidades add column if not exists peso_seco_kg numeric(10,2)`,
+  `alter table unidades add column if not exists tolva_cerrada boolean`,
+  `alter table unidades add column if not exists carreta_con_piston boolean`,
+  `alter table unidades add column if not exists unidad_a_gas boolean`,
+  `alter table unidades add column if not exists forma_apertura text`,
+  `alter table unidades add column if not exists altura_m numeric(5,2)`,
+  `alter table unidades add column if not exists ancho_m numeric(5,2)`,
+  `alter table unidades add column if not exists largo_m numeric(5,2)`,
+  `alter table unidades add column if not exists altura_plataforma_m numeric(5,2)`
 ];
 
 let listo = null;
