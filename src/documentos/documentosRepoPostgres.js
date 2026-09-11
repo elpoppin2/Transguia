@@ -19,6 +19,8 @@ const COLS_UNIDAD = `
   to_char(fecha_emision, 'YYYY-MM-DD')     as "fechaEmision",
   to_char(fecha_vencimiento, 'YYYY-MM-DD') as "fechaVencimiento",
   archivo_url                  as "archivoUrl",
+  archivo_nombre               as "archivoNombre",
+  (archivo is not null)        as "tieneArchivo",
   creado_en                    as "creadoEn"
 `;
 const COLS_CHOFER = `
@@ -42,14 +44,18 @@ class DocumentosRepositorioPostgres {
     return rows;
   }
 
-  async agregarAUnidad({ unidadId, tipoDocumento, numeroDocumento, fechaEmision, fechaVencimiento, archivoUrl }) {
+  async agregarAUnidad({ unidadId, tipoDocumento, numeroDocumento, fechaEmision, fechaVencimiento, archivoUrl, archivo, archivoNombre, archivoTipo }) {
     try {
       const { rows } = await pool.query(
         `insert into documentos_unidad
-           (unidad_id, tipo_documento, numero_documento, fecha_emision, fecha_vencimiento, archivo_url)
-         values ($1, $2::tipo_documento_unidad, $3, $4, $5, $6)
+           (unidad_id, tipo_documento, numero_documento, fecha_emision, fecha_vencimiento,
+            archivo_url, archivo, archivo_nombre, archivo_tipo)
+         values ($1, $2::tipo_documento_unidad, $3, $4, $5, $6, $7, $8, $9)
          returning ${COLS_UNIDAD}`,
-        [unidadId, tipoDocumento, numeroDocumento ?? null, fechaEmision ?? null, fechaVencimiento, archivoUrl ?? null]
+        [
+          unidadId, tipoDocumento, numeroDocumento ?? null, fechaEmision ?? null, fechaVencimiento ?? null,
+          archivoUrl ?? null, archivo ?? null, archivoNombre ?? null, archivoTipo ?? null
+        ]
       );
       return rows[0];
     } catch (error) {
@@ -60,6 +66,16 @@ class DocumentosRepositorioPostgres {
   async eliminarDeUnidad(docId) {
     const { rowCount } = await pool.query('delete from documentos_unidad where id = $1', [docId]);
     if (rowCount === 0) throw new Error('El documento indicado no existe');
+  }
+
+  /** El PDF de un documento de unidad (bytes + nombre + tipo), para descargarlo. */
+  async obtenerArchivoDeUnidad(docId) {
+    const { rows } = await pool.query(
+      `select unidad_id as "unidadId", archivo, archivo_nombre as "archivoNombre", archivo_tipo as "archivoTipo"
+       from documentos_unidad where id = $1`,
+      [docId]
+    );
+    return rows[0] || null;
   }
 
   async listarDeChofer(choferId) {
@@ -128,6 +144,9 @@ class DocumentosRepositorioPostgres {
 function traducir(error, entidad) {
   if (error.code === '23503') {
     return new Error(`La ${entidad} indicada no existe`);
+  }
+  if (error.code === '23514' && String(error.constraint) === 'chk_vencimiento_segun_tipo') {
+    return new Error('Este tipo de documento necesita fecha de vencimiento');
   }
   if (error.code === '22P02') {
     if (String(error.message).includes('categoria_licencia')) {

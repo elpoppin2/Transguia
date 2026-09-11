@@ -207,16 +207,39 @@ paths:
       summary: Registrar una unidad *(admin)*
       description: >
         La unidad nace en `estadoRegistro: "PENDIENTE"` y no se puede usar
-        para tickets hasta que el superadmin la libere. Obligatorios:
-        placa, rucPropietario, dniTransportista. Si vienen
-        nroSoat/vigenciaSoat o nroCitv/vigenciaCitv, se crean como
-        documentos de la unidad (tipos SOAT y REVISION_TECNICA); si alguno
-        está mal cargado, la unidad igual se crea y la respuesta trae `avisos`.
+        para tickets hasta que el superadmin la libere. Obligatorios a
+        nivel de datos: placa, rucPropietario, dniTransportista.
+        **Además, esta operación exige** `vigenciaSoat`, `vigenciaCitv` y
+        el PDF (base64, sin multipart) de 5 documentos —
+        `archivoSoat`, `archivoCitv`, `archivoBrevete`, `archivoDni`,
+        `archivoCategoriaMtc`, cada uno con su `*Nombre` opcional—; si
+        falta alguno o no es un PDF válido (`%PDF-`, ≤5 MB), responde 400
+        y no crea nada. Los archivos se guardan como documentos de la
+        unidad: SOAT y REVISION_TECNICA (con `nroSoat`/`nroCitv` y su
+        vencimiento) y BREVETE_TRANSPORTISTA / DNI_TRANSPORTISTA /
+        CATEGORIA_MTC (solo el archivo, sin vencimiento). Si alguno de los
+        5 falla al guardarse ya con la unidad creada, la respuesta trae
+        `avisos` en vez de fallar toda la operación.
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/NuevaUnidad" }
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/NuevaUnidad"
+                - type: object
+                  required: [vigenciaSoat, vigenciaCitv, archivoSoat, archivoCitv, archivoBrevete, archivoDni, archivoCategoriaMtc]
+                  properties:
+                    archivoSoat: { type: string, format: byte, description: "PDF en base64 (o data:application/pdf;base64,...)" }
+                    archivoSoatNombre: { type: string, example: "soat.pdf" }
+                    archivoCitv: { type: string, format: byte }
+                    archivoCitvNombre: { type: string }
+                    archivoBrevete: { type: string, format: byte }
+                    archivoBreveteNombre: { type: string }
+                    archivoDni: { type: string, format: byte }
+                    archivoDniNombre: { type: string }
+                    archivoCategoriaMtc: { type: string, format: byte }
+                    archivoCategoriaMtcNombre: { type: string }
       responses:
         "201":
           description: Solicitud registrada (queda PENDIENTE)
@@ -362,6 +385,26 @@ paths:
             application/json: { schema: { type: object, properties: { ok: { type: boolean } } } }
         "400": { $ref: "#/components/responses/ErrorValidacion" }
         "403": { $ref: "#/components/responses/SinPermiso" }
+
+  /api/unidades/{id}/documentos/{docId}/archivo:
+    get:
+      tags: [Documentos]
+      summary: Descargar/ver el PDF adjunto de un documento de una unidad
+      description: >
+        Devuelve el binario del PDF (`Content-Type: application/pdf`,
+        `Content-Disposition: inline`). 404 si el documento no tiene
+        archivo guardado.
+      parameters:
+        - { $ref: "#/components/parameters/IdPath" }
+        - { name: docId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Contenido del PDF
+          content:
+            application/pdf: { schema: { type: string, format: binary } }
+        "401": { $ref: "#/components/responses/NoAutenticado" }
+        "403": { $ref: "#/components/responses/SinPermiso" }
+        "404": { description: No existe el documento o no tiene archivo }
 
   /api/choferes:
     get:
@@ -674,6 +717,36 @@ paths:
           content:
             application/json: { schema: { $ref: "#/components/schemas/Error" } }
 
+  /api/tickets/{id}/historial:
+    get:
+      tags: [Tickets]
+      summary: Historial de cambios de estado operativo de un ticket
+      description: >
+        Línea de tiempo ordenada cronológicamente (una fila por cambio de
+        `estadoOperativo`, incluida la creación del ticket), con el
+        usuario que hizo cada cambio si se pudo identificar.
+      parameters: [{ $ref: "#/components/parameters/IdPath" }]
+      responses:
+        "200":
+          description: Historial del ticket
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    estadoAnterior: { type: [string, "null"] }
+                    estadoNuevo: { type: string }
+                    usuarioId: { type: [string, "null"], format: uuid }
+                    usuarioNombre: { type: [string, "null"] }
+                    creadoEn: { type: string, format: date-time }
+        "401": { $ref: "#/components/responses/NoAutenticado" }
+        "404":
+          description: No encontrado (o de otra empresa)
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/Error" } }
+
   /api/tickets/{id}/avanzar:
     post:
       tags: [Tickets]
@@ -771,7 +844,7 @@ components:
       enum: [Atocongo, Condorcocha, Muelle Conchán]
     EstadoOperativo: { type: string, enum: [GENERADO, EN_TRANSITO, ENTREGADO, ANULADO] }
     EstadoSunat: { type: string, enum: [ENVIANDO, ACEPTADO, RECHAZADO, OBSERVADO] }
-    TipoDocumentoUnidad: { type: string, enum: [SOAT, REVISION_TECNICA, TARJETA_CIRCULACION, PERMISO_OPERACION, OTRO] }
+    TipoDocumentoUnidad: { type: string, enum: [SOAT, REVISION_TECNICA, TARJETA_CIRCULACION, PERMISO_OPERACION, DNI_TRANSPORTISTA, BREVETE_TRANSPORTISTA, CATEGORIA_MTC, OTRO] }
     TipoDocumentoChofer: { type: string, enum: [LICENCIA_CONDUCIR, CERTIFICADO_MEDICO, OTRO] }
     CategoriaLicencia: { type: string, enum: ["A-I", "A-IIa", "A-IIb", "A-IIIa", "A-IIIb", "A-IIIc"] }
 
@@ -922,12 +995,18 @@ components:
     NuevaUnidad:
       type: object
       description: >
-        Solo placa, rucPropietario y dniTransportista son obligatorios;
-        el resto se puede completar después. Los campos "autocompletados"
-        (nombrePropietario, direccionPropietario, departamento, provincia,
-        distrito) hoy se cargan a mano. nroSoat/vigenciaSoat y
-        nroCitv/vigenciaCitv NO se guardan en la unidad: se registran como
-        documentos con vencimiento (tipo SOAT y REVISION_TECNICA).
+        Solo placa, rucPropietario y dniTransportista son obligatorios a
+        nivel de datos; el resto de la ficha se puede completar después.
+        Los campos "autocompletados" (nombrePropietario,
+        direccionPropietario, departamento, provincia, distrito) hoy se
+        cargan a mano. nroSoat/vigenciaSoat y nroCitv/vigenciaCitv NO se
+        guardan en la unidad: se registran como documentos con vencimiento
+        (tipo SOAT y REVISION_TECNICA). **`POST /api/unidades` además
+        exige** vigenciaSoat, vigenciaCitv y los 5 archivos
+        archivoSoat/archivoCitv/archivoBrevete/archivoDni/
+        archivoCategoriaMtc (ver la descripción de esa operación) — ese
+        candado vive en la ruta, no en este schema, así que un PUT de
+        edición o una siembra interna no lo exige.
       required: [placa, rucPropietario, dniTransportista]
       properties:
         placa: { type: string, description: "3 letras + 3 dígitos; se normaliza a ABC-123", example: ABC-756 }
@@ -1047,12 +1126,16 @@ components:
 
     NuevoDocumentoUnidad:
       type: object
-      required: [tipoDocumento, fechaVencimiento]
+      description: >
+        `fechaVencimiento` es obligatoria salvo para DNI_TRANSPORTISTA,
+        BREVETE_TRANSPORTISTA y CATEGORIA_MTC (documentos sin vencimiento
+        que solo llevan el archivo).
+      required: [tipoDocumento]
       properties:
         tipoDocumento: { $ref: "#/components/schemas/TipoDocumentoUnidad" }
         numeroDocumento: { type: [string, "null"] }
         fechaEmision: { type: [string, "null"], format: date, example: "2025-01-15" }
-        fechaVencimiento: { type: string, format: date, example: "2026-12-31" }
+        fechaVencimiento: { type: [string, "null"], format: date, example: "2026-12-31" }
         archivoUrl: { type: [string, "null"] }
 
     DocumentoUnidad:
@@ -1062,6 +1145,8 @@ components:
           properties:
             id: { type: string, format: uuid }
             unidadId: { type: string, format: uuid }
+            archivoNombre: { type: [string, "null"], description: "Nombre original del PDF subido, si tiene." }
+            tieneArchivo: { type: boolean, description: "true si el documento tiene un PDF guardado (descargable en /archivo)." }
             creadoEn: { type: string, format: date-time }
 
     NuevoDocumentoChofer:

@@ -90,7 +90,28 @@ const PASOS = [
   `alter table choferes alter column estado_registro set not null`,
   `alter table choferes add column if not exists motivo_rechazo text`,
   `alter table choferes add column if not exists revisado_por uuid`,
-  `alter table choferes add column if not exists revisado_en timestamptz`
+  `alter table choferes add column if not exists revisado_en timestamptz`,
+
+  // --- Documentos de unidad: adjuntar el PDF + 3 tipos nuevos ---
+  // Al registrar una placa, la plataforma exige el PDF de SOAT, CITV,
+  // brevete y DNI del transportista, y la constancia de categoría MTC.
+  // Estos 3 últimos no tienen vencimiento (son solo el archivo), así que
+  // fecha_vencimiento deja de ser obligatoria en general y pasa a
+  // exigirse solo para los tipos que sí vencen.
+  `alter type tipo_documento_unidad add value if not exists 'DNI_TRANSPORTISTA'`,
+  `alter type tipo_documento_unidad add value if not exists 'BREVETE_TRANSPORTISTA'`,
+  `alter type tipo_documento_unidad add value if not exists 'CATEGORIA_MTC'`,
+  `alter table documentos_unidad alter column fecha_vencimiento drop not null`,
+  `alter table documentos_unidad add column if not exists archivo bytea`,
+  `alter table documentos_unidad add column if not exists archivo_nombre text`,
+  `alter table documentos_unidad add column if not exists archivo_tipo text`,
+  `do $$ begin
+     alter table documentos_unidad add constraint chk_vencimiento_segun_tipo
+       check (
+         fecha_vencimiento is not null
+         or tipo_documento in ('DNI_TRANSPORTISTA', 'BREVETE_TRANSPORTISTA', 'CATEGORIA_MTC')
+       );
+   exception when duplicate_object then null; end $$`
 ];
 
 let listo = null;

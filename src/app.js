@@ -32,6 +32,7 @@ const { MERCANCIAS, CENTROS_ORIGEN, DESTINOS } = require('./tickets/catalogos');
 const { TIPOS_VEHICULO, TIPOS_RODADA, FORMAS_APERTURA } = require('./unidades/catalogosUnidad');
 const { TIPOS_DOC_IDENTIDAD, DEPARTAMENTOS, CATEGORIAS_LICENCIA } = require('./choferes/catalogosChofer');
 const { consultarRuc, consultarDni } = require('./consulta/consultaIdentidad');
+const { decodificarPdf } = require('./documentos/archivos');
 
 // En serverless (Vercel) la función se apaga apenas responde, así que la
 // emisión de la GRE debe terminar ANTES de contestar, no en segundo
@@ -81,7 +82,10 @@ function prepararEsquema() {
 }
 
 const app = express();
-app.use(express.json());
+// Los PDF de los documentos de la unidad viajan como base64 en el mismo
+// POST (sin multipart ni storage externo), así que el body puede pesar
+// varios MB: se sube el límite por defecto de express.json (100kb).
+app.use(express.json({ limit: '20mb' }));
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -178,23 +182,47 @@ app.post('/api/unidades', requiereSesion, requiereRol('admin_empresa'), h(async 
   const empresaId = req.sesion.empresaId;
   // El SOAT y el CITV no son columnas de la unidad: se guardan como
   // documentos con vencimiento (así los ve la pestaña "Vencimientos").
-  const { nroSoat, vigenciaSoat, nroCitv, vigenciaCitv, ...datosUnidad } = req.body || {};
+  // Para registrar una placa, la plataforma exige el PDF (base64, sin
+  // multipart) de estos 5 documentos: SOAT, CITV, brevete y DNI del
+  // transportista, y la constancia de categoría MTC.
+  const {
+    nroSoat, vigenciaSoat, nroCitv, vigenciaCitv,
+    archivoSoat, archivoSoatNombre,
+    archivoCitv, archivoCitvNombre,
+    archivoBrevete, archivoBreveteNombre,
+    archivoDni, archivoDniNombre,
+    archivoCategoriaMtc, archivoCategoriaMtcNombre,
+    ...datosUnidad
+  } = req.body || {};
+
+  if (!vigenciaSoat) throw new Error('Falta la fecha de vigencia del SOAT');
+  if (!vigenciaCitv) throw new Error('Falta la fecha de vigencia del CITV');
+  // Decodifica y valida los 5 PDF ANTES de crear la unidad: si falta uno
+  // o no es un PDF válido, no se registra nada.
+  const pdfSoat = decodificarPdf(archivoSoat, 'SOAT');
+  const pdfCitv = decodificarPdf(archivoCitv, 'CITV');
+  const pdfBrevete = decodificarPdf(archivoBrevete, 'brevete del transportista');
+  const pdfDni = decodificarPdf(archivoDni, 'DNI del transportista');
+  const pdfCategoriaMtc = decodificarPdf(archivoCategoriaMtc, 'categoría MTC');
+
   const unidad = await unidadesService.registrarUnidad({ ...datosUnidad, empresaId });
 
   const avisos = [];
-  const guardarDoc = async (tipo, numero, vencimiento, etiqueta) => {
-    if (!vencimiento && !numero) return;
-    if (!vencimiento) { avisos.push(`${etiqueta}: falta la fecha de vigencia, no se guardó`); return; }
+  const guardarDoc = async (tipo, numero, vencimiento, archivo, archivoNombre, etiqueta) => {
     try {
       await documentosService.agregarAUnidad(empresaId, unidad.id, {
-        tipoDocumento: tipo, numeroDocumento: numero || null, fechaVencimiento: vencimiento
+        tipoDocumento: tipo, numeroDocumento: numero || null, fechaVencimiento: vencimiento || null,
+        archivo, archivoNombre: archivoNombre || `${etiqueta}.pdf`, archivoTipo: 'application/pdf'
       });
     } catch (e) {
       avisos.push(`${etiqueta}: ${e.message}`);
     }
   };
-  await guardarDoc('SOAT', nroSoat, vigenciaSoat, 'SOAT');
-  await guardarDoc('REVISION_TECNICA', nroCitv, vigenciaCitv, 'CITV');
+  await guardarDoc('SOAT', nroSoat, vigenciaSoat, pdfSoat, archivoSoatNombre, 'SOAT');
+  await guardarDoc('REVISION_TECNICA', nroCitv, vigenciaCitv, pdfCitv, archivoCitvNombre, 'CITV');
+  await guardarDoc('BREVETE_TRANSPORTISTA', null, null, pdfBrevete, archivoBreveteNombre, 'Brevete del transportista');
+  await guardarDoc('DNI_TRANSPORTISTA', null, null, pdfDni, archivoDniNombre, 'DNI del transportista');
+  await guardarDoc('CATEGORIA_MTC', null, null, pdfCategoriaMtc, archivoCategoriaMtcNombre, 'Categoría MTC');
 
   res.status(201).json(avisos.length ? { ...unidad, avisos } : unidad);
 }));
@@ -231,6 +259,18 @@ app.get('/api/unidades/:id/documentos', requiereSesion, h(async (req, res) => {
 app.post('/api/unidades/:id/documentos', requiereSesion, requiereRol('admin_empresa'), h(async (req, res) => {
   const doc = await documentosService.agregarAUnidad(req.sesion.empresaId, req.params.id, req.body);
   res.status(201).json(doc);
+}));
+
+// El PDF de un documento de la unidad (lo puede ver cualquiera con
+// acceso a la unidad, no solo el admin: el superadmin lo necesita para
+// revisar una solicitud antes de liberarla).
+app.get('/api/unidades/:id/documentos/:docId/archivo', requiereSesion, h(async (req, res) => {
+  const archivo = await documentosService.obtenerArchivoDeUnidad(
+    empresaDeLaPeticion(req), req.params.id, req.params.docId
+  );
+  res.set('Content-Type', archivo.archivoTipo || 'application/pdf');
+  res.set('Content-Disposition', `inline; filename="${archivo.archivoNombre || 'documento.pdf'}"`);
+  res.send(archivo.archivo);
 }));
 
 app.delete('/api/unidades/:id/documentos/:docId', requiereSesion, requiereRol('admin_empresa'), h(async (req, res) => {
@@ -361,6 +401,15 @@ app.get('/api/tickets/:id', requiereSesion, h(async (req, res) => {
     return res.status(404).json({ error: 'Ticket no encontrado' });
   }
   res.json(ticket);
+}));
+
+// Línea de tiempo del ticket (cada cambio de estado, con quién lo hizo).
+app.get('/api/tickets/:id/historial', requiereSesion, h(async (req, res) => {
+  const ticket = await ticketService.obtenerTicket(req.params.id);
+  if (!ticket || ticket.empresaId !== empresaDeLaPeticion(req)) {
+    return res.status(404).json({ error: 'Ticket no encontrado' });
+  }
+  res.json(await ticketService.obtenerHistorial(req.params.id));
 }));
 
 app.post('/api/tickets/:id/avanzar', requiereSesion, requiereRol('admin_empresa', 'operador'), h(async (req, res) => {

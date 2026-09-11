@@ -172,11 +172,14 @@ erDiagram
     documentos_unidad {
         uuid id PK
         uuid unidad_id FK
-        enum tipo_documento "SOAT | REVISION_TECNICA | TARJETA_CIRCULACION | PERMISO_OPERACION | OTRO"
+        enum tipo_documento "SOAT | REVISION_TECNICA | TARJETA_CIRCULACION | PERMISO_OPERACION | DNI_TRANSPORTISTA | BREVETE_TRANSPORTISTA | CATEGORIA_MTC | OTRO"
         text numero_documento
         date fecha_emision
-        date fecha_vencimiento
+        date fecha_vencimiento "NULL permitido en DNI/BREVETE/CATEGORIA_MTC"
         text archivo_url
+        bytea archivo "PDF guardado en la BD"
+        text archivo_nombre
+        text archivo_tipo
         timestamptz creado_en
     }
 
@@ -216,7 +219,11 @@ En palabras simples:
   - un **historial_estado_ticket** con cada cambio de estado operativo
     (generado → en tránsito → entregado, o anulado).
 - **documentos_unidad** y **documentos_chofer** guardan los papeles con vencimiento
-  (SOAT, revisión técnica, licencia de conducir, certificado médico…).
+  (SOAT, revisión técnica, licencia de conducir, certificado médico…). Al registrar
+  una unidad desde la web, además son obligatorios los PDF de SOAT, CITV
+  (revisión técnica), brevete, DNI y categoría MTC del transportista — estos tres
+  últimos no tienen fecha de vencimiento, solo el archivo. El PDF se guarda como
+  `bytea` directo en la base (no hay almacenamiento externo de objetos todavía).
 
 ### Estado de uso hoy
 
@@ -318,7 +325,7 @@ El contrato formal está en `contrato-api.yaml` (OpenAPI 3.1, pegable en
 | Método y ruta | Para qué sirve | Entrada | Salida |
 |---|---|---|---|
 | `GET /api/unidades` | Listar las unidades de mi empresa (todas, con su `estadoRegistro`), por placa. | — | Arreglo de unidades |
-| `POST /api/unidades` **(admin)** | Registrar una unidad con su ficha (dueño, transportista + ubicación, datos técnicos, medidas). **Nace en `estadoRegistro: PENDIENTE`** — no sirve para tickets hasta que el superadmin la libere. **Obligatorios: `placa`, `rucPropietario` (11 díg), `dniTransportista` (8 díg)**; el resto opcional. `nroSoat`/`vigenciaSoat` y `nroCitv`/`vigenciaCitv` se guardan como documentos (SOAT y REVISION_TECNICA). | ver `NuevaUnidad` en `contrato-api.yaml` | La unidad creada (con `avisos` si algún SOAT/CITV quedó mal) |
+| `POST /api/unidades` **(admin)** | Registrar una unidad con su ficha (dueño, transportista + ubicación, datos técnicos, medidas). **Nace en `estadoRegistro: PENDIENTE`** — no sirve para tickets hasta que el superadmin la libere. **Obligatorios: `placa`, `rucPropietario` (11 díg), `dniTransportista` (8 díg)**; el resto opcional. `nroSoat`/`vigenciaSoat` y `nroCitv`/`vigenciaCitv` se guardan como documentos (SOAT y REVISION_TECNICA). **Esta ruta además exige `vigenciaSoat`, `vigenciaCitv` y 5 PDF en base64** (`archivoSoat`, `archivoCitv`, `archivoBrevete`, `archivoDni`, `archivoCategoriaMtc`, con `*Nombre` opcional) — sin ellos responde 400. Este candado vive en la ruta, no aplica a `PUT` ni a siembras internas. | ver `NuevaUnidad` en `contrato-api.yaml` | La unidad creada (con `avisos` si algún archivo quedó mal) |
 | `GET /api/unidades/pendientes` **(superadmin)** | Solicitudes `PENDIENTE` de todas las empresas, con `empresaRazonSocial`. | — | Arreglo de unidades |
 | `PUT /api/unidades/:id` **(admin / superadmin)** | Editar la ficha. Admin: su unidad, solo si está PENDIENTE o RECHAZADA (si estaba rechazada, al guardar vuelve a PENDIENTE). Superadmin: cualquiera, sin cambiar el estado. Solo pisa los campos enviados. | campos de ficha | La unidad actualizada |
 | `POST /api/unidades/:id/aprobar` **(superadmin)** | Libera la solicitud: `estadoRegistro = APROBADA`. Recién ahí se puede usar para tickets. | `id` en la URL | La unidad actualizada |
@@ -341,8 +348,9 @@ El contrato formal está en `contrato-api.yaml` (OpenAPI 3.1, pegable en
 
 | Método y ruta | Para qué sirve | Entrada | Salida |
 |---|---|---|---|
-| `GET /api/unidades/:id/documentos` | Papeles de una unidad: SOAT, revisión técnica, tarjeta de circulación, permiso de operación. | `id` en la URL | Arreglo de documentos |
-| `POST /api/unidades/:id/documentos` **(admin)** | Agregar un documento a la unidad. | `tipoDocumento`, `fechaVencimiento` (AAAA-MM-DD), `numeroDocumento` (opc.), `fechaEmision` (opc.) | El documento creado |
+| `GET /api/unidades/:id/documentos` | Papeles de una unidad: SOAT, revisión técnica, tarjeta de circulación, permiso de operación, DNI/brevete/categoría MTC del transportista. Cada fila trae `tieneArchivo` y `archivoNombre`. | `id` en la URL | Arreglo de documentos |
+| `POST /api/unidades/:id/documentos` **(admin)** | Agregar un documento a la unidad. `fechaVencimiento` es obligatoria salvo en DNI_TRANSPORTISTA/BREVETE_TRANSPORTISTA/CATEGORIA_MTC. | `tipoDocumento`, `fechaVencimiento` (AAAA-MM-DD, según tipo), `numeroDocumento` (opc.), `fechaEmision` (opc.) | El documento creado |
+| `GET /api/unidades/:id/documentos/:docId/archivo` | Descargar/ver el PDF adjunto de un documento (guardado como `bytea` en la BD). 404 si no tiene archivo. | ids en la URL | Binario `application/pdf` |
 | `DELETE /api/unidades/:id/documentos/:docId` **(admin)** | Borrar ese documento. | ids en la URL | `{ ok: true }` |
 | `GET /api/choferes/:id/documentos` | Papeles de un chofer: licencia de conducir, certificado médico. | `id` en la URL | Arreglo de documentos |
 | `POST /api/choferes/:id/documentos` **(admin)** | Agregar un documento al chofer. Para `LICENCIA_CONDUCIR` acepta `categoriaLicencia` (A-I … A-IIIc). | `tipoDocumento`, `fechaVencimiento`, `categoriaLicencia` (opc.), `numeroDocumento` (opc.) | El documento creado |
@@ -366,6 +374,7 @@ El contrato formal está en `contrato-api.yaml` (OpenAPI 3.1, pegable en
 | `GET /api/tickets` | Listar los tickets de mi empresa, del más nuevo al más viejo, con el estado de su GRE y los datos de unidad y chofer. | — | Arreglo de tickets |
 | `POST /api/tickets` | **Generar un ticket y disparar la GRE.** Verifica que la unidad y el chofer sean de mi empresa y estén activos. Traduce el `motivo` libre al valor oficial. `descripcionMercancia`, `origen` (centro de origen) y `destino` deben ser valores del catálogo (`GET /api/catalogos`); se aceptan sin distinguir mayúsculas/tildes/espacios y se guardan canónicos. `creadoPor` sale del token. Responde con `estadoSunat: "ENVIANDO"` — la GRE se resuelve en segundo plano (1–2 s con el simulador). | `unidadId`, `choferId`, `origen`, `destino`, `motivo` (opc.), `descripcionMercancia`, `pesoBrutoKg` | El ticket creado (`codigoInterno` tipo `TCK-000001`) |
 | `GET /api/tickets/:id` | Ver un ticket con el estado actualizado de su GRE. El frontend lo consulta en bucle tras crear, hasta que deja de estar `ENVIANDO`. | `id` en la URL | El ticket, o 404 |
+| `GET /api/tickets/:id/historial` | Línea de tiempo del ticket: un registro por cambio de `estadoOperativo` (incluida la creación), con quién lo hizo si se pudo identificar. Alimenta el detalle/timeline del ticket en el frontend. | `id` en la URL | Arreglo `{ estadoAnterior, estadoNuevo, usuarioId, usuarioNombre, creadoEn }`, o 404 |
 | `POST /api/tickets/:id/avanzar` | Cambiar el estado operativo: `EN_TRANSITO`, `ENTREGADO` o `ANULADO`. Solo se avanza si la GRE fue **ACEPTADA**; anular se permite salvo que ya esté anulado. Marca `fechaTraslado` / `fechaEntrega` y deja registro (con el usuario) en `historial_estado_ticket`. | `id` en la URL, `{ "estadoOperativo": "EN_TRANSITO" }` | El ticket actualizado |
 
 ### Campos que devuelve un ticket
