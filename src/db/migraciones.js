@@ -111,7 +111,34 @@ const PASOS = [
          fecha_vencimiento is not null
          or tipo_documento in ('DNI_TRANSPORTISTA', 'BREVETE_TRANSPORTISTA', 'CATEGORIA_MTC')
        );
-   exception when duplicate_object then null; end $$`
+   exception when duplicate_object then null; end $$`,
+
+  // --- Programación de viajes ---
+  // Agendar de antemano qué unidad/chofer va a qué ruta un día dado, para
+  // no chocar (misma unidad o chofer en dos viajes el mismo día). No
+  // reemplaza al ticket: es un paso previo, opcional, a la emisión.
+  `create table if not exists viajes_programados (
+     id uuid primary key default gen_random_uuid(),
+     empresa_id uuid not null references empresas(id) on delete cascade,
+     unidad_id uuid not null references unidades(id) on delete restrict,
+     chofer_id uuid not null references choferes(id) on delete restrict,
+     fecha_programada date not null,
+     origen text not null,
+     destino text not null,
+     descripcion_mercancia text,
+     observaciones text,
+     estado text not null default 'PROGRAMADO',
+     motivo_cancelacion text,
+     creado_por uuid references usuarios(id),
+     creado_en timestamptz not null default now()
+   )`,
+  `do $$ begin
+     alter table viajes_programados add constraint chk_estado_viaje_programado
+       check (estado in ('PROGRAMADO', 'CUMPLIDO', 'CANCELADO'));
+   exception when duplicate_object then null; end $$`,
+  `create index if not exists idx_viajes_prog_empresa_fecha on viajes_programados(empresa_id, fecha_programada)`,
+  `create index if not exists idx_viajes_prog_unidad on viajes_programados(unidad_id)`,
+  `create index if not exists idx_viajes_prog_chofer on viajes_programados(chofer_id)`
 ];
 
 let listo = null;

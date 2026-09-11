@@ -33,6 +33,11 @@ erDiagram
     unidades ||--o{ documentos_unidad : "acredita con"
     choferes ||--o{ documentos_chofer : "acredita con"
 
+    empresas ||--o{ viajes_programados : "agenda"
+    unidades ||--o{ viajes_programados : "se agenda en"
+    choferes ||--o{ viajes_programados : "se agenda en"
+    usuarios ||--o{ viajes_programados : "programa (creado_por)"
+
     empresas {
         uuid id PK
         char ruc UK "11 dígitos"
@@ -193,6 +198,22 @@ erDiagram
         date fecha_vencimiento
         timestamptz creado_en
     }
+
+    viajes_programados {
+        uuid id PK
+        uuid empresa_id FK
+        uuid unidad_id FK
+        uuid chofer_id FK
+        date fecha_programada
+        text origen
+        text destino
+        text descripcion_mercancia "opcional"
+        text observaciones
+        text estado "PROGRAMADO | CUMPLIDO | CANCELADO"
+        text motivo_cancelacion
+        uuid creado_por FK
+        timestamptz creado_en
+    }
 ```
 
 ### Cómo leer las relaciones
@@ -224,6 +245,10 @@ En palabras simples:
   (revisión técnica), brevete, DNI y categoría MTC del transportista — estos tres
   últimos no tienen fecha de vencimiento, solo el archivo. El PDF se guarda como
   `bytea` directo en la base (no hay almacenamiento externo de objetos todavía).
+- **viajes_programados** es una agenda previa y opcional: qué unidad y qué chofer
+  van a qué ruta un día dado, antes de que exista el ticket. No lo reemplaza ni
+  lo crea automáticamente; la única regla fuerte es que la misma unidad o el
+  mismo chofer no pueden tener dos viajes `PROGRAMADO` el mismo día.
 
 ### Estado de uso hoy
 
@@ -240,6 +265,7 @@ En palabras simples:
 | `documentos_unidad` | Sí — alta / listado / borrado (SOAT, revisión técnica…) |
 | `documentos_chofer` | Sí — alta / listado / borrado. La licencia vigente se manda en la GRE |
 | `vencimientos_proximos` (vista) | Sí — la usa `GET /api/vencimientos` |
+| `viajes_programados` | Sí — alta / listado / cumplir / cancelar (`/api/viajes-programados`) |
 
 ### Ciclo de vida de un ticket
 
@@ -376,6 +402,20 @@ El contrato formal está en `contrato-api.yaml` (OpenAPI 3.1, pegable en
 | `GET /api/tickets/:id` | Ver un ticket con el estado actualizado de su GRE. El frontend lo consulta en bucle tras crear, hasta que deja de estar `ENVIANDO`. | `id` en la URL | El ticket, o 404 |
 | `GET /api/tickets/:id/historial` | Línea de tiempo del ticket: un registro por cambio de `estadoOperativo` (incluida la creación), con quién lo hizo si se pudo identificar. Alimenta el detalle/timeline del ticket en el frontend. | `id` en la URL | Arreglo `{ estadoAnterior, estadoNuevo, usuarioId, usuarioNombre, creadoEn }`, o 404 |
 | `POST /api/tickets/:id/avanzar` | Cambiar el estado operativo: `EN_TRANSITO`, `ENTREGADO` o `ANULADO`. Solo se avanza si la GRE fue **ACEPTADA**; anular se permite salvo que ya esté anulado. Marca `fechaTraslado` / `fechaEntrega` y deja registro (con el usuario) en `historial_estado_ticket`. | `id` en la URL, `{ "estadoOperativo": "EN_TRANSITO" }` | El ticket actualizado |
+
+### Programación de viajes
+
+Agenda previa y opcional (no crea el ticket): qué unidad y qué chofer van a qué
+ruta un día dado, para no chocar (misma unidad o chofer en dos viajes el
+mismo día). `origen`/`destino`/`descripcionMercancia` usan el mismo catálogo
+fijo que los tickets.
+
+| Método y ruta | Para qué sirve | Entrada | Salida |
+|---|---|---|---|
+| `GET /api/viajes-programados` | Listar los viajes programados de mi empresa, ordenados por fecha. | — | Arreglo de viajes programados |
+| `POST /api/viajes-programados` **(admin/operador)** | Programar un viaje. La unidad y el chofer deben existir, ser de mi empresa y estar APROBADA/activa. Rechaza (400) si la unidad o el chofer ya tienen otro viaje `PROGRAMADO` para esa misma fecha. | `unidadId`, `choferId`, `fechaProgramada` (AAAA-MM-DD), `origen`, `destino`, `descripcionMercancia` (opc.), `observaciones` (opc.) | El viaje creado (`estado: "PROGRAMADO"`) |
+| `POST /api/viajes-programados/:id/cumplir` **(admin/operador)** | Marca el viaje como `CUMPLIDO`. Solo si estaba `PROGRAMADO`. | `id` en la URL | El viaje actualizado |
+| `POST /api/viajes-programados/:id/cancelar` **(admin/operador)** | Marca el viaje como `CANCELADO`. Solo si estaba `PROGRAMADO`. | `id` en la URL, `{ "motivo": "…" }` (opc.) | El viaje actualizado |
 
 ### Campos que devuelve un ticket
 

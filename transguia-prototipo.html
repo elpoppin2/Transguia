@@ -389,6 +389,7 @@
         <button data-tab="unidades" class="activa"><span class="nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7h11v10H2zM13 10h4l3 3v4h-7z"/><circle cx="6.5" cy="19" r="1.6"/><circle cx="17" cy="19" r="1.6"/></svg></span><span>Unidades</span></button>
         <button data-tab="choferes"><span class="nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="11" r="2"/><path d="M5.5 16c.6-1.7 1.9-2.5 3-2.5s2.4.8 3 2.5M14 10h5M14 14h5"/></svg></span><span>Choferes</span></button>
         <button data-tab="tickets"><span class="nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-2.5-1.5L13 21l-1-1.5L11 21l-2.5-1.5L6 21z"/><path d="M9 8h6M9 12h6"/></svg></span><span>Tickets</span></button>
+        <button data-tab="programacion"><span class="nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg></span><span>Programación</span></button>
         <button data-tab="vencimientos"><span class="nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span>Vencimientos</span></button>
         <button data-tab="usuarios" class="solo-admin"><span class="nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3.5 19c.7-3 2.8-4.5 5.5-4.5s4.8 1.5 5.5 4.5M16 8.2c1.4.2 2.5 1.3 2.5 2.8M17 14c1.8.4 3 1.7 3.5 3.6"/></svg></span><span>Usuarios</span></button>
       </div>
@@ -714,6 +715,46 @@
       <div class="vacio" id="vacioTickets" hidden>Todavía no hay tickets.</div>
     </section>
 
+    <!-- PROGRAMACIÓN DE VIAJES -->
+    <section class="panel" data-vista="programacion" hidden>
+      <div id="progForm">
+        <h2>Programar un viaje <span class="sub">— agenda una unidad y un chofer para una fecha, antes de emitir el ticket</span></h2>
+        <div class="grid">
+          <div><label for="pFecha">Fecha</label><input id="pFecha" type="date" /></div>
+          <div><label for="pUnidad">Unidad</label><select id="pUnidad"></select></div>
+          <div><label for="pChofer">Chofer</label><select id="pChofer"></select></div>
+          <div><label for="pOrigen">Centro de origen</label><select id="pOrigen"></select></div>
+          <div><label for="pDestino">Destino</label><select id="pDestino"></select></div>
+          <div><label for="pMercancia">Mercancía (opcional)</label><select id="pMercancia"></select></div>
+        </div>
+        <div class="grid" style="margin-top:12px">
+          <div style="grid-column:1/-1"><label for="pObs">Observaciones (opcional)</label><input id="pObs" placeholder="Notas para el despacho" /></div>
+        </div>
+        <div class="fila" style="margin-top:12px">
+          <button id="btnCrearProgramacion">Programar viaje</button>
+          <span class="muted" id="pEstado" aria-live="polite"></span>
+        </div>
+      </div>
+      <h3 class="grupo">Viajes programados</h3>
+      <div class="buscador">
+        <input type="search" id="qProgramacion" placeholder="Buscar por unidad, chofer, ruta…" />
+        <select id="fProgramacion">
+          <option value="">Todos los estados</option>
+          <option value="PROGRAMADO">Programado</option>
+          <option value="CUMPLIDO">Cumplido</option>
+          <option value="CANCELADO">Cancelado</option>
+        </select>
+      </div>
+      <div class="tabla-scroll">
+        <table>
+          <thead><tr><th>Fecha</th><th>Unidad</th><th>Chofer</th><th>Ruta</th><th>Mercancía</th><th>Estado</th><th>Acciones</th></tr></thead>
+          <tbody id="tbProgramacion"></tbody>
+        </table>
+      </div>
+      <div id="pagProgramacion"></div>
+      <div class="vacio" id="vacioProgramacion" hidden>Todavía no hay viajes programados.</div>
+    </section>
+
     <!-- VENCIMIENTOS -->
     <section class="panel" data-vista="vencimientos" hidden>
       <h2>Documentos por vencer <span class="sub">— SOAT, revisión técnica, licencias, certificados médicos</span></h2>
@@ -766,12 +807,13 @@ const estado = {
   empresaSel: JSON.parse(localStorage.getItem("transguia.empresaSel") || "null"), // superadmin: empresa que está viendo (null = todas)
   vistaActual: null,
   dashVentana: "30d",
-  empresas: [], unidades: [], choferes: [], tickets: [],
+  empresas: [], unidades: [], choferes: [], tickets: [], viajesProgramados: [],
   // Buscar/filtrar/paginar de las tablas (todo en el navegador: ya tenemos la lista completa).
   filtros: {
     unidades: { q: "", estado: "", pag: 1 },
     choferes: { q: "", estado: "", pag: 1 },
-    tickets: { q: "", estado: "", pag: 1 }
+    tickets: { q: "", estado: "", pag: 1 },
+    programacion: { q: "", estado: "", pag: 1 }
   }
 };
 
@@ -896,6 +938,7 @@ function render() {
   document.querySelectorAll(".solo-gerencia").forEach((n) => n.classList.toggle("oculto", !(esAdmin() || esSuper())));
   el("segmentador").hidden = !esSuper();
   if (el("ticketForm")) el("ticketForm").hidden = soloLectura();
+  if (el("progForm")) el("progForm").hidden = soloLectura();
 
   if (!dentro) return;
 
@@ -929,6 +972,7 @@ function mostrarVista(nombre) {
   else if (nombre === "unidades") cargarUnidades().catch((e) => aviso(e.message));
   else if (nombre === "choferes") cargarChoferes().catch((e) => aviso(e.message));
   else if (nombre === "tickets") cargarTickets().catch((e) => aviso(e.message));
+  else if (nombre === "programacion") cargarProgramacion().catch((e) => aviso(e.message));
   else if (nombre === "vencimientos") cargarVencimientos();
 }
 
@@ -1065,11 +1109,12 @@ async function cargarUnidades() {
   await cargarCatalogos();
   estado.unidades = await api("/api/unidades");
   renderUnidades();
-  const sel = el("tUnidad");
   const usables = estado.unidades.filter((u) => u.activo && u.estadoRegistro === "APROBADA");
-  sel.innerHTML = usables
+  const opciones = usables
     .map((u) => `<option value="${u.id}">${escapar(u.placa)} — ${escapar(descUnidad(u))}</option>`).join("")
     || `<option value="">(no hay unidades aprobadas todavía)</option>`;
+  el("tUnidad").innerHTML = opciones;
+  if (el("pUnidad")) el("pUnidad").innerHTML = opciones;
 }
 function renderUnidades() {
   const f = estado.filtros.unidades;
@@ -1284,11 +1329,12 @@ async function cargarChoferes() {
   await cargarCatalogos();
   estado.choferes = await api("/api/choferes");
   renderChoferes();
-  const sel = el("tChofer");
   const usables = estado.choferes.filter((c) => c.activo && c.estadoRegistro === "APROBADA");
-  sel.innerHTML = usables
+  const opciones = usables
     .map((c) => `<option value="${c.id}">${escapar(nombreChofer(c))} — ${escapar(c.dni)}</option>`).join("")
     || `<option value="">(no hay choferes aprobados todavía)</option>`;
+  el("tChofer").innerHTML = opciones;
+  if (el("pChofer")) el("pChofer").innerHTML = opciones;
 }
 function renderChoferes() {
   const f = estado.filtros.choferes;
@@ -1501,6 +1547,9 @@ async function cargarCatalogos() {
     fill("tMercancia", c.mercancias);
     fill("tOrigen", c.centrosOrigen);
     fill("tDestino", c.destinos);
+    fill("pOrigen", c.centrosOrigen);
+    fill("pDestino", c.destinos);
+    fill("pMercancia", c.mercancias, true);
     fill("uTipoVehiculo", c.tiposVehiculo, true);
     fill("uFormaApertura", c.formasApertura, true);
     ["uRodadaDel", "uRodadaC1", "uRodadaC2"].forEach((id) => fill(id, c.tiposRodada, true));
@@ -1616,6 +1665,69 @@ async function crearTicket() {
 }
 async function avanzar(id, nuevo) {
   try { await api(`/api/tickets/${id}/avanzar`, { method: "POST", body: JSON.stringify({ estadoOperativo: nuevo }) }); await cargarTickets(); }
+  catch (e) { aviso(e.message); }
+}
+
+// ---------- programación de viajes ----------
+function pillProgramacion(e) {
+  const m = { PROGRAMADO: "info", CUMPLIDO: "ok", CANCELADO: "gris" };
+  const t = { PROGRAMADO: "programado", CUMPLIDO: "cumplido", CANCELADO: "cancelado" };
+  return `<span class="pill ${m[e] || "gris"}">${t[e] || e}</span>`;
+}
+async function cargarProgramacion() {
+  await Promise.all([cargarUnidades(), cargarChoferes()]);
+  estado.viajesProgramados = await api("/api/viajes-programados");
+  renderProgramacion();
+}
+function renderProgramacion() {
+  const f = estado.filtros.programacion;
+  const { pagina, total, totalPaginas } = filtrarYPaginar(
+    estado.viajesProgramados, f, ["placa", "choferNombre", "choferDni", "origen", "destino", "descripcionMercancia"], "estado"
+  );
+  const tb = el("tbProgramacion"); tb.innerHTML = "";
+  el("vacioProgramacion").hidden = estado.viajesProgramados.length > 0;
+  for (const v of pagina) {
+    const tr = document.createElement("tr");
+    const acciones = v.estado === "PROGRAMADO" && !soloLectura()
+      ? `<button class="tenue chico" data-progcumplir="${v.id}">Cumplir</button>
+         <button class="tenue chico" data-progcancelar="${v.id}">Cancelar</button>`
+      : (v.motivoCancelacion ? `<span class="muted" title="${escapar(v.motivoCancelacion)}">motivo: ${escapar(v.motivoCancelacion)}</span>` : "—");
+    tr.innerHTML = `
+      <td>${String(v.fechaProgramada).slice(0, 10)}</td>
+      <td><strong>${escapar(v.placa)}</strong></td>
+      <td>${escapar(v.choferNombre)} <span class="muted">— ${escapar(v.choferDni)}</span></td>
+      <td>${escapar(v.origen)} → ${escapar(v.destino)}</td>
+      <td>${escapar(v.descripcionMercancia || "—")}</td>
+      <td>${pillProgramacion(v.estado)}</td>
+      <td>${acciones}</td>`;
+    tb.appendChild(tr);
+  }
+  el("pagProgramacion").innerHTML = controlesPaginacionHTML("programacion", f.pag, totalPaginas, total);
+}
+async function crearProgramacion() {
+  const btn = el("btnCrearProgramacion"), info = el("pEstado");
+  btn.disabled = true; info.textContent = "Programando…";
+  try {
+    await api("/api/viajes-programados", { method: "POST", body: JSON.stringify({
+      fechaProgramada: el("pFecha").value,
+      unidadId: el("pUnidad").value, choferId: el("pChofer").value,
+      origen: el("pOrigen").value, destino: el("pDestino").value,
+      descripcionMercancia: el("pMercancia").value || undefined,
+      observaciones: el("pObs").value || undefined
+    }) });
+    el("pFecha").value = ""; el("pObs").value = "";
+    info.textContent = "Viaje programado.";
+    await cargarProgramacion();
+  } catch (e) { aviso(e.message); info.textContent = ""; }
+  finally { btn.disabled = false; }
+}
+async function cumplirProgramacion(id) {
+  try { await api(`/api/viajes-programados/${id}/cumplir`, { method: "POST" }); await cargarProgramacion(); }
+  catch (e) { aviso(e.message); }
+}
+async function cancelarProgramacion(id) {
+  const motivo = prompt("Motivo de la cancelación (opcional):") || "";
+  try { await api(`/api/viajes-programados/${id}/cancelar`, { method: "POST", body: JSON.stringify({ motivo }) }); await cargarProgramacion(); }
   catch (e) { aviso(e.message); }
 }
 
@@ -2073,6 +2185,7 @@ el("uBtnDni").addEventListener("click", traerPorDni);
 el("cBtnDni").addEventListener("click", traerPorDniChofer);
 el("btnCrearChofer").addEventListener("click", crearChofer);
 el("btnCrearTicket").addEventListener("click", crearTicket);
+el("btnCrearProgramacion").addEventListener("click", crearProgramacion);
 el("btnCrearUsuario").addEventListener("click", crearUsuario);
 el("btnVencimientos").addEventListener("click", cargarVencimientos);
 el("btnCrearEmpresa").addEventListener("click", crearEmpresa);
@@ -2082,7 +2195,8 @@ document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("cli
 // Buscar/filtrar: cada tecla o cambio de select reinicia a la página 1.
 [["qUnidades", "unidades", "q", renderUnidades], ["fUnidades", "unidades", "estado", renderUnidades],
  ["qChoferes", "choferes", "q", renderChoferes], ["fChoferes", "choferes", "estado", renderChoferes],
- ["qTickets", "tickets", "q", renderTickets], ["fTickets", "tickets", "estado", renderTickets]
+ ["qTickets", "tickets", "q", renderTickets], ["fTickets", "tickets", "estado", renderTickets],
+ ["qProgramacion", "programacion", "q", renderProgramacion], ["fProgramacion", "programacion", "estado", renderProgramacion]
 ].forEach(([id, tabla, campo, render]) => {
   const nodo = el(id);
   const evento = nodo.tagName === "SELECT" ? "change" : "input";
@@ -2144,10 +2258,12 @@ document.body.addEventListener("click", (e) => {
     verArchivoUnidad(unidadId, docId, u ? u.empresaId : undefined);
   }
   if (t.dataset.detalleTicket) toggleDetalleTicket(t.dataset.detalleTicket);
+  if (t.dataset.progcumplir) cumplirProgramacion(t.dataset.progcumplir);
+  if (t.dataset.progcancelar) cancelarProgramacion(t.dataset.progcancelar);
   if (t.dataset.pag) {
     const [tabla, dir] = t.dataset.pag.split(":");
     estado.filtros[tabla].pag += Number(dir);
-    ({ unidades: renderUnidades, choferes: renderChoferes, tickets: renderTickets })[tabla]();
+    ({ unidades: renderUnidades, choferes: renderChoferes, tickets: renderTickets, programacion: renderProgramacion })[tabla]();
   }
   if (t.dataset.avanzar) {
     const [id, nuevo] = t.dataset.avanzar.split(":");

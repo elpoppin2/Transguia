@@ -262,6 +262,28 @@ create table historial_estado_ticket (
 );
 create index idx_historial_ticket on historial_estado_ticket(ticket_id);
 
+-- Agendar de antemano qué unidad/chofer va a qué ruta un día dado, para no
+-- chocar (misma unidad o chofer en dos viajes el mismo día). No reemplaza
+-- al ticket: es un paso previo, opcional, a la emisión.
+create table viajes_programados (
+  id uuid primary key default gen_random_uuid(),
+  empresa_id uuid not null references empresas(id) on delete cascade,
+  unidad_id uuid not null references unidades(id) on delete restrict,
+  chofer_id uuid not null references choferes(id) on delete restrict,
+  fecha_programada date not null,
+  origen text not null,
+  destino text not null,
+  descripcion_mercancia text,
+  observaciones text,
+  estado text not null default 'PROGRAMADO' check (estado in ('PROGRAMADO', 'CUMPLIDO', 'CANCELADO')),
+  motivo_cancelacion text,
+  creado_por uuid references usuarios(id),
+  creado_en timestamptz not null default now()
+);
+create index idx_viajes_prog_empresa_fecha on viajes_programados(empresa_id, fecha_programada);
+create index idx_viajes_prog_unidad on viajes_programados(unidad_id);
+create index idx_viajes_prog_chofer on viajes_programados(chofer_id);
+
 -- ---------- Vista: vencimientos próximos (para el panel de alertas) ----------
 
 create view vencimientos_proximos as

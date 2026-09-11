@@ -776,6 +776,76 @@ paths:
           content:
             application/json: { schema: { $ref: "#/components/schemas/Error" } }
 
+  /api/viajes-programados:
+    get:
+      tags: [Programación]
+      summary: Listar los viajes programados de mi empresa
+      description: >
+        Agenda previa (opcional) de qué unidad/chofer va a qué ruta un día
+        dado; no crea el ticket, es solo un paso previo de planificación.
+        Ordenados por fecha programada.
+      responses:
+        "200":
+          description: Lista de viajes programados
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/ViajeProgramado" } }
+        "401": { $ref: "#/components/responses/NoAutenticado" }
+    post:
+      tags: [Programación]
+      summary: Programar un viaje *(admin/operador)*
+      description: >
+        La unidad y el chofer deben existir, pertenecer a mi empresa y
+        estar APROBADA/activa. `origen`, `destino` y `descripcionMercancia`
+        (opcional) salen del mismo catálogo fijo que usan los tickets.
+        Rechaza (400) si la unidad o el chofer ya tienen otro viaje
+        `PROGRAMADO` para la misma `fechaProgramada`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/NuevoViajeProgramado" }
+      responses:
+        "201":
+          description: Viaje programado
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/ViajeProgramado" } }
+        "400": { $ref: "#/components/responses/ErrorValidacion" }
+        "401": { $ref: "#/components/responses/NoAutenticado" }
+        "403": { $ref: "#/components/responses/SinPermiso" }
+
+  /api/viajes-programados/{id}/cumplir:
+    post:
+      tags: [Programación]
+      summary: Marcar un viaje programado como cumplido *(admin/operador)*
+      description: Solo si está en estado `PROGRAMADO`.
+      parameters: [{ $ref: "#/components/parameters/IdPath" }]
+      responses:
+        "200":
+          description: Viaje actualizado
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/ViajeProgramado" } }
+        "400": { $ref: "#/components/responses/ErrorValidacion" }
+        "403": { $ref: "#/components/responses/SinPermiso" }
+
+  /api/viajes-programados/{id}/cancelar:
+    post:
+      tags: [Programación]
+      summary: Cancelar un viaje programado *(admin/operador)*
+      description: Solo si está en estado `PROGRAMADO`. `motivo` es opcional.
+      parameters: [{ $ref: "#/components/parameters/IdPath" }]
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { motivo: { type: [string, "null"] } } }
+      responses:
+        "200":
+          description: Viaje actualizado
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/ViajeProgramado" } }
+        "400": { $ref: "#/components/responses/ErrorValidacion" }
+        "403": { $ref: "#/components/responses/SinPermiso" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1222,3 +1292,36 @@ components:
         fechaTraslado: { type: [string, "null"], format: date-time }
         fechaEntrega: { type: [string, "null"], format: date-time }
         creadoEn: { type: string, format: date-time }
+
+    NuevoViajeProgramado:
+      type: object
+      required: [unidadId, choferId, fechaProgramada, origen, destino]
+      properties:
+        unidadId: { type: string, format: uuid }
+        choferId: { type: string, format: uuid }
+        fechaProgramada: { type: string, format: date, example: "2026-09-25" }
+        origen: { $ref: "#/components/schemas/CentroOrigen" }
+        destino: { $ref: "#/components/schemas/Destino" }
+        descripcionMercancia:
+          description: Opcional; si viene, debe ser una del catálogo de mercancías.
+          oneOf:
+            - $ref: "#/components/schemas/Mercancia"
+            - type: "null"
+        observaciones: { type: [string, "null"] }
+
+    ViajeProgramado:
+      allOf:
+        - $ref: "#/components/schemas/NuevoViajeProgramado"
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            empresaId: { type: string, format: uuid }
+            placa: { type: string, example: ABC-756 }
+            choferNombre: { type: string, example: "Pedro Martín Alva Rojas" }
+            choferDni: { type: string, example: "70110234" }
+            estado:
+              type: string
+              enum: [PROGRAMADO, CUMPLIDO, CANCELADO]
+            motivoCancelacion: { type: [string, "null"] }
+            creadoPor: { type: [string, "null"], format: uuid }
+            creadoEn: { type: string, format: date-time }

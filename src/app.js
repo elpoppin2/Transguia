@@ -28,6 +28,8 @@ const { DocumentosService } = require('./documentos/documentosService');
 const { DocumentosRepositorioPostgres } = require('./documentos/documentosRepoPostgres');
 const { TicketService } = require('./tickets/ticketService');
 const { TicketsRepositorioPostgres } = require('./tickets/ticketsRepoPostgres');
+const { ViajesProgramadosService } = require('./viajes/viajesProgramadosService');
+const { ViajesProgramadosRepositorioPostgres } = require('./viajes/viajesProgramadosRepoPostgres');
 const { MERCANCIAS, CENTROS_ORIGEN, DESTINOS } = require('./tickets/catalogos');
 const { TIPOS_VEHICULO, TIPOS_RODADA, FORMAS_APERTURA } = require('./unidades/catalogosUnidad');
 const { TIPOS_DOC_IDENTIDAD, DEPARTAMENTOS, CATEGORIAS_LICENCIA } = require('./choferes/catalogosChofer');
@@ -49,6 +51,7 @@ const unidadesRepo = new UnidadesRepositorioPostgres();
 const choferesRepo = new ChoferesRepositorioPostgres();
 const documentosRepo = new DocumentosRepositorioPostgres();
 const ticketsRepo = new TicketsRepositorioPostgres();
+const viajesProgramadosRepo = new ViajesProgramadosRepositorioPostgres();
 
 const empresasRepo = new EmpresasRepositorioPostgres();
 const authService = new AuthService(usuariosRepo);
@@ -71,6 +74,11 @@ const ticketService = new TicketService({
   repositorioChoferes: choferesRepo,
   repositorioDocumentos: documentosRepo,
   emisionSincrona
+});
+const viajesProgramadosService = new ViajesProgramadosService({
+  repositorioViajesProgramados: viajesProgramadosRepo,
+  repositorioUnidades: unidadesRepo,
+  repositorioChoferes: choferesRepo
 });
 
 // Prepara el esquema (la secuencia del código de ticket) una sola vez.
@@ -419,6 +427,32 @@ app.post('/api/tickets/:id/avanzar', requiereSesion, requiereRol('admin_empresa'
   }
   const ticket = await ticketService.avanzarEstado(req.params.id, req.body.estadoOperativo, req.sesion.usuarioId);
   res.json(ticket);
+}));
+
+// ==================== PROGRAMACIÓN DE VIAJES ====================
+// Agenda previa (opcional) de qué unidad/chofer va a qué ruta un día
+// dado; no crea el ticket, solo evita chocar la misma unidad o el mismo
+// chofer en dos viajes el mismo día.
+
+app.get('/api/viajes-programados', requiereSesion, h(async (req, res) => {
+  res.json(await viajesProgramadosService.listar(empresaDeLaPeticion(req)));
+}));
+
+app.post('/api/viajes-programados', requiereSesion, requiereRol('admin_empresa', 'operador'), h(async (req, res) => {
+  const viaje = await viajesProgramadosService.programar({
+    ...req.body,
+    empresaId: req.sesion.empresaId,
+    creadoPor: req.sesion.usuarioId
+  });
+  res.status(201).json(viaje);
+}));
+
+app.post('/api/viajes-programados/:id/cumplir', requiereSesion, requiereRol('admin_empresa', 'operador'), h(async (req, res) => {
+  res.json(await viajesProgramadosService.cumplir(req.params.id, req.sesion.empresaId));
+}));
+
+app.post('/api/viajes-programados/:id/cancelar', requiereSesion, requiereRol('admin_empresa', 'operador'), h(async (req, res) => {
+  res.json(await viajesProgramadosService.cancelar(req.params.id, req.sesion.empresaId, (req.body || {}).motivo));
 }));
 
 module.exports = { app, prepararEsquema, emisionSincrona };
