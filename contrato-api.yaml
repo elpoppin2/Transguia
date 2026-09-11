@@ -1051,6 +1051,15 @@ components:
               placa: { type: string, example: "ABC-756" }
               viajes: { type: integer }
               toneladas: { type: number }
+        viajesPorChofer:
+          type: array
+          description: Los 10 choferes con más viajes en la ventana.
+          items:
+            type: object
+            properties:
+              chofer: { type: string, example: "Luis Alberto Quispe Mamani" }
+              viajes: { type: integer }
+              toneladas: { type: number }
         corredores:
           type: array
           description: Toneladas y viajes por par centro de origen → destino.

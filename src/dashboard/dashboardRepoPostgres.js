@@ -137,6 +137,22 @@ class DashboardRepositorioPostgres {
     return rows;
   }
 
+  /** Viajes (y toneladas) por chofer en la ventana — los 10 más activos. */
+  async viajesPorChofer(empresaId, dias) {
+    const e = this._emp(empresaId);
+    const { rows } = await pool.query(`
+      select (c.nombres || ' ' || c.apellidos) as chofer,
+             count(*)::int as viajes,
+             round((sum(t.peso_bruto_kg) / 1000.0)::numeric, 2)::float8 as toneladas
+      from tickets_traslado t
+      join choferes c on c.id = t.chofer_id
+      where t.estado_operativo <> 'ANULADO'
+        and t.creado_en >= now() - make_interval(days => $${e.n}::int) ${e.sql}
+      group by c.id, c.nombres, c.apellidos order by viajes desc, toneladas desc limit 10
+    `, [...e.params, dias]);
+    return rows;
+  }
+
   /** Toneladas y viajes por corredor (centro de origen -> destino) en la ventana. */
   async corredores(empresaId, dias) {
     const e = this._emp(empresaId);

@@ -33,7 +33,7 @@ class DashboardService {
       alcance = empresa.razonSocial;
     }
 
-    const [k, gre, flota, periodo, estado, materiales, unidades, corredores] = await Promise.all([
+    const [k, gre, flota, periodo, estado, materiales, unidades, choferes, corredores] = await Promise.all([
       this.repo.kpis(empresaId, v.dias),
       this.repo.gre(empresaId, v.dias),
       this.repo.flotaHabilitada(empresaId),
@@ -41,6 +41,7 @@ class DashboardService {
       this.repo.porEstado(empresaId, v.dias),
       this.repo.toneladasPorMaterial(empresaId, v.dias),
       this.repo.viajesPorUnidad(empresaId, v.dias),
+      this.repo.viajesPorChofer(empresaId, v.dias),
       this.repo.corredores(empresaId, v.dias)
     ]);
 
@@ -102,6 +103,7 @@ class DashboardService {
       porEstadoOperativo,                  // { GENERADO, EN_TRANSITO, ENTREGADO, ANULADO } (en la ventana)
       toneladasPorMaterial: materiales,    // [{ material, toneladas, viajes }]
       viajesPorUnidad: unidades,           // [{ placa, viajes, toneladas }]
+      viajesPorChofer: choferes,           // [{ chofer, viajes, toneladas }]
       corredores                           // [{ origen, destino, toneladas, viajes }]
     };
   }
