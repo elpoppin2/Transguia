@@ -181,46 +181,6 @@ function esperarEmision(ticketService, datos) {
     console.log(`doc chofer creado: ${d.dni} ${d.tipoDocumento} (vence ${d.fechaVencimiento})`);
   }
 
-  // --- Tickets (solo si la empresa aún no tiene ninguno) ---
-  const ticketsRepo = new TicketsRepositorioPostgres();
-  await ticketsRepo.asegurarEsquema();
-  const { rows: cuenta } = await pool.query(
-    'select count(*)::int as n from tickets_traslado where empresa_id = $1', [empresaId]
-  );
-  if (cuenta[0].n > 0) {
-    console.log(`la empresa ya tiene ${cuenta[0].n} ticket(s); no se crean más`);
-  } else {
-    // Emisor "demo" sin rechazos para que la siembra sea predecible.
-    const { EmisorGREDemo } = require('./src/gre/EmisorGREDemo');
-    const ticketService = new TicketService({
-      emisorGRE: new EmisorGREDemo({ serie: 'T001', correlativoInicial: 160, probabilidadRechazo: 0, demoraMs: 20 }),
-      repositorioTickets: ticketsRepo,
-      repositorioUnidades: unidadesRepo,
-      repositorioChoferes: choferesRepo,
-      repositorioDocumentos: documentosRepo
-    });
-    for (const t of TICKETS) {
-      const creado = await esperarEmision(ticketService, {
-        empresaId,
-        unidadId: mapaUnidades[t.placa],
-        choferId: mapaChoferes[t.dni],
-        creadoPor: adminId,
-        origen: t.origen, destino: t.destino, motivo: t.motivo,
-        descripcionMercancia: t.descripcionMercancia, pesoBrutoKg: t.pesoBrutoKg
-      });
-
-      // Backdatea y fija el estado directamente (es data de demo; en uso
-      // real esto lo hace el operador con "avanzar").
-      const creadoEn = `now() - interval '${t.diasAtras} days'`;
-      const sets = [`creado_en = ${creadoEn}`, `estado_operativo = '${t.estado}'`];
-      if (t.horasTransito != null) sets.push(`fecha_traslado = ${creadoEn} + interval '${t.horasTransito} hours'`);
-      if (t.estado === 'ENTREGADO') sets.push(`fecha_entrega = ${creadoEn} + interval '${(t.horasTransito || 0) + t.horasEntrega} hours'`);
-      await pool.query(`update tickets_traslado set ${sets.join(', ')} where id = $1`, [creado.id]);
-
-      console.log(`ticket: ${creado.codigoInterno}  ${creado.origen}→${creado.destino}  ${t.estado}  (hace ${t.diasAtras} d)`);
-    }
-  }
-
   // --- Superadmin (ve todas las empresas) ---
   if (!(await usuariosRepo.buscarPorUsername(SUPERADMIN.username))) {
     await auth.registrarUsuario({ ...SUPERADMIN, rol: 'superadmin' });
@@ -260,7 +220,9 @@ function esperarEmision(ticketService, datos) {
   }
 
   // La flota y los choferes de demo ya vienen "liberados" por la
-  // plataforma (si no, no se podría emitir ningún ticket de demo).
+  // plataforma — ANTES de emitir cualquier ticket, porque nace en
+  // PENDIENTE y una unidad/chofer no liberado no se puede usar en un
+  // traslado (si no, la siembra de tickets de abajo falla).
   const idsDemo = `(select id from empresas where ruc = any($1))`;
   const aprU = await pool.query(
     `update unidades set estado_registro = 'APROBADA'
@@ -270,6 +232,46 @@ function esperarEmision(ticketService, datos) {
      where estado_registro <> 'APROBADA' and empresa_id in ${idsDemo}`, [[EMPRESA.ruc, EMPRESA_2.ruc]]);
   if (aprU.rowCount || aprC.rowCount) {
     console.log(`liberadas: ${aprU.rowCount} unidad(es), ${aprC.rowCount} chofer(es)`);
+  }
+
+  // --- Tickets (solo si la empresa aún no tiene ninguno) ---
+  const ticketsRepo = new TicketsRepositorioPostgres();
+  await ticketsRepo.asegurarEsquema();
+  const { rows: cuenta } = await pool.query(
+    'select count(*)::int as n from tickets_traslado where empresa_id = $1', [empresaId]
+  );
+  if (cuenta[0].n > 0) {
+    console.log(`la empresa ya tiene ${cuenta[0].n} ticket(s); no se crean más`);
+  } else {
+    // Emisor "demo" sin rechazos para que la siembra sea predecible.
+    const { EmisorGREDemo } = require('./src/gre/EmisorGREDemo');
+    const ticketService = new TicketService({
+      emisorGRE: new EmisorGREDemo({ serie: 'T001', correlativoInicial: 160, probabilidadRechazo: 0, demoraMs: 20 }),
+      repositorioTickets: ticketsRepo,
+      repositorioUnidades: unidadesRepo,
+      repositorioChoferes: choferesRepo,
+      repositorioDocumentos: documentosRepo
+    });
+    for (const t of TICKETS) {
+      const creado = await esperarEmision(ticketService, {
+        empresaId,
+        unidadId: mapaUnidades[t.placa],
+        choferId: mapaChoferes[t.dni],
+        creadoPor: adminId,
+        origen: t.origen, destino: t.destino, motivo: t.motivo,
+        descripcionMercancia: t.descripcionMercancia, pesoBrutoKg: t.pesoBrutoKg
+      });
+
+      // Backdatea y fija el estado directamente (es data de demo; en uso
+      // real esto lo hace el operador con "avanzar").
+      const creadoEn = `now() - interval '${t.diasAtras} days'`;
+      const sets = [`creado_en = ${creadoEn}`, `estado_operativo = '${t.estado}'`];
+      if (t.horasTransito != null) sets.push(`fecha_traslado = ${creadoEn} + interval '${t.horasTransito} hours'`);
+      if (t.estado === 'ENTREGADO') sets.push(`fecha_entrega = ${creadoEn} + interval '${(t.horasTransito || 0) + t.horasEntrega} hours'`);
+      await pool.query(`update tickets_traslado set ${sets.join(', ')} where id = $1`, [creado.id]);
+
+      console.log(`ticket: ${creado.codigoInterno}  ${creado.origen}→${creado.destino}  ${t.estado}  (hace ${t.diasAtras} d)`);
+    }
   }
 
   // Solicitudes que quedan PENDIENTES, para que el superadmin tenga algo

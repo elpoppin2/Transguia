@@ -137,6 +137,33 @@ class DashboardRepositorioPostgres {
     return rows;
   }
 
+  /**
+   * Cumplimiento del plan: viajes programados con fecha dentro de la
+   * ventana (ya pasada, sin contar los cancelados) vs. tickets realmente
+   * ENTREGADOs en esa misma ventana (por fecha de entrega real). No hay
+   * vínculo 1 a 1 entre un viaje programado y un ticket concreto: es una
+   * comparación agregada de plan vs. ejecución, no un cruce exacto.
+   */
+  async cumplimientoProgramacion(empresaId, dias) {
+    const condVp = empresaId ? 'and vp.empresa_id = $2' : '';
+    const condT = empresaId ? 'and t.empresa_id = $2' : '';
+    const params = empresaId ? [dias, empresaId] : [dias];
+    const { rows } = await pool.query(`
+      select
+        (select count(*)::int from viajes_programados vp
+          where vp.estado <> 'CANCELADO'
+            and vp.fecha_programada >= (now() - make_interval(days => $1::int))::date
+            and vp.fecha_programada <= now()::date
+            ${condVp}) as programados,
+        (select count(*)::int from tickets_traslado t
+          where t.estado_operativo = 'ENTREGADO'
+            and t.fecha_entrega >= now() - make_interval(days => $1::int)
+            and t.fecha_entrega <= now()
+            ${condT}) as entregados
+    `, params);
+    return rows[0];
+  }
+
   /** Viajes (y toneladas) por chofer en la ventana — los 10 más activos. */
   async viajesPorChofer(empresaId, dias) {
     const e = this._emp(empresaId);

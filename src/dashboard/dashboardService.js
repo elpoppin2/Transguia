@@ -33,7 +33,7 @@ class DashboardService {
       alcance = empresa.razonSocial;
     }
 
-    const [k, gre, flota, periodo, estado, materiales, unidades, choferes, corredores] = await Promise.all([
+    const [k, gre, flota, periodo, estado, materiales, unidades, choferes, corredores, cumpl] = await Promise.all([
       this.repo.kpis(empresaId, v.dias),
       this.repo.gre(empresaId, v.dias),
       this.repo.flotaHabilitada(empresaId),
@@ -42,7 +42,8 @@ class DashboardService {
       this.repo.toneladasPorMaterial(empresaId, v.dias),
       this.repo.viajesPorUnidad(empresaId, v.dias),
       this.repo.viajesPorChofer(empresaId, v.dias),
-      this.repo.corredores(empresaId, v.dias)
+      this.repo.corredores(empresaId, v.dias),
+      this.repo.cumplimientoProgramacion(empresaId, v.dias)
     ]);
 
     const porEstadoOperativo = Object.fromEntries(ESTADOS.map((e) => [e, 0]));
@@ -57,6 +58,8 @@ class DashboardService {
     const tasaAnulPrev = k.total_prev ? redondear((k.anulados_prev / k.total_prev) * 100) : 0;
     const greAceptadas = num(gre.aceptadas) || 0;
     const greBase = num(gre.total) || 0;
+    const programados = num(cumpl.programados) || 0;
+    const entregadosPlan = num(cumpl.entregados) || 0;
 
     const kpis = {
       // valor actual, variación % vs. ventana previa, y si "subir" es bueno
@@ -89,6 +92,15 @@ class DashboardService {
         valor: greBase ? redondear((greAceptadas / greBase) * 100) : null, unidad: '%',
         aceptadas: greAceptadas, rechazadas: num(gre.rechazadas) || 0, total: greBase,
         semaforo: greBase ? umbral((greAceptadas / greBase) * 100, { bien: 98, atencion: 92 }, 'mayorEsMejor') : 'sinDatos'
+      },
+      // Real (tickets ENTREGADO por fecha de entrega) vs. plan (viajes
+      // programados con fecha en la ventana, sin contar cancelados). No
+      // hay vínculo 1 a 1 entre un viaje programado y un ticket puntual:
+      // es una lectura agregada de cuánto se ejecutó de lo agendado.
+      cumplimientoProgramacion: {
+        valor: programados ? redondear((entregadosPlan / programados) * 100) : null, unidad: '%',
+        entregados: entregadosPlan, programados,
+        semaforo: programados ? umbral((entregadosPlan / programados) * 100, { bien: 90, atencion: 70 }, 'mayorEsMejor') : 'sinDatos'
       }
     };
 

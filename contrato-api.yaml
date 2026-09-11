@@ -1012,7 +1012,7 @@ components:
         mensual: { type: boolean }
         kpis:
           type: object
-          description: 6 indicadores (ver schema Kpi). cicloHoras trae además `despacho`/`transito`; los de flota/GRE traen sus contadores.
+          description: 7 indicadores (ver schema Kpi). cicloHoras trae además `despacho`/`transito`; los de flota/GRE/cumplimiento traen sus contadores.
           properties:
             toneladas: { $ref: "#/components/schemas/Kpi" }
             viajes: { $ref: "#/components/schemas/Kpi" }
@@ -1020,6 +1020,15 @@ components:
             tasaAnulacion: { $ref: "#/components/schemas/Kpi" }
             utilizacionFlota: { $ref: "#/components/schemas/Kpi" }
             greAceptada: { $ref: "#/components/schemas/Kpi" }
+            cumplimientoProgramacion:
+              description: >
+                % de viajes ENTREGADO (por fecha de entrega real) sobre los
+                viajes_programados con fecha en la ventana (sin contar
+                cancelados). Trae `entregados`/`programados`. No hay
+                vínculo 1 a 1 entre un viaje programado y un ticket
+                puntual: es una lectura agregada de plan vs. ejecución,
+                `null`/`sinDatos` si no hubo nada programado en la ventana.
+              allOf: [{ $ref: "#/components/schemas/Kpi" }]
         toneladasPorPeriodo:
           type: array
           items:

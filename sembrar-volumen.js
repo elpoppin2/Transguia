@@ -1,9 +1,10 @@
 // Ejecutar con:  node sembrar-volumen.js
 //
-// Agranda la demo: suma flota, choferes, documentos y MUCHOS tickets de
-// traslado repartidos en los últimos ~90 días, en varios estados y
-// combinando los catálogos del ticket (mercancía / centro de origen /
-// destino), para que el dashboard y los listados se vean con volumen.
+// Agranda la demo: suma flota, choferes, documentos, MUCHOS tickets de
+// traslado repartidos en los últimos ~90 días (en varios estados y
+// combinando los catálogos del ticket: mercancía / centro de origen /
+// destino) y una agenda de viajes programados, para que el dashboard y
+// los listados se vean con volumen.
 //
 // Requiere que antes se haya corrido `node sembrar-datos.js` (usa las dos
 // empresas de demo: "Transportes Andina S.A.C." y "Logística del Sur E.I.R.L.").
@@ -11,6 +12,10 @@
 // Es idempotente y reproducible:
 //   - unidades/choferes/documentos: no se recrean si ya existen (placa/DNI).
 //   - tickets: genera solo los que falten para llegar al objetivo por empresa.
+//   - programación: genera solo los que falten para llegar al objetivo
+//     (~15% más que los tickets ENTREGADO de la empresa, + unos pocos a
+//     futuro); así el KPI "Cumplimiento de programación" del dashboard
+//     (real ENTREGADO vs. programado) tiene con qué compararse.
 //   - usa un generador de azar con semilla fija: la demo sale igual siempre.
 //
 // Se limpia junto con el resto:  node borrar-datos-demo.js
@@ -27,6 +32,8 @@ const { DocumentosRepositorioPostgres } = require('./src/documentos/documentosRe
 const { TicketService } = require('./src/tickets/ticketService');
 const { TicketsRepositorioPostgres } = require('./src/tickets/ticketsRepoPostgres');
 const { EmisorGREDemo } = require('./src/gre/EmisorGREDemo');
+const { ViajesProgramadosService } = require('./src/viajes/viajesProgramadosService');
+const { ViajesProgramadosRepositorioPostgres } = require('./src/viajes/viajesProgramadosRepoPostgres');
 const { fichaVehiculoDemo } = require('./demo-ficha-vehiculo');
 
 // ------------------------------------------------------------------
@@ -227,10 +234,10 @@ async function generarTickets(ctx, empresaId, ruc, adminId) {
     return;
   }
 
-  const unidades = (await unidadesSvc.listarUnidades(empresaId)).filter((u) => u.activo !== false);
-  const choferes = (await choferesSvc.listarChoferes(empresaId)).filter((c) => c.activo !== false);
+  const unidades = (await unidadesSvc.listarUnidades(empresaId)).filter((u) => u.activo !== false && u.estadoRegistro === 'APROBADA');
+  const choferes = (await choferesSvc.listarChoferes(empresaId)).filter((c) => c.activo !== false && c.estadoRegistro === 'APROBADA');
   if (!unidades.length || !choferes.length) {
-    console.log('  tickets: no hay unidades/choferes activos; se omite');
+    console.log('  tickets: no hay unidades/choferes activos y aprobados; se omite');
     return;
   }
   console.log(`  tickets: generando ${faltan} (flota activa ${unidades.length}, choferes activos ${choferes.length})…`);
@@ -280,6 +287,87 @@ async function generarTickets(ctx, empresaId, ruc, adminId) {
   console.log(`  tickets: ${hechos} creados`);
 }
 
+const MOTIVOS_CANCELACION_PROG = [
+  'Unidad con falla mecánica', 'Chofer con descanso médico',
+  'El cliente reprogramó la recepción', 'Condiciones de vía'
+];
+const PROXIMOS_A_FUTURO = 6; // últimos N de la generación quedan sin resolver, a futuro
+
+/**
+ * Agenda de "Programación de viajes": para que el KPI de cumplimiento
+ * (real ENTREGADO vs. programado) tenga con qué compararse, y para que la
+ * pestaña Programación se vea usada. El objetivo se calcula sobre los
+ * tickets ya ENTREGADOs de la empresa (un ~15% más, como quien planifica
+ * algo más de lo que termina saliendo), repartido en los mismos ~90 días
+ * de historia; los últimos PROXIMOS_A_FUTURO quedan a futuro (próximos
+ * días, en PROGRAMADO, sin resolver todavía).
+ */
+async function generarProgramacion(ctx, empresaId, adminId) {
+  const { viajesProgramadosSvc, unidadesSvc, choferesSvc } = ctx;
+  const { rows: cuentaEnt } = await pool.query(
+    `select count(*)::int as n from tickets_traslado where empresa_id = $1 and estado_operativo = 'ENTREGADO'`,
+    [empresaId]
+  );
+  const objetivo = Math.max(8, Math.round(cuentaEnt[0].n * 1.15)) + PROXIMOS_A_FUTURO;
+
+  const { rows: cuentaProg } = await pool.query(
+    'select count(*)::int as n from viajes_programados where empresa_id = $1', [empresaId]
+  );
+  const faltan = objetivo - cuentaProg[0].n;
+  if (faltan <= 0) {
+    console.log(`  programación: la empresa ya tiene ${cuentaProg[0].n} viaje(s) (objetivo ${objetivo}); no se generan más`);
+    return;
+  }
+
+  const unidades = (await unidadesSvc.listarUnidades(empresaId)).filter((u) => u.activo !== false && u.estadoRegistro === 'APROBADA');
+  const choferes = (await choferesSvc.listarChoferes(empresaId)).filter((c) => c.activo !== false && c.estadoRegistro === 'APROBADA');
+  if (!unidades.length || !choferes.length) {
+    console.log('  programación: no hay unidades/choferes aprobados; se omite');
+    return;
+  }
+  console.log(`  programación: generando ${faltan} viaje(s) programado(s)…`);
+
+  let hechos = 0, futuros = 0;
+  for (let i = 0; i < faltan; i++) {
+    const esFuturo = (faltan - i) <= PROXIMOS_A_FUTURO;
+    const fechaProgramada = esFuturo ? dias(entero(1, 8)) : dias(-entero(0, 85));
+    const [destino] = elegir(DESTINOS);
+    const [material] = elegir(MATERIALES);
+    const unidad = elegir(unidades);
+    const chofer = elegir(choferes);
+
+    let creado;
+    try {
+      creado = await viajesProgramadosSvc.programar({
+        empresaId, unidadId: unidad.id, choferId: chofer.id,
+        fechaProgramada, origen: elegir(CENTROS_ORIGEN), destino,
+        descripcionMercancia: material, creadoPor: adminId
+      });
+    } catch (e) {
+      continue; // choque de unidad/chofer en esa fecha u otro dato inválido: se omite
+    }
+
+    if (esFuturo) {
+      futuros++;
+    } else {
+      // Pasado: en su mayoría se cumplió, algunos se cancelaron, y unos
+      // pocos quedan "programados" sin resolver (nunca se marcaron) —
+      // ese resto es justamente lo que hace que el cumplimiento no dé 100%.
+      const r = rnd();
+      if (r < 0.78) {
+        await pool.query(`update viajes_programados set estado = 'CUMPLIDO' where id = $1`, [creado.id]);
+      } else if (r < 0.90) {
+        await pool.query(
+          `update viajes_programados set estado = 'CANCELADO', motivo_cancelacion = $2 where id = $1`,
+          [creado.id, elegir(MOTIVOS_CANCELACION_PROG)]
+        );
+      }
+    }
+    hechos++;
+  }
+  console.log(`  programación: ${hechos} creados (${futuros} a futuro)`);
+}
+
 // ------------------------------------------------------------------
 (async () => {
   await prepararEsquema();
@@ -307,8 +395,13 @@ async function generarTickets(ctx, empresaId, ruc, adminId) {
     repositorioDocumentos: documentosRepo,
     emisionSincrona: true
   });
+  const viajesProgramadosSvc = new ViajesProgramadosService({
+    repositorioViajesProgramados: new ViajesProgramadosRepositorioPostgres(),
+    repositorioUnidades: unidadesRepo,
+    repositorioChoferes: choferesRepo
+  });
 
-  const ctx = { ticketService, unidadesSvc, choferesSvc };
+  const ctx = { ticketService, unidadesSvc, choferesSvc, viajesProgramadosSvc };
 
   for (const [ruc, unidadesLista, choferesLista, etiqueta] of [
     [RUC_ANDINA, UNIDADES_ANDINA, CHOFERES_ANDINA, 'Andina'],
@@ -325,13 +418,16 @@ async function generarTickets(ctx, empresaId, ruc, adminId) {
     await altaUnidades(unidadesSvc, unidadesRepo, empresaId, unidadesLista, etiqueta);
     await altaChoferes(choferesSvc, choferesRepo, empresaId, choferesLista, etiqueta);
 
-    // Flota y choferes de demo: liberados (si no, no se pueden emitir tickets).
+    // Flota y choferes de demo: liberados (si no, no se pueden emitir
+    // tickets) — salvo la placa/DNI que sembrar-datos.js deja PENDIENTE
+    // a propósito, para que el superadmin tenga algo que revisar/liberar
+    // en la demo (si no, este UPDATE se lo pisa apenas corre esta siembra).
     await pool.query(
       `update unidades set estado_registro = 'APROBADA'
-       where empresa_id = $1 and estado_registro <> 'APROBADA'`, [empresaId]);
+       where empresa_id = $1 and estado_registro <> 'APROBADA' and placa <> 'PEN-001'`, [empresaId]);
     await pool.query(
       `update choferes set estado_registro = 'APROBADA'
-       where empresa_id = $1 and estado_registro <> 'APROBADA'`, [empresaId]);
+       where empresa_id = $1 and estado_registro <> 'APROBADA' and trim(dni) <> '76543210'`, [empresaId]);
 
     const unidades = await unidadesSvc.listarUnidades(empresaId);
     const choferes = await choferesSvc.listarChoferes(empresaId);
@@ -366,6 +462,8 @@ async function generarTickets(ctx, empresaId, ruc, adminId) {
          where id = any($1)`, [ids]);
       console.log(`  GRE rechazadas (demo): ${ids.length}`);
     }
+
+    await generarProgramacion(ctx, empresaId, admin[0] ? admin[0].id : null);
   }
 
   console.log('\nListo. Refrescá http://localhost:3001 → pestaña Dashboard.');

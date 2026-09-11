@@ -1,8 +1,8 @@
 // Ejecutar con:  node borrar-datos-demo.js
 //
-// Borra TODO lo que siembra sembrar-datos.js: las dos empresas de demo
-// (con sus tickets, documentos, unidades, choferes y usuarios) y el
-// usuario superadmin "super".
+// Borra TODO lo que siembra sembrar-datos.js / sembrar-volumen.js: las dos
+// empresas de demo (con sus tickets, documentos, viajes programados,
+// unidades, choferes y usuarios) y el usuario superadmin "super".
 //
 // Por defecto NO borra las empresas (fila `empresas`). Para borrarlas:
 //   node borrar-datos-demo.js --empresa
@@ -25,10 +25,13 @@ async function limpiarEmpresa(empresaId, nombre) {
   const tk = await pool.query('delete from tickets_traslado where empresa_id = $1', [empresaId]);
   await pool.query('delete from documentos_unidad where unidad_id in (select id from unidades where empresa_id = $1)', [empresaId]);
   await pool.query('delete from documentos_chofer where chofer_id in (select id from choferes where empresa_id = $1)', [empresaId]);
+  // viajes_programados referencia unidad/chofer con ON DELETE RESTRICT:
+  // hay que borrarla antes o el delete de unidades/choferes de abajo falla.
+  const vp = await pool.query('delete from viajes_programados where empresa_id = $1', [empresaId]);
   const un = await pool.query('delete from unidades where empresa_id = $1', [empresaId]);
   const ch = await pool.query('delete from choferes where empresa_id = $1', [empresaId]);
   const us = await pool.query('delete from usuarios where empresa_id = $1', [empresaId]);
-  console.log(`${nombre}: ${tk.rowCount} tickets, ${un.rowCount} unidades, ${ch.rowCount} choferes, ${us.rowCount} usuarios`);
+  console.log(`${nombre}: ${tk.rowCount} tickets, ${vp.rowCount} programados, ${un.rowCount} unidades, ${ch.rowCount} choferes, ${us.rowCount} usuarios`);
   if (BORRAR_EMPRESA) {
     await pool.query('delete from empresas where id = $1', [empresaId]);
     console.log(`  empresa borrada`);
