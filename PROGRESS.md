@@ -212,6 +212,39 @@ o certificado digital; punto 9: piloto con transportistas reales).
    despliegue = front + API. `vercel.json` incluye el HTML en el bundle
    de la función (`includeFiles`). Para desarrollo se puede apuntar a
    otro backend con `localStorage.setItem("transguia.api", "...")`.
+6i. [x] **Rediseño visual + reorganización de pantallas** (2026-09-11,
+   decisión del usuario). Solo apariencia y orden en pantalla — ningún
+   cálculo, dato, permiso ni endpoint cambió. Todo sigue en el único
+   archivo `transguia-prototipo.html` (sin build, sin librerías nuevas):
+   - Estilos centralizados en variables CSS (colores, tipografía,
+     espaciados, sombras, bordes) en vez de valores sueltos repetidos;
+     mismo look blanco/negro/rojo de antes, con tono más "premium"
+     (referencia cromática unacem.pe + minimalismo tipo Apple).
+   - Navegación: las pestañas pasaron de una fila arriba a un panel
+     lateral en pantallas grandes (con íconos), y siguen siendo una
+     fila de pestañas deslizable en celular/tablet.
+   - Dashboard: los 6 indicadores y los 6 gráficos de siempre se
+     reagruparon en secciones con título ("Operación", "Calidad y
+     riesgo", "Volumen y estado", "Eficiencia operativa", "Red de
+     distribución") para leerse de un vistazo en vez de una sola lista.
+   - Los formularios largos y poco frecuentes ("Registrar unidad",
+     "Registrar chofer", "Nueva empresa") ahora empiezan cerrados con
+     un botón "+ ..." que los despliega, para no tapar la tabla de
+     abajo; se abren igual que antes al tocarlos.
+   - Pestaña "Empresas" (superadmin) reordenada: resumen arriba,
+     solicitudes pendientes de unidades/choferes juntas (con contador),
+     tabla de empresas, y "Nueva empresa" al final.
+   - Botones "Ficha"/"Documentos" (se repetían en cada fila) pasaron de
+     rojo a gris neutro, dejando el rojo para lo que de verdad pide
+     atención (rechazado, vencido, anular), como ya proponía el propio
+     comentario del CSS anterior ("el rojo es lo único que pide
+     atención").
+   - Accesibilidad: foco de teclado visible en todos los controles,
+     etiquetas de formulario ligadas a su campo (`<label for>`), avisos
+     de error/éxito con ícono y botón para cerrarlos.
+   - Verificado con capturas automáticas (login, cada pestaña, celular,
+     modo claro y oscuro, con usuario admin y superadmin) sin errores
+     de consola.
 7. **(pendiente — necesita cuenta del usuario)** Deploy a Vercel. Todo el
    código y la config están; solo falta importar el repo en vercel.com y
    cargar las variables de entorno. **Un solo deploy** publica la

@@ -4,123 +4,245 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>TransGuía — Prototipo</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%23c8102e'/%3E%3C/svg%3E" />
 <style>
+  /* =========================================================================
+     TOKENS
+     Paleta blanco / grafito / rojo — identidad UNACEM (industrial, sobria)
+     ejecutada con la sencillez de un panel Apple: superficies limpias,
+     jerarquía tipográfica clara, radios moderados, sombras discretas.
+     "Management by exception": el gris/negro es "sin novedad", el rojo
+     es lo único que pide atención. Los nombres --bg/--panel/--primario/etc.
+     los usa también el JS en estilos inline (gráficos) — no renombrar.
+     ========================================================================= */
   :root {
-    color-scheme: light dark;
-    /* Blanco / negro / rojo — look de operaciones (management by exception:
-       el negro es "sin novedad", el rojo es lo único que pide atención). */
-    --bg: #ffffff; --panel: #ffffff; --panel-2: #f7f7f7;
-    --texto: #111111; --texto-suave: #6b6b6b; --borde: #e3e3e3;
-    --dato: #111111; /* color por defecto de los gráficos con categorías (segmentados) */
-    --primario: #c8102e; --primario-texto: #fff; /* acento rojo: acciones, enlaces, series únicas */
-    --ok-bg: #f2f2f2; --ok-tx: #171717;
+    color-scheme: light;
+    --bg: #f5f5f7; --panel: #ffffff; --panel-2: #f6f6f7;
+    --texto: #1d1d1f; --texto-suave: #6e6e73; --borde: #e2e2e6; --borde-fuerte: #d1d1d6;
+    --dato: #1d1d1f; /* color neutro por defecto de los gráficos */
+    --primario: #c8102e; --primario-600: #a80d27; --primario-tint: #fdecee; --primario-texto: #fff;
+    --ok-bg: #f0f0f1; --ok-tx: #1d1d1f;
     --warn-bg: #fdecee; --warn-tx: #c8102e;
-    --err-bg: #f8dde1; --err-tx: #8c0b22;
-    --info-bg: #f2f2f2; --info-tx: #171717;
-    --radio: 8px; --sombra: 0 1px 2px rgba(0,0,0,.05);
+    --err-bg: #f8dbe0; --err-tx: #8c0b22;
+    --info-bg: #f0f0f1; --info-tx: #1d1d1f;
+    --radio: 10px; --sombra: 0 1px 2px rgba(0,0,0,.05);
+    --sombra-sm: 0 1px 2px rgba(17,17,17,.04);
+    --sombra-md: 0 6px 20px rgba(17,17,17,.07), 0 1px 3px rgba(17,17,17,.05);
+    --sombra-lg: 0 20px 48px rgba(17,17,17,.14), 0 2px 8px rgba(17,17,17,.06);
+    --r-sm: 8px; --r-md: 10px; --r-lg: 14px; --r-xl: 20px; --r-pill: 999px;
+    --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px; --sp-7: 32px;
+    --fuente: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, Roboto, Helvetica, Arial, sans-serif;
+    --fs-xs: 11.5px; --fs-sm: 12.5px; --fs-md: 15px; --fs-lg: 17px; --fs-xl: 21px; --fs-2xl: 27px;
+    --ease: cubic-bezier(.4,0,.2,1); --dur: 160ms;
+    --topbar-h: 56px; --sidenav-w: 228px;
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #0b0b0b; --panel: #151515; --panel-2: #1c1c1c;
-      --texto: #f2f2f2; --texto-suave: #a3a3a3; --borde: #2c2c2c;
-      --dato: #f2f2f2;
-      --primario: #ff4d5e;
-      --ok-bg: #1c1c1c; --ok-tx: #f2f2f2;
-      --warn-bg: #2b1416; --warn-tx: #ff6b78;
-      --err-bg: #331013; --err-tx: #ff8a93;
-      --info-bg: #1c1c1c; --info-tx: #f2f2f2;
-      --sombra: none;
-    }
-  }
+  /* Un solo diseño (claro), a propósito: no seguimos el modo oscuro del
+     sistema operativo — así se ve siempre igual en cualquier computadora. */
+
+  /* =========================================================================
+     BASE
+     ========================================================================= */
   * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
   body { margin: 0; background: var(--bg); color: var(--texto);
-    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-  header { background: var(--panel); border-bottom: 1px solid var(--borde);
-    padding: 12px 20px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-  header h1 { font-size: 17px; margin: 0; letter-spacing: .3px; }
-  header .sp { flex: 1; }
-  header .quien { color: var(--texto-suave); font-size: 13px; }
-  main { max-width: 1080px; margin: 0 auto; padding: 20px; }
-  .panel { background: var(--panel); border: 1px solid var(--borde); border-radius: var(--radio);
-    box-shadow: var(--sombra); padding: 18px; margin-bottom: 18px; }
-  h2 { font-size: 15px; margin: 0 0 14px; }
-  h2 .sub { color: var(--texto-suave); font-weight: 400; font-size: 13px; }
-  label { display: block; font-size: 13px; color: var(--texto-suave); margin: 0 0 4px; }
-  input, select { width: 100%; padding: 8px 10px; border: 1px solid var(--borde);
-    border-radius: 8px; background: var(--panel-2); color: var(--texto); font: inherit; }
-  input:focus, select:focus { outline: 2px solid var(--primario); outline-offset: -1px; }
-  .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
-  .fila { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
-  button { padding: 8px 14px; border: 1px solid var(--primario); border-radius: 8px;
-    background: var(--primario); color: var(--primario-texto); font: inherit; font-weight: 500; cursor: pointer; }
+    font: var(--fs-md)/1.5 var(--fuente); -webkit-font-smoothing: antialiased; }
+  ::selection { background: var(--primario-tint); color: var(--texto); }
+  ::-webkit-scrollbar { width: 11px; height: 11px; }
+  ::-webkit-scrollbar-thumb { background: var(--borde-fuerte); border-radius: var(--r-pill); border: 3px solid var(--bg); }
+  ::-webkit-scrollbar-track { background: transparent; }
+  a { color: var(--primario); }
+  [hidden] { display: none !important; }
+  .oculto { display: none !important; }
+
+  /* foco accesible y consistente en toda la app */
+  a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible,
+  [tabindex]:focus-visible, tr.clic:focus-visible {
+    outline: 2px solid var(--primario); outline-offset: 2px; border-radius: var(--r-sm);
+  }
+
+  /* =========================================================================
+     ESTRUCTURA — barra superior, navegación lateral, contenido
+     ========================================================================= */
+  header.topbar {
+    position: sticky; top: 0; z-index: 20; height: var(--topbar-h);
+    background: color-mix(in srgb, var(--panel) 88%, transparent);
+    backdrop-filter: saturate(180%) blur(14px); -webkit-backdrop-filter: saturate(180%) blur(14px);
+    border-bottom: 1px solid var(--borde);
+    padding: 0 var(--sp-5); display: flex; align-items: center; gap: var(--sp-4); flex-wrap: nowrap;
+  }
+  .brand { display: flex; align-items: center; gap: var(--sp-2); flex-shrink: 0; }
+  .brand-mark { width: 22px; height: 22px; border-radius: 6px; background: var(--primario); flex-shrink: 0;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.05); }
+  header h1, .brand-name { font-size: var(--fs-lg); margin: 0; font-weight: 600; letter-spacing: -.01em; white-space: nowrap; }
+  header .sp { flex: 1 1 auto; min-width: var(--sp-3); }
+  header .quien { color: var(--texto-suave); font-size: var(--fs-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .userbox { display: flex; align-items: center; gap: var(--sp-3); flex-shrink: 0; }
+
+  main { max-width: 1180px; margin: 0 auto; padding: var(--sp-5); }
+  .avisos { position: sticky; top: calc(var(--topbar-h) + var(--sp-3)); z-index: 15; }
+  .avisos:empty { display: none; }
+
+  #app.shell-body { display: grid; grid-template-columns: var(--sidenav-w) 1fr; gap: var(--sp-6); align-items: start; }
+  .sidenav { position: sticky; top: calc(var(--topbar-h) + var(--sp-5)); }
+  .views { min-width: 0; }
+
+  /* =========================================================================
+     NAVEGACIÓN (pestañas / sidenav) — mismos <button data-tab> de siempre
+     ========================================================================= */
+  .tabs { display: flex; flex-direction: column; gap: 2px; }
+  .tabs button {
+    display: flex; align-items: center; gap: var(--sp-3);
+    background: transparent; color: var(--texto-suave); border: 1px solid transparent;
+    border-radius: var(--r-md); padding: 9px var(--sp-3); font-size: var(--fs-md); font-weight: 500;
+    text-align: left; width: 100%; justify-content: flex-start;
+    transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+  }
+  .tabs button:hover { background: var(--panel-2); color: var(--texto); }
+  .tabs button.activa { background: var(--primario-tint); color: var(--primario); border-color: transparent; }
+  .tabs button .nav-ic { flex-shrink: 0; display: flex; opacity: .85; }
+  .tabs button.activa .nav-ic { opacity: 1; }
+  .tabs button .nav-ic svg { width: 17px; height: 17px; }
+
+  /* =========================================================================
+     TIPOGRAFÍA Y TEXTOS AUXILIARES
+     ========================================================================= */
+  h2 { font-size: var(--fs-lg); margin: 0 0 var(--sp-4); font-weight: 600; letter-spacing: -.01em; }
+  h2 .sub { color: var(--texto-suave); font-weight: 400; font-size: var(--fs-sm); }
+  .muted { color: var(--texto-suave); font-size: var(--fs-sm); }
+  .vacio { color: var(--texto-suave); font-size: 13.5px; padding: var(--sp-6) 0; text-align: center; }
+  code { background: var(--panel-2); padding: 1px 5px; border-radius: 5px; font-size: var(--fs-sm); }
+
+  /* =========================================================================
+     FORMULARIOS
+     ========================================================================= */
+  label { display: block; font-size: var(--fs-sm); color: var(--texto-suave); margin: 0 0 4px; }
+  input, select {
+    width: 100%; padding: 9px 10px; border: 1px solid var(--borde); border-radius: var(--r-sm);
+    background: var(--panel-2); color: var(--texto); font: inherit;
+    transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+  }
+  input::placeholder { color: color-mix(in srgb, var(--texto-suave) 75%, transparent); }
+  input:hover, select:hover { border-color: var(--borde-fuerte); }
+  input:focus, select:focus { outline: 2px solid var(--primario); outline-offset: -1px; background: var(--panel); }
+  input:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
+  .grid { display: grid; gap: var(--sp-3) var(--sp-4); grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  .fila { display: flex; gap: var(--sp-3); align-items: flex-end; flex-wrap: wrap; }
+  .conbtn { display: flex; gap: 6px; }
+  .conbtn input { flex: 1; min-width: 0; }
+  .conbtn button { white-space: nowrap; }
+
+  h3.grupo { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .06em; font-weight: 600;
+    color: var(--texto-suave); margin: var(--sp-5) 0 var(--sp-3); border-top: 1px solid var(--borde); padding-top: var(--sp-4); }
+  h3.grupo .sub { text-transform: none; letter-spacing: 0; font-weight: 400; }
+  h3.grupo:first-of-type { border-top: 0; padding-top: 0; margin-top: 2px; }
+
+  /* bloque de formulario colapsable (alta de unidad/chofer/empresa) */
+  .form-toggle-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap; }
+  .form-toggle-bar h2 { margin-bottom: 2px; }
+  [data-form-body] { margin-top: var(--sp-4); }
+
+  /* =========================================================================
+     BOTONES
+     ========================================================================= */
+  button {
+    padding: 9px 15px; border: 1px solid var(--primario); border-radius: var(--r-sm);
+    background: var(--primario); color: var(--primario-texto); font: inherit; font-weight: 500; cursor: pointer;
+    transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease), transform var(--dur) var(--ease), opacity var(--dur) var(--ease);
+  }
+  button:hover { background: var(--primario-600); border-color: var(--primario-600); }
+  button:active { transform: scale(.97); }
   button.sec { background: transparent; color: var(--primario); }
+  button.sec:hover { background: var(--primario-tint); border-color: var(--primario); }
   button.tenue { background: transparent; color: var(--texto-suave); border-color: var(--borde); }
-  button:disabled { opacity: .5; cursor: default; }
-  button.chico { padding: 4px 9px; font-size: 12px; }
+  button.tenue:hover { background: var(--panel-2); color: var(--texto); border-color: var(--borde-fuerte); }
+  button:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+  button.chico { padding: 5px 10px; font-size: var(--fs-sm); }
+
+  /* =========================================================================
+     TABLAS
+     ========================================================================= */
+  .tabla-scroll { overflow-x: auto; margin: 0 calc(var(--sp-4) * -1); padding: 0 var(--sp-4); }
   table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
-  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--borde); vertical-align: top; }
-  th { color: var(--texto-suave); font-weight: 500; }
-  .tabla-scroll { overflow-x: auto; }
-  .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+  th, td { text-align: left; padding: 10px; border-bottom: 1px solid var(--borde); vertical-align: top; }
+  th { color: var(--texto-suave); font-weight: 600; font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .04em; }
+  tbody tr:hover td { background: var(--panel-2); }
+  tr.clic { cursor: pointer; }
+  tr.clic:hover td { background: var(--primario-tint); }
+
+  /* =========================================================================
+     ETIQUETAS DE ESTADO (pills)
+     ========================================================================= */
+  .pill { display: inline-block; padding: 3px 9px; border-radius: var(--r-pill); font-size: var(--fs-xs); font-weight: 600; white-space: nowrap; }
   .pill.ok { background: var(--ok-bg); color: var(--ok-tx); }
   .pill.warn { background: var(--warn-bg); color: var(--warn-tx); }
   .pill.err { background: var(--err-bg); color: var(--err-tx); }
   .pill.info { background: var(--info-bg); color: var(--info-tx); }
   .pill.gris { background: var(--panel-2); color: var(--texto-suave); border: 1px solid var(--borde); }
-  .tabs { display: flex; gap: 4px; margin-bottom: 16px; flex-wrap: wrap; }
-  .tabs button { background: transparent; color: var(--texto-suave); border: 1px solid transparent; border-radius: 8px; }
-  .tabs button.activa { background: var(--panel); color: var(--texto); border-color: var(--borde); }
-  .aviso { padding: 10px 12px; border-radius: 8px; font-size: 13.5px; margin-bottom: 14px; background: var(--err-bg); color: var(--err-tx); }
+
+  /* =========================================================================
+     AVISOS (banners de error / éxito)
+     ========================================================================= */
+  .aviso { display: flex; align-items: center; gap: var(--sp-2); padding: 11px var(--sp-4); border-radius: var(--r-md);
+    font-size: 13.5px; margin-bottom: var(--sp-3); background: var(--err-bg); color: var(--err-tx);
+    box-shadow: var(--sombra-sm); animation: aviso-in var(--dur) var(--ease); }
   .aviso.ok { background: var(--ok-bg); color: var(--ok-tx); }
-  .vacio { color: var(--texto-suave); font-size: 13.5px; padding: 10px 0; }
-  .muted { color: var(--texto-suave); font-size: 12.5px; }
-  .config { font-size: 12.5px; color: var(--texto-suave); display: flex; gap: 8px; align-items: center; }
-  .config input { width: 240px; padding: 4px 8px; font-size: 12.5px; }
-  code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; font-size: 12.5px; }
-  .sub-panel { background: var(--panel-2); border-radius: 8px; padding: 12px; }
-  .oculto { display: none !important; }
-  .stats { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
-  .stat { background: var(--panel-2); border: 1px solid var(--borde); border-radius: 8px; padding: 12px 14px; }
-  .stat .n { font-size: 22px; font-weight: 600; }
-  .stat .t { font-size: 12px; color: var(--texto-suave); }
+  .aviso .aviso-msg { flex: 1; }
+  .aviso .aviso-icon { flex-shrink: 0; font-weight: 700; }
+  .aviso .aviso-cerrar { flex-shrink: 0; background: none; border: none; color: inherit; opacity: .55;
+    padding: 0 2px; font-size: 15px; line-height: 1; cursor: pointer; }
+  .aviso .aviso-cerrar:hover { opacity: 1; background: none; }
+  @keyframes aviso-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+
+  /* =========================================================================
+     TARJETAS / PANELES
+     ========================================================================= */
+  .panel { background: var(--panel); border: 1px solid var(--borde); border-radius: var(--r-lg);
+    box-shadow: var(--sombra-sm); padding: var(--sp-5); margin-bottom: var(--sp-5); }
+  .sub-panel { background: var(--panel-2); border: 1px solid var(--borde); border-radius: var(--r-md); padding: var(--sp-4); margin-top: var(--sp-2); }
+  .ficha { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: var(--sp-2) var(--sp-4); }
+  .ficha > div { display: flex; flex-direction: column; font-size: 12.5px; }
+  .ficha > div > span { color: var(--texto-suave); font-size: 11px; }
+
+  .section-title { font-size: var(--fs-md); font-weight: 600; margin: 0 0 var(--sp-1); letter-spacing: -.01em; }
+  .section-title .sub { color: var(--texto-suave); font-weight: 400; font-size: var(--fs-sm); }
+  .card-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-3); margin-bottom: var(--sp-4); flex-wrap: wrap; }
+  .badge-count { display: inline-flex; align-items: center; justify-content: center; min-width: 19px; height: 19px; padding: 0 5px;
+    border-radius: var(--r-pill); background: var(--primario); color: var(--primario-texto); font-size: 11px; font-weight: 700; }
+
+  /* =========================================================================
+     PLATAFORMA (superadmin) — resumen en cifras
+     ========================================================================= */
+  #segmentador { padding: 6px 10px 6px 12px; background: var(--panel-2); border: 1px solid var(--borde);
+    border-radius: var(--r-pill); display: flex; align-items: center; gap: var(--sp-2); flex-shrink: 1; min-width: 0; }
+  #segmentador label { margin: 0; white-space: nowrap; }
+  #segmentador select { width: auto; min-width: 160px; max-width: 46vw; background: var(--panel); border: none; padding: 3px 6px; }
+  .stats { display: grid; gap: var(--sp-3); grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+  .stat { background: var(--panel-2); border: 1px solid var(--borde); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); }
+  .stat .n { font-size: var(--fs-xl); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stat .t { font-size: var(--fs-sm); color: var(--texto-suave); margin-top: 2px; }
   .stat.alerta .n { color: var(--err-tx); }
-  tr.clic { cursor: pointer; }
-  tr.clic:hover td { background: var(--panel-2); }
-  #segmentador { margin: -6px 0 16px; padding: 10px 12px; background: var(--panel);
-    border: 1px solid var(--borde); border-radius: 8px; display: flex; align-items: center; gap: 10px; }
-  #segmentador select { width: auto; min-width: 220px; }
-  /* charts */
-  .dash-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
-  .card { background: var(--panel-2); border: 1px solid var(--borde); border-radius: 8px; padding: 14px; }
-  .card h3 { font-size: 13px; margin: 0 0 14px; color: var(--texto-suave); font-weight: 600; }
-  .chart-v { display: flex; align-items: flex-end; gap: 5px; height: 150px; overflow-x: auto; padding-bottom: 2px; }
-  .bar-col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
-    min-width: 24px; height: 100%; flex: 1 0 auto; }
-  .bar-col .bar { width: 60%; max-width: 26px; min-width: 8px; background: var(--dato);
-    border-radius: 3px 3px 0 0; min-height: 2px; }
-  .bar-col .bar-val { font-size: 10px; color: var(--texto-suave); margin-bottom: 3px; font-variant-numeric: tabular-nums; }
-  .bar-col .bar-lbl { font-size: 9px; color: var(--texto-suave); margin-top: 5px; white-space: nowrap; }
-  .bar-row { display: grid; grid-template-columns: minmax(90px, 34%) 1fr 62px; gap: 8px;
-    align-items: center; margin-bottom: 7px; font-size: 12px; }
-  .bar-row-lbl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--texto-suave); }
-  .bar-row-track { background: var(--borde); border-radius: 4px; height: 14px; overflow: hidden; }
-  .bar-row-fill { background: var(--primario); height: 100%; border-radius: 4px; min-width: 2px; }
-  .bar-row-val { text-align: right; font-variant-numeric: tabular-nums; }
-  .resumen-linea { font-size: 13px; margin-bottom: 12px; color: var(--texto-suave); }
-  .resumen-linea strong { font-size: 17px; color: var(--texto); }
-  [data-agr].activa, [data-ventana].activa { background: var(--primario); color: var(--primario-texto); }
-  /* KPIs (indicadores de gestión) */
-  .kpi-row { display: grid; gap: 12px; margin-bottom: 18px;
+
+  /* =========================================================================
+     DASHBOARD — indicadores y gráficos
+     ========================================================================= */
+  .dash-toolbar { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap; margin-bottom: var(--sp-5); }
+  .ventanas { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  [data-ventana].activa { background: var(--primario); color: var(--primario-texto); border-color: var(--primario); }
+
+  .kpi-group + .kpi-group { margin-top: var(--sp-4); }
+  .kpi-group-title { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .06em; font-weight: 600;
+    color: var(--texto-suave); margin: 0 0 var(--sp-2); }
+  .kpi-row { display: grid; gap: var(--sp-3); margin-bottom: var(--sp-4);
     grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); }
-  .kpi { background: var(--panel-2); border: 1px solid var(--borde); border-left-width: 3px;
-    border-radius: 10px; padding: 11px 13px; }
-  .kpi .lbl { font-size: 11.5px; color: var(--texto-suave); line-height: 1.35; }
-  .kpi .val { font-size: 24px; font-weight: 600; margin: 5px 0 1px; line-height: 1.1; }
+  .kpi { background: var(--panel); border: 1px solid var(--borde); border-left-width: 3px; border-radius: var(--r-md);
+    padding: var(--sp-3) var(--sp-4); box-shadow: var(--sombra-sm); }
+  .kpi .lbl { font-size: var(--fs-xs); color: var(--texto-suave); line-height: 1.35; }
+  .kpi .val { font-size: var(--fs-2xl); font-weight: 700; margin: 5px 0 1px; line-height: 1.1; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
   .kpi .val .u { font-size: 13px; font-weight: 500; color: var(--texto-suave); margin-left: 2px; }
-  .kpi .delta { font-size: 11px; font-weight: 500; }
+  .kpi .delta { font-size: 11px; font-weight: 600; }
   .kpi .delta.up { color: var(--ok-tx); } .kpi .delta.down { color: var(--err-tx); }
-  .kpi .delta.flat { color: var(--texto-suave); }
-  .kpi .sem { font-size: 11px; font-weight: 600; margin-top: 1px; }
+  .kpi .delta.flat { color: var(--texto-suave); font-weight: 500; }
+  .kpi .sem { font-size: 11px; font-weight: 700; margin-top: 1px; }
   .kpi .nota { font-size: 10.5px; color: var(--texto-suave); margin-top: 1px; }
   .kpi.b-bien { border-left-color: var(--ok-tx); } .kpi.b-bien .sem { color: var(--ok-tx); }
   .kpi.b-atencion { border-left-color: var(--warn-tx); } .kpi.b-atencion .sem { color: var(--warn-tx); }
@@ -128,21 +250,45 @@
   .kpi.b-neutro { border-left-color: var(--borde); }
   .kpi-mini { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: var(--borde); margin-top: 7px; }
   .kpi-mini > i { height: 100%; }
+
+  .dash-section + .dash-section { margin-top: var(--sp-6); }
+  .dash-grid { display: grid; gap: var(--sp-4); grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+  .dash-grid-2 { display: grid; gap: var(--sp-4); grid-template-columns: 1.6fr 1fr; align-items: stretch; }
+  .card { background: var(--panel); border: 1px solid var(--borde); border-radius: var(--r-lg); padding: var(--sp-4); box-shadow: var(--sombra-sm); }
+  .card h3 { font-size: 13px; margin: 0 0 var(--sp-4); color: var(--texto); font-weight: 600; }
+  .card h3 .sub { color: var(--texto-suave); font-weight: 400; }
+
+  .chart-v { display: flex; align-items: flex-end; gap: 5px; height: 150px; overflow-x: auto; padding-bottom: 2px; }
+  .bar-col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+    min-width: 24px; height: 100%; flex: 1 0 auto; }
+  .bar-col .bar { width: 60%; max-width: 26px; min-width: 8px; background: var(--dato);
+    border-radius: 4px 4px 0 0; min-height: 2px; transition: height var(--dur) var(--ease); }
+  .bar-col .bar-val { font-size: 10px; color: var(--texto-suave); margin-bottom: 3px; font-variant-numeric: tabular-nums; }
+  .bar-col .bar-lbl { font-size: 9px; color: var(--texto-suave); margin-top: 5px; white-space: nowrap; }
+  .bar-row { display: grid; grid-template-columns: minmax(90px, 34%) 1fr 62px; gap: var(--sp-2);
+    align-items: center; margin-bottom: 8px; font-size: 12px; }
+  .bar-row-lbl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--texto-suave); }
+  .bar-row-track { background: var(--panel-2); border-radius: 4px; height: 14px; overflow: hidden; }
+  .bar-row-fill { background: var(--primario); height: 100%; border-radius: 4px; min-width: 2px; transition: width var(--dur) var(--ease); }
+  .bar-row-val { text-align: right; font-variant-numeric: tabular-nums; }
+
   /* barra apilada (part-to-whole) */
-  .stack-bar { display: flex; height: 26px; border-radius: 4px; overflow: hidden; background: var(--borde); }
-  .stack-bar > i { height: 100%; border-right: 2px solid var(--panel-2); }
+  .stack-bar { display: flex; height: 26px; border-radius: 6px; overflow: hidden; background: var(--panel-2); }
+  .stack-bar > i { height: 100%; border-right: 2px solid var(--panel); }
   .stack-bar > i:last-child { border-right: 0; }
-  .stack-leg { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; font-size: 12px; color: var(--texto-suave); }
+  .stack-leg { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-top: var(--sp-3); font-size: 12px; color: var(--texto-suave); }
   .stack-leg b { color: var(--texto); font-weight: 600; }
-  .stack-leg .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+  .stack-leg .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+
   /* heatmap de corredores */
-  .heat { display: grid; gap: 2px; font-variant-numeric: tabular-nums; }
-  .heat > div { padding: 7px 4px; text-align: center; font-size: 11px; border-radius: 3px; }
+  .heat { display: grid; gap: 3px; font-variant-numeric: tabular-nums; }
+  .heat > div { padding: 8px 4px; text-align: center; font-size: 11px; border-radius: 5px; }
   .heat .hd { color: var(--texto-suave); font-size: 10px; font-weight: 600; }
   .heat .rl { text-align: right; padding-right: 8px; color: var(--texto-suave); font-size: 10.5px; font-weight: 600; }
-  .heat-scale { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 10.5px; color: var(--texto-suave); }
-  .heat-scale i { flex: 1; height: 8px; border-radius: 3px;
+  .heat-scale { display: flex; align-items: center; gap: 6px; margin-top: var(--sp-3); font-size: 10.5px; color: var(--texto-suave); }
+  .heat-scale i { flex: 1; height: 8px; border-radius: 4px;
     background: linear-gradient(to right, var(--panel-2), var(--primario)); }
+
   /* gráfico de línea (evolución diaria) */
   .chart-l { padding-top: 4px; }
   .chl-plot { position: relative; height: 150px; }
@@ -152,103 +298,147 @@
   .chl-linea { fill: none; stroke: var(--primario); stroke-width: 2; vector-effect: non-scaling-stroke;
     stroke-linejoin: round; stroke-linecap: round; }
   .chl-punto { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: var(--primario);
-    transform: translate(-50%, -50%); box-shadow: 0 0 0 3px var(--panel-2); }
+    transform: translate(-50%, -50%); box-shadow: 0 0 0 3px var(--panel); }
   .chl-ymax { position: absolute; top: -3px; left: 0; font-size: 10px; color: var(--texto-suave);
-    background: var(--panel-2); padding: 0 3px; font-variant-numeric: tabular-nums; }
+    background: var(--panel); padding: 0 3px; font-variant-numeric: tabular-nums; }
   .chl-hits { position: absolute; inset: 0; }
   .chl-hits > div { position: absolute; top: 0; bottom: 0; }
   .chl-hits > div:hover { background: color-mix(in srgb, var(--primario) 9%, transparent); }
   .chl-xlab { position: relative; height: 14px; margin-top: 5px; }
   .chl-xlab span { position: absolute; transform: translateX(-50%); font-size: 9px;
     color: var(--texto-suave); white-space: nowrap; }
-  /* formulario de unidad */
-  h3.grupo { font-size: 12px; text-transform: uppercase; letter-spacing: .5px;
-    color: var(--texto-suave); margin: 18px 0 8px; border-top: 1px solid var(--borde); padding-top: 12px; }
-  h3.grupo .sub { text-transform: none; letter-spacing: 0; font-weight: 400; }
-  h3.grupo:first-of-type { border-top: 0; padding-top: 0; margin-top: 4px; }
-  .conbtn { display: flex; gap: 6px; }
-  .conbtn input { flex: 1; min-width: 0; }
-  .conbtn button { white-space: nowrap; }
-  .ficha { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px 16px; }
-  .ficha > div { display: flex; flex-direction: column; font-size: 12.5px; }
-  .ficha > div > span { color: var(--texto-suave); font-size: 11px; }
+
+  /* =========================================================================
+     LOGIN
+     ========================================================================= */
+  /* Sin contenedor propio: así al ocultarse (login exitoso) no reserva alto. */
+  .login-card { width: 100%; max-width: 380px; margin: min(14vh, 96px) auto var(--sp-7); box-shadow: var(--sombra-lg); }
+  .login-head { text-align: center; margin-bottom: var(--sp-5); }
+  .login-head .brand-mark { width: 40px; height: 40px; border-radius: 11px; margin: 0 auto var(--sp-3); }
+  .login-head h2 { margin-bottom: 2px; }
+
+  /* =========================================================================
+     RESPONSIVE
+     ========================================================================= */
+  @media (max-width: 900px) {
+    #app.shell-body { grid-template-columns: 1fr; gap: var(--sp-3); }
+    .sidenav { position: static; }
+    .tabs { flex-direction: row; overflow-x: auto; gap: 6px; padding-bottom: 2px; }
+    .tabs button { width: auto; flex-shrink: 0; }
+    .dash-grid-2 { grid-template-columns: 1fr; }
+    #segmentador select { max-width: 60vw; }
+  }
+  @media (max-width: 640px) {
+    main { padding: var(--sp-3); }
+    header.topbar { padding: 0 var(--sp-3); gap: var(--sp-2); }
+    header .quien { display: none; }
+    .brand-name { font-size: var(--fs-md); }
+    .panel { padding: var(--sp-4); border-radius: var(--r-md); }
+    .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    .dash-toolbar { flex-direction: column; align-items: stretch; }
+  }
 </style>
 </head>
 <body>
-<header>
-  <h1>TransGuía</h1>
-  <span class="quien" id="quien"></span>
+<header class="topbar">
+  <div class="brand"><span class="brand-mark" aria-hidden="true"></span><h1 class="brand-name">TransGuía</h1></div>
   <span class="sp"></span>
-  <button class="tenue chico" id="btnSalir" hidden>Cerrar sesión</button>
+  <div id="segmentador" class="solo-super" hidden>
+    <label for="segEmpresa" style="display:inline">Empresa</label>
+    <select id="segEmpresa"><option value="">Todas las empresas</option></select>
+  </div>
+  <div class="userbox">
+    <span class="quien" id="quien"></span>
+    <button class="tenue chico" id="btnSalir" hidden>Cerrar sesión</button>
+  </div>
 </header>
 
 <main>
-  <div id="zonaAviso"></div>
+  <div id="zonaAviso" class="avisos" aria-live="polite" role="status"></div>
 
   <!-- ==================== LOGIN ==================== -->
-  <section class="panel" id="panelLogin">
-    <h2>Ingresar <span class="sub">— usuario creado con <code>node sembrar-datos.js</code> o <code>node crear-empresa.js</code></span></h2>
-    <div class="grid">
-      <div><label>Usuario</label><input id="loginUser" autocomplete="username" value="andina" /></div>
-      <div><label>Contraseña</label><input id="loginPass" type="password" autocomplete="current-password" value="demo2026seguro" /></div>
+  <section class="panel login-card" id="panelLogin">
+    <div class="login-head">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <h2>Ingresar <span class="sub">— usuario creado con <code>node sembrar-datos.js</code> o <code>node crear-empresa.js</code></span></h2>
     </div>
-    <div class="fila" style="margin-top:12px"><button id="btnLogin">Ingresar</button></div>
+    <div class="grid">
+      <div><label for="loginUser">Usuario</label><input id="loginUser" autocomplete="username" value="andina" /></div>
+      <div><label for="loginPass">Contraseña</label><input id="loginPass" type="password" autocomplete="current-password" value="demo2026seguro" /></div>
+    </div>
+    <div class="fila" style="margin-top:12px"><button id="btnLogin" style="width:100%">Ingresar</button></div>
   </section>
 
   <!-- ==================== APP ==================== -->
-  <div id="app" hidden>
-    <div class="tabs">
-      <button data-tab="dashboard" class="solo-gerencia">Dashboard</button>
-      <button data-tab="empresas" class="solo-super">Empresas</button>
-      <button data-tab="unidades" class="activa">Unidades</button>
-      <button data-tab="choferes">Choferes</button>
-      <button data-tab="tickets">Tickets</button>
-      <button data-tab="vencimientos">Vencimientos</button>
-      <button data-tab="usuarios" class="solo-admin">Usuarios</button>
-    </div>
+  <div id="app" hidden class="shell-body">
+    <nav class="sidenav">
+      <div class="tabs" role="tablist">
+        <button data-tab="dashboard" class="solo-gerencia"><span class="nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M12 20V4M20 20v-7"/></svg></span><span>Dashboard</span></button>
+        <button data-tab="empresas" class="solo-super"><span class="nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M9 8h1M14 8h1M9 12h1M14 12h1M9 16h1M14 16h1"/></svg></span><span>Empresas</span></button>
+        <button data-tab="unidades" class="activa"><span class="nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7h11v10H2zM13 10h4l3 3v4h-7z"/><circle cx="6.5" cy="19" r="1.6"/><circle cx="17" cy="19" r="1.6"/></svg></span><span>Unidades</span></button>
+        <button data-tab="choferes"><span class="nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="11" r="2"/><path d="M5.5 16c.6-1.7 1.9-2.5 3-2.5s2.4.8 3 2.5M14 10h5M14 14h5"/></svg></span><span>Choferes</span></button>
+        <button data-tab="tickets"><span class="nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-2.5-1.5L13 21l-1-1.5L11 21l-2.5-1.5L6 21z"/><path d="M9 8h6M9 12h6"/></svg></span><span>Tickets</span></button>
+        <button data-tab="vencimientos"><span class="nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span>Vencimientos</span></button>
+        <button data-tab="usuarios" class="solo-admin"><span class="nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3.5 19c.7-3 2.8-4.5 5.5-4.5s4.8 1.5 5.5 4.5M16 8.2c1.4.2 2.5 1.3 2.5 2.8M17 14c1.8.4 3 1.7 3.5 3.6"/></svg></span><span>Usuarios</span></button>
+      </div>
+    </nav>
 
-    <div id="segmentador" class="solo-super" hidden>
-      <label style="display:inline">Empresa</label>
-      <select id="segEmpresa"><option value="">Todas las empresas</option></select>
-    </div>
+    <div class="views">
 
     <!-- DASHBOARD -->
     <section class="panel" data-vista="dashboard" hidden>
-      <h2>Dashboard — indicadores de gestión <span class="sub" id="dashAlcance"></span></h2>
-      <div class="fila" style="margin-bottom:16px">
-        <span class="muted">Período:</span>
-        <button class="sec chico" data-ventana="7d">7 días</button>
-        <button class="sec chico" data-ventana="30d">30 días</button>
-        <button class="sec chico" data-ventana="90d">90 días</button>
-        <button class="sec chico" data-ventana="12m">12 meses</button>
+      <div class="dash-toolbar">
+        <h2 style="margin-bottom:0">Dashboard — indicadores de gestión <span class="sub" id="dashAlcance"></span></h2>
+        <div class="ventanas">
+          <span class="muted">Período:</span>
+          <button class="sec chico" data-ventana="7d">7 días</button>
+          <button class="sec chico" data-ventana="30d">30 días</button>
+          <button class="sec chico" data-ventana="90d">90 días</button>
+          <button class="sec chico" data-ventana="12m">12 meses</button>
+        </div>
       </div>
 
-      <div class="kpi-row" id="kpiRow"></div>
+      <div id="kpiRow"></div>
 
-      <div class="dash-grid">
-        <div class="card">
-          <h3>Toneladas movidas por <span id="dashPeriodoLbl">día</span></h3>
-          <div id="chToneladas"></div>
+      <div class="dash-section">
+        <div class="section-title">Volumen y estado de los viajes <span class="sub">— cuánto se movió y en qué situación quedó</span></div>
+        <div class="dash-grid-2">
+          <div class="card">
+            <h3>Toneladas movidas por <span id="dashPeriodoLbl">día</span></h3>
+            <div id="chToneladas"></div>
+          </div>
+          <div class="card">
+            <h3>Viajes por estado <span class="sub">— en el período</span></h3>
+            <div id="chEstados"></div>
+          </div>
         </div>
-        <div class="card">
-          <h3>Viajes por estado <span class="sub">— en el período</span></h3>
-          <div id="chEstados"></div>
+      </div>
+
+      <div class="dash-section">
+        <div class="section-title">Eficiencia operativa <span class="sub">— dónde se va el tiempo y qué unidades trabajan más</span></div>
+        <div class="dash-grid-2">
+          <div class="card">
+            <h3>Ciclo del traslado <span class="sub">— espera de despacho vs. tránsito</span></h3>
+            <div id="chCiclo"></div>
+          </div>
+          <div class="card">
+            <h3>Unidades más activas <span class="sub">— viajes en el período</span></h3>
+            <div id="chUnidades"></div>
+          </div>
         </div>
-        <div class="card">
-          <h3>Ciclo del traslado <span class="sub">— espera de despacho vs. tránsito</span></h3>
-          <div id="chCiclo"></div>
-        </div>
-        <div class="card">
-          <h3>Unidades más activas <span class="sub">— viajes en el período</span></h3>
-          <div id="chUnidades"></div>
-        </div>
-        <div class="card">
-          <h3>Corredores <span class="sub">— toneladas por ruta (origen → destino)</span></h3>
-          <div id="chCorredores"></div>
-        </div>
-        <div class="card">
-          <h3>Toneladas por material</h3>
-          <div id="chMaterial"></div>
+      </div>
+
+      <div class="dash-section">
+        <div class="section-title">Red de distribución <span class="sub">— por dónde y qué se está moviendo</span></div>
+        <div class="dash-grid-2">
+          <div class="card">
+            <h3>Corredores <span class="sub">— toneladas por ruta (origen → destino)</span></h3>
+            <div id="chCorredores"></div>
+          </div>
+          <div class="card">
+            <h3>Toneladas por material</h3>
+            <div id="chMaterial"></div>
+          </div>
         </div>
       </div>
     </section>
@@ -258,6 +448,17 @@
       <h2>Resumen de la plataforma</h2>
       <div class="stats" id="statsGlobal"></div>
     </section>
+
+    <section class="panel" data-vista="empresas" hidden>
+      <h2>Solicitudes pendientes <span class="sub">— la empresa carga el registro; acá se revisa, corrige, libera o rechaza</span></h2>
+      <h3 class="grupo">Unidades <span class="badge-count" id="cntSolUnidades" hidden>0</span></h3>
+      <div id="tbSolicitudes"></div>
+      <div class="vacio" id="vacioSolicitudes" hidden>No hay solicitudes de unidades pendientes.</div>
+      <h3 class="grupo">Choferes <span class="badge-count" id="cntSolChoferes" hidden>0</span></h3>
+      <div id="tbSolChoferes"></div>
+      <div class="vacio" id="vacioSolChoferes" hidden>No hay solicitudes de choferes pendientes.</div>
+    </section>
+
     <section class="panel" data-vista="empresas" hidden>
       <h2>Empresas <span class="sub">— clic en una fila para ver su operación</span></h2>
       <div class="tabla-scroll">
@@ -271,26 +472,22 @@
       </div>
       <div class="vacio" id="vacioEmpresas" hidden>Todavía no hay empresas.</div>
     </section>
+
     <section class="panel" data-vista="empresas" hidden>
-      <h2>Solicitudes de registro de unidades <span class="sub">— el admin de la empresa carga la unidad; acá se libera o se rechaza</span></h2>
-      <div id="tbSolicitudes"></div>
-      <div class="vacio" id="vacioSolicitudes" hidden>No hay solicitudes de unidades pendientes.</div>
-    </section>
-    <section class="panel" data-vista="empresas" hidden>
-      <h2>Solicitudes de registro de choferes <span class="sub">— igual que unidades: el admin carga, la plataforma libera</span></h2>
-      <div id="tbSolChoferes"></div>
-      <div class="vacio" id="vacioSolChoferes" hidden>No hay solicitudes de choferes pendientes.</div>
-    </section>
-    <section class="panel" data-vista="empresas" hidden>
-      <h2>Nueva empresa <span class="sub">— se crea junto con su primer administrador</span></h2>
-      <div class="grid">
-        <div><label>RUC (11 dígitos)</label><input id="neRuc" placeholder="20512345678" /></div>
-        <div><label>Razón social</label><input id="neRazon" placeholder="Transportes El Sol S.A.C." /></div>
-        <div><label>Usuario admin</label><input id="neUser" /></div>
-        <div><label>Contraseña (mín. 8)</label><input id="nePass" type="password" /></div>
-        <div><label>Nombre del admin</label><input id="neNombre" /></div>
+      <div class="form-toggle-bar">
+        <h2 style="margin-bottom:0">Nueva empresa <span class="sub">— se crea junto con su primer administrador</span></h2>
+        <button type="button" class="sec chico" data-toggle-form="nuevaEmpresaForm">+ Nueva empresa</button>
       </div>
-      <div class="fila" style="margin-top:12px"><button id="btnCrearEmpresa">Crear empresa</button></div>
+      <div id="nuevaEmpresaForm" data-form-body hidden>
+        <div class="grid">
+          <div><label for="neRuc">RUC (11 dígitos)</label><input id="neRuc" placeholder="20512345678" /></div>
+          <div><label for="neRazon">Razón social</label><input id="neRazon" placeholder="Transportes El Sol S.A.C." /></div>
+          <div><label for="neUser">Usuario admin</label><input id="neUser" /></div>
+          <div><label for="nePass">Contraseña (mín. 8)</label><input id="nePass" type="password" /></div>
+          <div><label for="neNombre">Nombre del admin</label><input id="neNombre" /></div>
+        </div>
+        <div class="fila" style="margin-top:12px"><button id="btnCrearEmpresa">Crear empresa</button></div>
+      </div>
     </section>
 
     <!-- Aviso cuando el superadmin no eligió una empresa para el detalle -->
@@ -301,74 +498,80 @@
     <!-- UNIDADES -->
     <section class="panel" data-vista="unidades">
       <div class="solo-admin">
-        <h2>Registrar unidad <span class="sub">— solo Placa, RUC del dueño y DNI del transportista son obligatorios</span></h2>
+        <div class="form-toggle-bar">
+          <h2 style="margin-bottom:0">Registrar unidad <span class="sub">— solo Placa, RUC del dueño y DNI del transportista son obligatorios</span></h2>
+          <button type="button" class="sec chico" data-toggle-form="unidadForm">+ Registrar unidad</button>
+        </div>
+        <div id="unidadForm" data-form-body hidden>
 
         <h3 class="grupo">Dueño del vehículo</h3>
         <div class="grid">
-          <div><label>RUC del dueño *</label>
+          <div><label for="uRucProp">RUC del dueño *</label>
             <div class="conbtn"><input id="uRucProp" inputmode="numeric" placeholder="20512345678" />
             <button type="button" class="sec chico" id="uBtnRuc">Traer datos</button></div></div>
-          <div><label>Nombre del dueño</label><input id="uNombreProp" placeholder="se completa con el RUC" /></div>
-          <div><label>Dirección</label><input id="uDireccionProp" placeholder="se completa con el RUC" /></div>
+          <div><label for="uNombreProp">Nombre del dueño</label><input id="uNombreProp" placeholder="se completa con el RUC" /></div>
+          <div><label for="uDireccionProp">Dirección</label><input id="uDireccionProp" placeholder="se completa con el RUC" /></div>
         </div>
 
         <h3 class="grupo">Transportista</h3>
         <div class="grid">
-          <div><label>DNI del transportista *</label>
+          <div><label for="uDni">DNI del transportista *</label>
             <div class="conbtn"><input id="uDni" inputmode="numeric" placeholder="45678912" />
             <button type="button" class="sec chico" id="uBtnDni">Traer datos</button></div></div>
-          <div><label>Departamento</label><input id="uDepartamento" placeholder="se completa con el DNI" /></div>
-          <div><label>Provincia</label><input id="uProvincia" placeholder="se completa con el DNI" /></div>
-          <div><label>Distrito</label><input id="uDistrito" placeholder="se completa con el DNI" /></div>
+          <div><label for="uDepartamento">Departamento</label><input id="uDepartamento" placeholder="se completa con el DNI" /></div>
+          <div><label for="uProvincia">Provincia</label><input id="uProvincia" placeholder="se completa con el DNI" /></div>
+          <div><label for="uDistrito">Distrito</label><input id="uDistrito" placeholder="se completa con el DNI" /></div>
         </div>
 
         <h3 class="grupo">Vehículo</h3>
         <div class="grid">
-          <div><label>Placa *</label><input id="uPlaca" placeholder="ABC-123" /></div>
-          <div><label>Tipo de vehículo</label><select id="uTipoVehiculo"></select></div>
-          <div><label>Marca</label><input id="uMarca" placeholder="Volvo" /></div>
-          <div><label>Año de fabricación</label><input id="uAnio" type="number" placeholder="2021" /></div>
-          <div><label>N° de ejes</label><input id="uNroEjes" type="number" placeholder="3" /></div>
-          <div><label>Forma de apertura</label><select id="uFormaApertura"></select></div>
-          <div><label>Rodada eje delantero</label><select id="uRodadaDel"></select></div>
-          <div><label>Rodada C1</label><select id="uRodadaC1"></select></div>
-          <div><label>Rodada C2</label><select id="uRodadaC2"></select></div>
+          <div><label for="uPlaca">Placa *</label><input id="uPlaca" placeholder="ABC-123" /></div>
+          <div><label for="uTipoVehiculo">Tipo de vehículo</label><select id="uTipoVehiculo"></select></div>
+          <div><label for="uMarca">Marca</label><input id="uMarca" placeholder="Volvo" /></div>
+          <div><label for="uAnio">Año de fabricación</label><input id="uAnio" type="number" placeholder="2021" /></div>
+          <div><label for="uNroEjes">N° de ejes</label><input id="uNroEjes" type="number" placeholder="3" /></div>
+          <div><label for="uFormaApertura">Forma de apertura</label><select id="uFormaApertura"></select></div>
+          <div><label for="uRodadaDel">Rodada eje delantero</label><select id="uRodadaDel"></select></div>
+          <div><label for="uRodadaC1">Rodada C1</label><select id="uRodadaC1"></select></div>
+          <div><label for="uRodadaC2">Rodada C2</label><select id="uRodadaC2"></select></div>
         </div>
 
         <h3 class="grupo">Pesos y medidas</h3>
         <div class="grid">
-          <div><label>Peso seco (kg)</label><input id="uPesoSeco" type="number" placeholder="14500" /></div>
-          <div><label>Altura (m)</label><input id="uAltura" type="number" step="0.01" placeholder="3.20" /></div>
-          <div><label>Ancho (m)</label><input id="uAncho" type="number" step="0.01" placeholder="2.60" /></div>
-          <div><label>Largo (m)</label><input id="uLargo" type="number" step="0.01" placeholder="12.30" /></div>
-          <div><label>Altura de plataforma (m)</label><input id="uAlturaPlataforma" type="number" step="0.01" placeholder="1.20" /></div>
+          <div><label for="uPesoSeco">Peso seco (kg)</label><input id="uPesoSeco" type="number" placeholder="14500" /></div>
+          <div><label for="uAltura">Altura (m)</label><input id="uAltura" type="number" step="0.01" placeholder="3.20" /></div>
+          <div><label for="uAncho">Ancho (m)</label><input id="uAncho" type="number" step="0.01" placeholder="2.60" /></div>
+          <div><label for="uLargo">Largo (m)</label><input id="uLargo" type="number" step="0.01" placeholder="12.30" /></div>
+          <div><label for="uAlturaPlataforma">Altura de plataforma (m)</label><input id="uAlturaPlataforma" type="number" step="0.01" placeholder="1.20" /></div>
         </div>
 
         <h3 class="grupo">Condición</h3>
         <div class="grid">
-          <div><label>Tolva cerrada</label><select id="uTolvaCerrada"><option value="">—</option><option value="SI">Sí</option><option value="NO">No</option></select></div>
-          <div><label>Carreta con pistón</label><select id="uCarretaPiston"><option value="">—</option><option value="SI">Sí</option><option value="NO">No</option></select></div>
-          <div><label>Unidad a gas</label><select id="uUnidadGas"><option value="">—</option><option value="SI">Sí</option><option value="NO">No</option></select></div>
+          <div><label for="uTolvaCerrada">Tolva cerrada</label><select id="uTolvaCerrada"><option value="">—</option><option value="SI">Sí</option><option value="NO">No</option></select></div>
+          <div><label for="uCarretaPiston">Carreta con pistón</label><select id="uCarretaPiston"><option value="">—</option><option value="SI">Sí</option><option value="NO">No</option></select></div>
+          <div><label for="uUnidadGas">Unidad a gas</label><select id="uUnidadGas"><option value="">—</option><option value="SI">Sí</option><option value="NO">No</option></select></div>
         </div>
 
         <h3 class="grupo">SOAT y CITV <span class="sub">— se registran como documentos con vencimiento</span></h3>
         <div class="grid">
-          <div><label>N° SOAT</label><input id="uNroSoat" /></div>
-          <div><label>Vigencia SOAT</label><input id="uVigenciaSoat" type="date" /></div>
-          <div><label>N° CITV</label><input id="uNroCitv" /></div>
-          <div><label>Vigencia CITV</label><input id="uVigenciaCitv" type="date" /></div>
+          <div><label for="uNroSoat">N° SOAT</label><input id="uNroSoat" /></div>
+          <div><label for="uVigenciaSoat">Vigencia SOAT</label><input id="uVigenciaSoat" type="date" /></div>
+          <div><label for="uNroCitv">N° CITV</label><input id="uNroCitv" /></div>
+          <div><label for="uVigenciaCitv">Vigencia CITV</label><input id="uVigenciaCitv" type="date" /></div>
         </div>
 
         <h3 class="grupo">Opcional (para la GRE)</h3>
         <div class="grid">
-          <div><label>Modelo</label><input id="uModelo" placeholder="FH 460" /></div>
-          <div><label>Categoría MTC</label><select id="uCategoria"><option value="">—</option><option>N1</option><option>N2</option><option>N3</option></select></div>
-          <div><label>Config. vehicular</label><select id="uConfig"></select></div>
+          <div><label for="uModelo">Modelo</label><input id="uModelo" placeholder="FH 460" /></div>
+          <div><label for="uCategoria">Categoría MTC</label><select id="uCategoria"><option value="">—</option><option>N1</option><option>N2</option><option>N3</option></select></div>
+          <div><label for="uConfig">Config. vehicular</label><select id="uConfig"></select></div>
         </div>
 
         <div class="fila" style="margin-top:14px"><button id="btnCrearUnidad">Guardar unidad</button></div>
+        </div>
       </div>
-      <div class="tabla-scroll" style="margin-top:16px">
+      <h3 class="grupo">Unidades registradas</h3>
+      <div class="tabla-scroll">
         <table>
           <thead><tr><th>Placa</th><th>Tipo</th><th>Marca / año</th><th>Dueño</th><th>DNI transp.</th><th>Estado</th><th></th></tr></thead>
           <tbody id="tbUnidades"></tbody>
@@ -380,40 +583,46 @@
     <!-- CHOFERES -->
     <section class="panel" data-vista="choferes" hidden>
       <div class="solo-admin">
-        <h2>Registrar chofer <span class="sub">— solo Tipo de documento, N° de documento, Primer nombre y Apellido paterno son obligatorios</span></h2>
+        <div class="form-toggle-bar">
+          <h2 style="margin-bottom:0">Registrar chofer <span class="sub">— solo Tipo de documento, N° de documento, Primer nombre y Apellido paterno son obligatorios</span></h2>
+          <button type="button" class="sec chico" data-toggle-form="choferForm">+ Registrar chofer</button>
+        </div>
+        <div id="choferForm" data-form-body hidden>
 
         <h3 class="grupo">Identidad</h3>
         <div class="grid">
-          <div><label>Tipo de documento *</label><select id="cTipoDoc"></select></div>
-          <div><label>N° de documento *</label>
+          <div><label for="cTipoDoc">Tipo de documento *</label><select id="cTipoDoc"></select></div>
+          <div><label for="cDni">N° de documento *</label>
             <div class="conbtn"><input id="cDni" inputmode="numeric" placeholder="45678912" />
             <button type="button" class="sec chico" id="cBtnDni">Traer datos</button></div></div>
-          <div><label>Apellido paterno *</label><input id="cApPaterno" placeholder="se completa con el DNI" /></div>
-          <div><label>Apellido materno</label><input id="cApMaterno" placeholder="se completa con el DNI" /></div>
-          <div><label>Primer nombre *</label><input id="cNombre1" placeholder="se completa con el DNI" /></div>
-          <div><label>Segundo nombre</label><input id="cNombre2" placeholder="se completa con el DNI" /></div>
+          <div><label for="cApPaterno">Apellido paterno *</label><input id="cApPaterno" placeholder="se completa con el DNI" /></div>
+          <div><label for="cApMaterno">Apellido materno</label><input id="cApMaterno" placeholder="se completa con el DNI" /></div>
+          <div><label for="cNombre1">Primer nombre *</label><input id="cNombre1" placeholder="se completa con el DNI" /></div>
+          <div><label for="cNombre2">Segundo nombre</label><input id="cNombre2" placeholder="se completa con el DNI" /></div>
         </div>
 
         <h3 class="grupo">Contacto y domicilio</h3>
         <div class="grid">
-          <div><label>Celular</label><input id="cCelular" inputmode="numeric" placeholder="987654321" /></div>
-          <div><label>Departamento</label><select id="cDepartamento"></select></div>
-          <div><label>Provincia</label><input id="cProvincia" /></div>
-          <div><label>Distrito</label><input id="cDistrito" /></div>
-          <div><label>Dirección</label><input id="cDireccion" /></div>
+          <div><label for="cCelular">Celular</label><input id="cCelular" inputmode="numeric" placeholder="987654321" /></div>
+          <div><label for="cDepartamento">Departamento</label><select id="cDepartamento"></select></div>
+          <div><label for="cProvincia">Provincia</label><input id="cProvincia" /></div>
+          <div><label for="cDistrito">Distrito</label><input id="cDistrito" /></div>
+          <div><label for="cDireccion">Dirección</label><input id="cDireccion" /></div>
         </div>
 
         <h3 class="grupo">Brevete <span class="sub">— se registra como documento "Licencia de conducir"</span></h3>
         <div class="grid">
-          <div><label>N° de brevete</label><input id="cBrevete" /></div>
-          <div><label>Clase - categoría</label><select id="cClaseCat"></select></div>
-          <div><label>Fecha de expedición</label><input id="cFechaExp" type="date" /></div>
-          <div><label>Fecha de revalidación</label><input id="cFechaReval" type="date" /></div>
+          <div><label for="cBrevete">N° de brevete</label><input id="cBrevete" /></div>
+          <div><label for="cClaseCat">Clase - categoría</label><select id="cClaseCat"></select></div>
+          <div><label for="cFechaExp">Fecha de expedición</label><input id="cFechaExp" type="date" /></div>
+          <div><label for="cFechaReval">Fecha de revalidación</label><input id="cFechaReval" type="date" /></div>
         </div>
 
         <div class="fila" style="margin-top:14px"><button id="btnCrearChofer">Guardar chofer</button></div>
+        </div>
       </div>
-      <div class="tabla-scroll" style="margin-top:16px">
+      <h3 class="grupo">Choferes registrados</h3>
+      <div class="tabla-scroll">
         <table>
           <thead><tr><th>Documento</th><th>Nombre</th><th>Celular</th><th>Estado</th><th></th></tr></thead>
           <tbody id="tbChoferes"></tbody>
@@ -427,24 +636,25 @@
       <div id="ticketForm">
         <h2>Nuevo ticket de traslado <span class="sub">— elige una unidad y un chofer ya registrados</span></h2>
         <div class="grid">
-          <div><label>Unidad</label><select id="tUnidad"></select></div>
-          <div><label>Chofer</label><select id="tChofer"></select></div>
-          <div><label>Centro de origen</label><select id="tOrigen"></select></div>
-          <div><label>Destino</label><select id="tDestino"></select></div>
-          <div><label>Motivo</label><select id="tMotivo">
+          <div><label for="tUnidad">Unidad</label><select id="tUnidad"></select></div>
+          <div><label for="tChofer">Chofer</label><select id="tChofer"></select></div>
+          <div><label for="tOrigen">Centro de origen</label><select id="tOrigen"></select></div>
+          <div><label for="tDestino">Destino</label><select id="tDestino"></select></div>
+          <div><label for="tMotivo">Motivo</label><select id="tMotivo">
             <option value="VENTA">Venta</option>
             <option value="TRASLADO_ENTRE_ESTABLECIMIENTOS">Traslado entre establecimientos</option>
             <option value="OTROS">Otros</option>
           </select></div>
-          <div><label>Mercancía</label><select id="tMercancia"></select></div>
-          <div><label>Peso bruto (kg)</label><input id="tPeso" type="number" placeholder="8200" /></div>
+          <div><label for="tMercancia">Mercancía</label><select id="tMercancia"></select></div>
+          <div><label for="tPeso">Peso bruto (kg)</label><input id="tPeso" type="number" placeholder="8200" /></div>
         </div>
         <div class="fila" style="margin-top:12px">
           <button id="btnCrearTicket">Generar ticket y emitir GRE</button>
-          <span class="muted" id="tEstadoEmision"></span>
+          <span class="muted" id="tEstadoEmision" aria-live="polite"></span>
         </div>
       </div>
-      <div class="tabla-scroll" style="margin-top:16px">
+      <h3 class="grupo">Tickets</h3>
+      <div class="tabla-scroll">
         <table>
           <thead><tr><th>Código</th><th>Ruta</th><th>Unidad</th><th>Chofer</th><th>Peso</th><th>GRE</th><th>Estado oper.</th><th>Acciones</th></tr></thead>
           <tbody id="tbTickets"></tbody>
@@ -457,7 +667,7 @@
     <section class="panel" data-vista="vencimientos" hidden>
       <h2>Documentos por vencer <span class="sub">— SOAT, revisión técnica, licencias, certificados médicos</span></h2>
       <div class="fila">
-        <div><label>Próximos… días</label><input id="vDias" type="number" value="30" style="width:110px" /></div>
+        <div><label for="vDias">Próximos… días</label><input id="vDias" type="number" value="30" style="width:110px" /></div>
         <button class="sec" id="btnVencimientos">Actualizar</button>
       </div>
       <div class="tabla-scroll" style="margin-top:16px">
@@ -473,10 +683,10 @@
     <section class="panel solo-admin" data-vista="usuarios" hidden>
       <h2>Crear usuario <span class="sub">— entra a tu misma empresa</span></h2>
       <div class="grid">
-        <div><label>Usuario</label><input id="nuUser" /></div>
-        <div><label>Contraseña (mín. 8)</label><input id="nuPass" type="password" /></div>
-        <div><label>Nombre completo</label><input id="nuNombre" /></div>
-        <div><label>Rol</label><select id="nuRol"><option value="operador">operador</option><option value="admin_empresa">admin_empresa</option></select></div>
+        <div><label for="nuUser">Usuario</label><input id="nuUser" /></div>
+        <div><label for="nuPass">Contraseña (mín. 8)</label><input id="nuPass" type="password" /></div>
+        <div><label for="nuNombre">Nombre completo</label><input id="nuNombre" /></div>
+        <div><label for="nuRol">Rol</label><select id="nuRol"><option value="operador">operador</option><option value="admin_empresa">admin_empresa</option></select></div>
       </div>
       <div class="fila" style="margin-top:12px"><button id="btnCrearUsuario">Crear usuario</button></div>
       <p class="muted" style="margin-top:12px">
@@ -484,6 +694,7 @@
         <strong>admin_empresa</strong>: además registra unidades, choferes, documentos y usuarios.
       </p>
     </section>
+    </div>
   </div>
 </main>
 
@@ -530,7 +741,12 @@ function aviso(mensaje, tipo = "err") {
   if (!mensaje) return;
   const d = document.createElement("div");
   d.className = "aviso" + (tipo === "ok" ? " ok" : "");
-  d.textContent = mensaje;
+  // Ícono + botón para cerrar: mismo mensaje/condición de siempre, solo se
+  // ve y se puede descartar más claro (el color no es la única señal).
+  d.innerHTML = `<span class="aviso-icon" aria-hidden="true">${tipo === "ok" ? "✓" : "!"}</span>` +
+    `<span class="aviso-msg">${escapar(mensaje)}</span>` +
+    `<button type="button" class="aviso-cerrar" aria-label="Cerrar aviso">✕</button>`;
+  d.querySelector(".aviso-cerrar").addEventListener("click", () => d.remove());
   z.appendChild(d);
   if (tipo === "ok") setTimeout(() => d.remove(), 4000);
 }
@@ -712,7 +928,7 @@ function camposUnidadHTML(pfx, u) {
     const id = `${pfx}-${s.k}`;
     const v = u[s.k];
     if (s.t === "bool") {
-      return `<div><label>${s.label}</label><select id="${id}">
+      return `<div><label for="${id}">${s.label}</label><select id="${id}">
         <option value=""${v == null ? " selected" : ""}>—</option>
         <option value="SI"${v === true ? " selected" : ""}>Sí</option>
         <option value="NO"${v === false ? " selected" : ""}>No</option></select></div>`;
@@ -720,10 +936,10 @@ function camposUnidadHTML(pfx, u) {
     if (s.t === "sel") {
       const lista = s.opts || cats[s.cat] || [];
       const cur = v == null ? "" : String(v);
-      return `<div><label>${s.label}</label><select id="${id}"><option value="">—</option>${
+      return `<div><label for="${id}">${s.label}</label><select id="${id}"><option value="">—</option>${
         lista.map((o) => `<option${String(o) === cur ? " selected" : ""}>${escapar(o)}</option>`).join("")}</select></div>`;
     }
-    return `<div><label>${s.label}</label><input id="${id}" type="${s.t === "num" ? "number" : "text"}" value="${v == null ? "" : escapar(v)}" /></div>`;
+    return `<div><label for="${id}">${s.label}</label><input id="${id}" type="${s.t === "num" ? "number" : "text"}" value="${v == null ? "" : escapar(v)}" /></div>`;
   };
   return `<div class="grid">${FICHA_SPEC.map(uno).join("")}</div>`;
 }
@@ -778,9 +994,9 @@ async function cargarUnidades() {
           ${aprobada && !u.activo ? ' <span class="pill gris">inactiva</span>' : ""}
           ${aprobada && u.activo && esAdmin() ? `<button class="tenue chico" data-desactivar="unidades:${u.id}">Desactivar</button>` : ""}</td>
       <td class="fila" style="gap:6px">
-        <button class="sec chico" data-ficha="${u.id}">Ficha</button>
+        <button class="tenue chico" data-ficha="${u.id}">Ficha</button>
         ${u.estadoRegistro === "RECHAZADA" && esAdmin() ? `<button class="sec chico" data-editar-unidad="${u.id}">Corregir</button>` : ""}
-        <button class="sec chico" data-docs="unidad:${u.id}">Documentos</button></td>`;
+        <button class="tenue chico" data-docs="unidad:${u.id}">Documentos</button></td>`;
     tb.appendChild(tr);
     const trFicha = document.createElement("tr");
     trFicha.hidden = true; trFicha.dataset.fichaRow = u.id;
@@ -810,6 +1026,7 @@ async function cargarSolicitudes() {
   try { pend = await api("/api/unidades/pendientes"); } catch (e) { aviso(e.message); return; }
   estado.solicitudes = pend;
   el("vacioSolicitudes").hidden = pend.length > 0;
+  if (el("cntSolUnidades")) { el("cntSolUnidades").textContent = pend.length; el("cntSolUnidades").hidden = !pend.length; }
   el("tbSolicitudes").innerHTML = pend.length ? `<div class="tabla-scroll"><table>
     <thead><tr><th>Empresa</th><th>Placa</th><th>Tipo</th><th>Dueño (RUC)</th><th>DNI transp.</th><th></th></tr></thead>
     <tbody>${pend.map((u) => `
@@ -893,10 +1110,10 @@ function camposChoferHTML(pfx, c) {
     if (s.t === "sel") {
       const lista = cats[s.cat] || [];
       const cur = v == null ? "" : String(v);
-      return `<div><label>${s.label}</label><select id="${id}"><option value="">—</option>${
+      return `<div><label for="${id}">${s.label}</label><select id="${id}"><option value="">—</option>${
         lista.map((o) => `<option${String(o) === cur ? " selected" : ""}>${escapar(o)}</option>`).join("")}</select></div>`;
     }
-    return `<div><label>${s.label}</label><input id="${id}" value="${v == null ? "" : escapar(v)}" /></div>`;
+    return `<div><label for="${id}">${s.label}</label><input id="${id}" value="${v == null ? "" : escapar(v)}" /></div>`;
   };
   return `<div class="grid">${FICHA_SPEC_CHOFER.map(uno).join("")}</div>`;
 }
@@ -964,9 +1181,9 @@ async function cargarChoferes() {
           ${aprobado && !c.activo ? ' <span class="pill gris">inactivo</span>' : ""}
           ${aprobado && c.activo && esAdmin() ? `<button class="tenue chico" data-desactivar="choferes:${c.id}">Desactivar</button>` : ""}</td>
       <td class="fila" style="gap:6px">
-        <button class="sec chico" data-ficha-chofer="${c.id}">Ficha</button>
+        <button class="tenue chico" data-ficha-chofer="${c.id}">Ficha</button>
         ${c.estadoRegistro === "RECHAZADA" && esAdmin() ? `<button class="sec chico" data-editar-chofer="${c.id}">Corregir</button>` : ""}
-        <button class="sec chico" data-docs="chofer:${c.id}">Documentos</button></td>`;
+        <button class="tenue chico" data-docs="chofer:${c.id}">Documentos</button></td>`;
     tb.appendChild(tr);
     const trFicha = document.createElement("tr");
     trFicha.hidden = true; trFicha.dataset.fichaChofer = c.id;
@@ -996,6 +1213,7 @@ async function cargarSolicitudesChoferes() {
   try { pend = await api("/api/choferes/pendientes"); } catch (e) { aviso(e.message); return; }
   estado.solChoferes = pend;
   el("vacioSolChoferes").hidden = pend.length > 0;
+  if (el("cntSolChoferes")) { el("cntSolChoferes").textContent = pend.length; el("cntSolChoferes").hidden = !pend.length; }
   el("tbSolChoferes").innerHTML = pend.length ? `<div class="tabla-scroll"><table>
     <thead><tr><th>Empresa</th><th>Documento</th><th>Nombre</th><th>Celular</th><th></th></tr></thead>
     <tbody>${pend.map((c) => `
@@ -1073,13 +1291,13 @@ async function pintarDocs(clave) {
     <table><tbody>${filas}</tbody></table>
     ${esAdmin() ? `
     <div class="fila" style="margin-top:10px">
-      <div><label>Tipo</label><select id="nd-tipo-${tipo}-${id}">${tipos.map((t) => `<option>${t}</option>`).join("")}</select></div>
+      <div><label for="nd-tipo-${tipo}-${id}">Tipo</label><select id="nd-tipo-${tipo}-${id}">${tipos.map((t) => `<option>${t}</option>`).join("")}</select></div>
       <div id="nd-cat-wrap-${tipo}-${id}" ${tipo === "chofer" ? "" : "hidden"}>
-        <label>Categoría licencia</label>
+        <label for="nd-cat-${tipo}-${id}">Categoría licencia</label>
         <select id="nd-cat-${tipo}-${id}"><option value="">—</option>${CATEGORIAS_LICENCIA.map((c) => `<option>${c}</option>`).join("")}</select>
       </div>
-      <div><label>N° documento</label><input id="nd-num-${tipo}-${id}" style="width:150px" /></div>
-      <div><label>Vence (AAAA-MM-DD)</label><input id="nd-ven-${tipo}-${id}" placeholder="2026-12-31" style="width:150px" /></div>
+      <div><label for="nd-num-${tipo}-${id}">N° documento</label><input id="nd-num-${tipo}-${id}" style="width:150px" /></div>
+      <div><label for="nd-ven-${tipo}-${id}">Vence (AAAA-MM-DD)</label><input id="nd-ven-${tipo}-${id}" placeholder="2026-12-31" style="width:150px" /></div>
       <button class="chico" data-doc-add="${tipo}:${id}">Agregar</button>
     </div>` : ""}`;
 }
@@ -1498,20 +1716,27 @@ async function cargarDashboard() {
       <i style="width:${(cic.despacho / (cic.despacho + cic.transito) * 100).toFixed(0)}%;background:var(--dato)"></i>
       <i style="flex:1;background:color-mix(in srgb,var(--dato) 35%,var(--panel-2))"></i></div>` : "";
   const palabra = { bien: "En meta", atencion: "Atención", critico: "Fuera de meta" };
-  el("kpiRow").innerHTML = [
+  // Mismos 6 indicadores de siempre (idéntico cálculo/significado); solo se
+  // agrupan visualmente en dos bloques temáticos para que se lean más claro.
+  const kpisOperacion = [
     kpiTile("Toneladas movidas", { ...K.toneladas, decimales: 0 }),
     kpiTile("Viajes realizados", K.viajes),
+    kpiTile("Utilización de flota", { ...K.utilizacionFlota, decimales: 0,
+      estado: palabra[K.utilizacionFlota.semaforo],
+      nota: `${K.utilizacionFlota.unidadesConViaje} de ${K.utilizacionFlota.flotaHabilitada} unidades con viaje` })
+  ].join("");
+  const kpisCalidad = [
     kpiTile("Ciclo del traslado", { ...cic, decimales: 1, mini: miniCiclo,
       nota: cic.despacho != null ? `despacho ${nf(cic.despacho, 1)} h · tránsito ${nf(cic.transito, 1)} h` : "" }),
     kpiTile("Tasa de anulación", { ...K.tasaAnulacion, decimales: 1,
       estado: palabra[K.tasaAnulacion.semaforo], nota: `${K.tasaAnulacion.anulados} de ${K.tasaAnulacion.total} viajes` }),
-    kpiTile("Utilización de flota", { ...K.utilizacionFlota, decimales: 0,
-      estado: palabra[K.utilizacionFlota.semaforo],
-      nota: `${K.utilizacionFlota.unidadesConViaje} de ${K.utilizacionFlota.flotaHabilitada} unidades con viaje` }),
     kpiTile("GRE aceptada", { ...K.greAceptada, decimales: 1,
       estado: K.greAceptada.total ? palabra[K.greAceptada.semaforo] : "",
       nota: K.greAceptada.total ? `${K.greAceptada.rechazadas} rechazada(s) de ${K.greAceptada.total}` : "sin emisiones" })
   ].join("");
+  el("kpiRow").innerHTML =
+    `<div class="kpi-group"><div class="kpi-group-title">Operación</div><div class="kpi-row">${kpisOperacion}</div></div>` +
+    `<div class="kpi-group"><div class="kpi-group-title">Calidad y riesgo</div><div class="kpi-row">${kpisCalidad}</div></div>`;
 
   chartLinea(el("chToneladas"), d.toneladasPorPeriodo.map((r) => {
     const [y, m, dd] = r.periodo.split("-").map(Number);
@@ -1580,7 +1805,7 @@ async function cargarPlataforma() {
         <td>${e.tickets}</td>
         <td>${e.ticketsEnTransito}</td>
         <td>${e.documentosVencidos > 0 ? `<span class="pill err">${e.documentosVencidos}</span>` : "0"}</td>
-        <td><button class="sec chico">Ver dashboard</button></td>`;
+        <td><button class="tenue chico">Ver dashboard</button></td>`;
       tb.appendChild(tr);
     }
   } catch (e) { aviso(e.message); }
@@ -1635,6 +1860,13 @@ document.body.addEventListener("change", (e) => {
 document.body.addEventListener("click", (e) => {
   const t = e.target;
   if (t.dataset.ventana) { estado.dashVentana = t.dataset.ventana; cargarDashboard(); return; }
+  if (t.dataset.toggleForm) {
+    // Alterna formularios largos y poco frecuentes (alta de unidad/chofer/empresa)
+    // para no mostrarlos siempre abiertos. Solo interfaz: no toca datos.
+    const cont = el(t.dataset.toggleForm);
+    if (cont) { cont.hidden = !cont.hidden; t.setAttribute("aria-expanded", String(!cont.hidden)); }
+    return;
+  }
   const fila = t.closest && t.closest("[data-ver-empresa]");
   if (fila) { verEmpresa(JSON.parse(fila.dataset.verEmpresa)); return; }
   if (t.dataset.ficha) toggleFicha(t.dataset.ficha);
