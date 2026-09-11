@@ -82,6 +82,12 @@ class TicketsRepositorioMemoria {
     registro._historial.push({ estadoAnterior: anterior, estadoNuevo: nuevoEstado, usuarioId: usuarioId ?? null, creadoEn: ahora });
     return vista(registro);
   }
+
+  async listarHistorial(ticketId) {
+    const registro = this.tickets.get(ticketId);
+    if (!registro) return [];
+    return registro._historial.map((h) => ({ ...h, usuarioNombre: null }));
+  }
 }
 
 /** Devuelve solo los campos públicos (oculta los que empiezan con "_"). */

@@ -17,7 +17,10 @@ create extension if not exists "pgcrypto";
 create type rol_usuario as enum ('admin_empresa', 'operador');
 create type categoria_mtc as enum ('N1', 'N2', 'N3');
 create type categoria_licencia as enum ('A-I','A-IIa','A-IIb','A-IIIa','A-IIIb','A-IIIc');
-create type tipo_documento_unidad as enum ('SOAT','REVISION_TECNICA','TARJETA_CIRCULACION','PERMISO_OPERACION','OTRO');
+create type tipo_documento_unidad as enum (
+  'SOAT','REVISION_TECNICA','TARJETA_CIRCULACION','PERMISO_OPERACION',
+  'DNI_TRANSPORTISTA','BREVETE_TRANSPORTISTA','CATEGORIA_MTC','OTRO'
+);
 create type tipo_documento_chofer as enum ('LICENCIA_CONDUCIR','CERTIFICADO_MEDICO','OTRO');
 create type estado_operativo_ticket as enum ('GENERADO','EN_TRANSITO','ENTREGADO','ANULADO');
 create type estado_gre as enum ('ENVIANDO','ACEPTADO','RECHAZADO','OBSERVADO');
@@ -140,9 +143,18 @@ create table documentos_unidad (
   tipo_documento tipo_documento_unidad not null,
   numero_documento text,
   fecha_emision date,
-  fecha_vencimiento date not null,
-  archivo_url text,
-  creado_en timestamptz not null default now()
+  -- Nula solo para los tipos sin vencimiento (ver el check de abajo):
+  -- DNI_TRANSPORTISTA, BREVETE_TRANSPORTISTA, CATEGORIA_MTC.
+  fecha_vencimiento date,
+  archivo_url text,       -- histórico, sin usar
+  archivo bytea,          -- el PDF en sí (se guarda en la base, sin storage externo)
+  archivo_nombre text,
+  archivo_tipo text,      -- mime type, siempre 'application/pdf' por ahora
+  creado_en timestamptz not null default now(),
+  constraint chk_vencimiento_segun_tipo check (
+    fecha_vencimiento is not null
+    or tipo_documento in ('DNI_TRANSPORTISTA', 'BREVETE_TRANSPORTISTA', 'CATEGORIA_MTC')
+  )
 );
 create index idx_documentos_unidad_vencimiento on documentos_unidad(fecha_vencimiento);
 create index idx_documentos_unidad_unidad on documentos_unidad(unidad_id);

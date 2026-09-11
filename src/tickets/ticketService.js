@@ -150,6 +150,11 @@ class TicketService {
     return this.repo.obtenerPorId(id);
   }
 
+  /** Línea de tiempo del ticket (cada cambio de estado, con quién lo hizo). */
+  async obtenerHistorial(id) {
+    return this.repo.listarHistorial(id);
+  }
+
   async listarTickets(empresaId) {
     if (!empresaId) throw new Error('empresaId es obligatorio');
     return this.repo.listarPorEmpresa(empresaId);

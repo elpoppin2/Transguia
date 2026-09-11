@@ -26,6 +26,10 @@ class DocumentosRepositorioMemoria {
     if (!this.deUnidad.delete(docId)) throw new Error('El documento indicado no existe');
   }
 
+  async obtenerArchivoDeUnidad(docId) {
+    return this.deUnidad.get(docId) || null;
+  }
+
   async listarDeChofer(choferId) {
     return [...this.deChofer.values()]
       .filter((d) => d.choferId === choferId)

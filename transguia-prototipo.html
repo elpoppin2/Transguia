@@ -4,7 +4,6 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>TransGuía — Prototipo</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%23c8102e'/%3E%3C/svg%3E" />
 <style>
   /* =========================================================================
      TOKENS
@@ -12,8 +11,10 @@
      ejecutada con la sencillez de un panel Apple: superficies limpias,
      jerarquía tipográfica clara, radios moderados, sombras discretas.
      "Management by exception": el gris/negro es "sin novedad", el rojo
-     es lo único que pide atención. Los nombres --bg/--panel/--primario/etc.
-     los usa también el JS en estilos inline (gráficos) — no renombrar.
+     es lo único que pide atención. Un solo diseño (claro), a propósito:
+     no seguimos el modo oscuro del sistema operativo.
+     Los nombres --bg/--panel/--primario/etc. los usa también el JS en
+     estilos inline (gráficos) — no renombrar.
      ========================================================================= */
   :root {
     color-scheme: light;
@@ -36,8 +37,6 @@
     --ease: cubic-bezier(.4,0,.2,1); --dur: 160ms;
     --topbar-h: 56px; --sidenav-w: 228px;
   }
-  /* Un solo diseño (claro), a propósito: no seguimos el modo oscuro del
-     sistema operativo — así se ve siempre igual en cualquier computadora. */
 
   /* =========================================================================
      BASE
@@ -125,6 +124,7 @@
   input:hover, select:hover { border-color: var(--borde-fuerte); }
   input:focus, select:focus { outline: 2px solid var(--primario); outline-offset: -1px; background: var(--panel); }
   input:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
+  input[type="file"] { padding: 7px 8px; font-size: 12.5px; }
   .grid { display: grid; gap: var(--sp-3) var(--sp-4); grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
   .fila { display: flex; gap: var(--sp-3); align-items: flex-end; flex-wrap: wrap; }
   .conbtn { display: flex; gap: 6px; }
@@ -140,6 +140,17 @@
   .form-toggle-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap; }
   .form-toggle-bar h2 { margin-bottom: 2px; }
   [data-form-body] { margin-top: var(--sp-4); }
+
+  /* buscar / filtrar / paginar */
+  .buscador { display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap; margin: var(--sp-1) 0 var(--sp-3); }
+  .buscador input[type="search"] { flex: 1; min-width: 180px; }
+  .buscador select { width: auto; min-width: 140px; }
+  .paginacion { font-size: var(--fs-sm); }
+
+  /* línea de tiempo del ticket */
+  .hist-lista { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+  .hist-item { font-size: var(--fs-sm); padding: 8px 10px; background: var(--panel); border: 1px solid var(--borde);
+    border-radius: var(--r-sm); display: flex; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap; }
 
   /* =========================================================================
      BOTONES
@@ -311,7 +322,6 @@
   /* =========================================================================
      LOGIN
      ========================================================================= */
-  /* Sin contenedor propio: así al ocultarse (login exitoso) no reserva alto. */
   .login-card { width: 100%; max-width: 380px; margin: min(14vh, 96px) auto var(--sp-7); box-shadow: var(--sombra-lg); }
   .login-head { text-align: center; margin-bottom: var(--sp-5); }
   .login-head .brand-mark { width: 40px; height: 40px; border-radius: 11px; margin: 0 auto var(--sp-3); }
@@ -338,6 +348,7 @@
     .dash-toolbar { flex-direction: column; align-items: stretch; }
   }
 </style>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%23c8102e'/%3E%3C/svg%3E" />
 </head>
 <body>
 <header class="topbar">
@@ -499,7 +510,7 @@
     <section class="panel" data-vista="unidades">
       <div class="solo-admin">
         <div class="form-toggle-bar">
-          <h2 style="margin-bottom:0">Registrar unidad <span class="sub">— solo Placa, RUC del dueño y DNI del transportista son obligatorios</span></h2>
+          <h2 style="margin-bottom:0">Registrar unidad <span class="sub">— Placa, RUC del dueño, DNI del transportista y los 5 documentos marcados con * son obligatorios</span></h2>
           <button type="button" class="sec chico" data-toggle-form="unidadForm">+ Registrar unidad</button>
         </div>
         <div id="unidadForm" data-form-body hidden>
@@ -555,9 +566,18 @@
         <h3 class="grupo">SOAT y CITV <span class="sub">— se registran como documentos con vencimiento</span></h3>
         <div class="grid">
           <div><label for="uNroSoat">N° SOAT</label><input id="uNroSoat" /></div>
-          <div><label for="uVigenciaSoat">Vigencia SOAT</label><input id="uVigenciaSoat" type="date" /></div>
+          <div><label for="uVigenciaSoat">Vigencia SOAT *</label><input id="uVigenciaSoat" type="date" /></div>
           <div><label for="uNroCitv">N° CITV</label><input id="uNroCitv" /></div>
-          <div><label for="uVigenciaCitv">Vigencia CITV</label><input id="uVigenciaCitv" type="date" /></div>
+          <div><label for="uVigenciaCitv">Vigencia CITV *</label><input id="uVigenciaCitv" type="date" /></div>
+        </div>
+
+        <h3 class="grupo">Documentos obligatorios (PDF) <span class="sub">— hasta 5 MB cada uno</span></h3>
+        <div class="grid">
+          <div><label for="uArchivoSoat">PDF del SOAT *</label><input id="uArchivoSoat" type="file" accept="application/pdf" /></div>
+          <div><label for="uArchivoCitv">PDF del CITV *</label><input id="uArchivoCitv" type="file" accept="application/pdf" /></div>
+          <div><label for="uArchivoBrevete">PDF del brevete del transportista *</label><input id="uArchivoBrevete" type="file" accept="application/pdf" /></div>
+          <div><label for="uArchivoDni">PDF del DNI del transportista *</label><input id="uArchivoDni" type="file" accept="application/pdf" /></div>
+          <div><label for="uArchivoCategoriaMtc">PDF de constancia de categoría MTC *</label><input id="uArchivoCategoriaMtc" type="file" accept="application/pdf" /></div>
         </div>
 
         <h3 class="grupo">Opcional (para la GRE)</h3>
@@ -571,12 +591,22 @@
         </div>
       </div>
       <h3 class="grupo">Unidades registradas</h3>
+      <div class="buscador">
+        <input type="search" id="qUnidades" placeholder="Buscar por placa, dueño, DNI del transportista…" />
+        <select id="fUnidades">
+          <option value="">Todos los estados</option>
+          <option value="PENDIENTE">Pendiente</option>
+          <option value="APROBADA">Aprobada</option>
+          <option value="RECHAZADA">Rechazada</option>
+        </select>
+      </div>
       <div class="tabla-scroll">
         <table>
           <thead><tr><th>Placa</th><th>Tipo</th><th>Marca / año</th><th>Dueño</th><th>DNI transp.</th><th>Estado</th><th></th></tr></thead>
           <tbody id="tbUnidades"></tbody>
         </table>
       </div>
+      <div id="pagUnidades"></div>
       <div class="vacio" id="vacioUnidades" hidden>Todavía no hay unidades registradas.</div>
     </section>
 
@@ -622,12 +652,22 @@
         </div>
       </div>
       <h3 class="grupo">Choferes registrados</h3>
+      <div class="buscador">
+        <input type="search" id="qChoferes" placeholder="Buscar por documento, nombre, celular…" />
+        <select id="fChoferes">
+          <option value="">Todos los estados</option>
+          <option value="PENDIENTE">Pendiente</option>
+          <option value="APROBADA">Aprobada</option>
+          <option value="RECHAZADA">Rechazada</option>
+        </select>
+      </div>
       <div class="tabla-scroll">
         <table>
           <thead><tr><th>Documento</th><th>Nombre</th><th>Celular</th><th>Estado</th><th></th></tr></thead>
           <tbody id="tbChoferes"></tbody>
         </table>
       </div>
+      <div id="pagChoferes"></div>
       <div class="vacio" id="vacioChoferes" hidden>Todavía no hay choferes registrados.</div>
     </section>
 
@@ -654,12 +694,23 @@
         </div>
       </div>
       <h3 class="grupo">Tickets</h3>
+      <div class="buscador">
+        <input type="search" id="qTickets" placeholder="Buscar por código, ruta, unidad, chofer, mercancía…" />
+        <select id="fTickets">
+          <option value="">Todos los estados</option>
+          <option value="GENERADO">Generado</option>
+          <option value="EN_TRANSITO">En tránsito</option>
+          <option value="ENTREGADO">Entregado</option>
+          <option value="ANULADO">Anulado</option>
+        </select>
+      </div>
       <div class="tabla-scroll">
         <table>
           <thead><tr><th>Código</th><th>Ruta</th><th>Unidad</th><th>Chofer</th><th>Peso</th><th>GRE</th><th>Estado oper.</th><th>Acciones</th></tr></thead>
           <tbody id="tbTickets"></tbody>
         </table>
       </div>
+      <div id="pagTickets"></div>
       <div class="vacio" id="vacioTickets" hidden>Todavía no hay tickets.</div>
     </section>
 
@@ -702,7 +753,7 @@
 "use strict";
 
 const CONFIG_VEHICULAR = ["C2","C2R2","C2R3","C3","C3R2","C3R3","C4","T2S1","T2S2","T2S3","T3S1","T3S2","T3S3"];
-const TIPOS_DOC_UNIDAD = ["SOAT","REVISION_TECNICA","TARJETA_CIRCULACION","PERMISO_OPERACION","OTRO"];
+const TIPOS_DOC_UNIDAD = ["SOAT","REVISION_TECNICA","TARJETA_CIRCULACION","PERMISO_OPERACION","DNI_TRANSPORTISTA","BREVETE_TRANSPORTISTA","CATEGORIA_MTC","OTRO"];
 const TIPOS_DOC_CHOFER = ["LICENCIA_CONDUCIR","CERTIFICADO_MEDICO","OTRO"];
 const CATEGORIAS_LICENCIA = ["A-I","A-IIa","A-IIb","A-IIIa","A-IIIb","A-IIIc"];
 
@@ -715,7 +766,13 @@ const estado = {
   empresaSel: JSON.parse(localStorage.getItem("transguia.empresaSel") || "null"), // superadmin: empresa que está viendo (null = todas)
   vistaActual: null,
   dashVentana: "30d",
-  empresas: [], unidades: [], choferes: []
+  empresas: [], unidades: [], choferes: [], tickets: [],
+  // Buscar/filtrar/paginar de las tablas (todo en el navegador: ya tenemos la lista completa).
+  filtros: {
+    unidades: { q: "", estado: "", pag: 1 },
+    choferes: { q: "", estado: "", pag: 1 },
+    tickets: { q: "", estado: "", pag: 1 }
+  }
 };
 
 const el = (id) => document.getElementById(id);
@@ -725,6 +782,34 @@ const esSuper = () => estado.sesion && estado.sesion.rol === "superadmin";
 const soloLectura = () => esSuper();
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 const escapar = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+const fmtFecha = (iso) => {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return isNaN(d) ? String(iso) : d.toLocaleString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+};
+
+// ---------- buscar / filtrar / paginar (todo en el navegador) ----------
+const POR_PAGINA = 15;
+function filtrarYPaginar(lista, filtro, camposTexto, campoEstado) {
+  const q = (filtro.q || "").trim().toLowerCase();
+  let filtrada = lista;
+  if (q) filtrada = filtrada.filter((x) => camposTexto.some((c) => String(x[c] || "").toLowerCase().includes(q)));
+  if (filtro.estado) filtrada = filtrada.filter((x) => x[campoEstado] === filtro.estado);
+  const totalPaginas = Math.max(1, Math.ceil(filtrada.length / POR_PAGINA));
+  filtro.pag = Math.min(Math.max(1, filtro.pag || 1), totalPaginas);
+  const inicio = (filtro.pag - 1) * POR_PAGINA;
+  return { pagina: filtrada.slice(inicio, inicio + POR_PAGINA), total: filtrada.length, totalPaginas };
+}
+function controlesPaginacionHTML(tabla, pag, totalPaginas, total) {
+  if (!total) return "";
+  return `<div class="fila paginacion" style="justify-content:space-between;margin-top:10px">
+    <span class="muted">${total} resultado${total === 1 ? "" : "s"}</span>
+    <span class="fila" style="gap:8px">
+      <button class="tenue chico" data-pag="${tabla}:-1" ${pag <= 1 ? "disabled" : ""}>&laquo; Anterior</button>
+      <span class="muted">página ${pag} de ${totalPaginas}</span>
+      <button class="tenue chico" data-pag="${tabla}:1" ${pag >= totalPaginas ? "disabled" : ""}>Siguiente &raquo;</button>
+    </span></div>`;
+}
 
 function guardarSesion(s) { estado.sesion = s; localStorage.setItem("transguia.sesion", JSON.stringify(s)); }
 function cerrarSesion(msg) {
@@ -758,7 +843,7 @@ async function api(ruta, opciones = {}) {
   // El superadmin consulta los datos de una empresa concreta: se le
   // agrega ?empresaId a las lecturas (no a /api/empresas ni /api/resumen).
   const metodo = (opciones.method || "GET").toUpperCase();
-  if (metodo === "GET" && esSuper() && estado.empresaSel &&
+  if (metodo === "GET" && esSuper() && estado.empresaSel && !ruta.includes("empresaId=") &&
       ruta.startsWith("/api/") && !ruta.startsWith("/api/empresas") && !ruta.startsWith("/api/resumen")) {
     url += (ruta.includes("?") ? "&" : "?") + "empresaId=" + encodeURIComponent(estado.empresaSel.id);
   }
@@ -979,9 +1064,21 @@ async function reenviarUnidad(id) {
 async function cargarUnidades() {
   await cargarCatalogos();
   estado.unidades = await api("/api/unidades");
+  renderUnidades();
+  const sel = el("tUnidad");
+  const usables = estado.unidades.filter((u) => u.activo && u.estadoRegistro === "APROBADA");
+  sel.innerHTML = usables
+    .map((u) => `<option value="${u.id}">${escapar(u.placa)} — ${escapar(descUnidad(u))}</option>`).join("")
+    || `<option value="">(no hay unidades aprobadas todavía)</option>`;
+}
+function renderUnidades() {
+  const f = estado.filtros.unidades;
+  const { pagina, total, totalPaginas } = filtrarYPaginar(
+    estado.unidades, f, ["placa", "nombrePropietario", "rucPropietario", "dniTransportista", "tipoVehiculo"], "estadoRegistro"
+  );
   const tb = el("tbUnidades"); tb.innerHTML = "";
   el("vacioUnidades").hidden = estado.unidades.length > 0;
-  for (const u of estado.unidades) {
+  for (const u of pagina) {
     const aprobada = u.estadoRegistro === "APROBADA";
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -1011,11 +1108,7 @@ async function cargarUnidades() {
     trDoc.innerHTML = `<td colspan="7"><div class="sub-panel" id="docs-unidad-${u.id}">…</div></td>`;
     tb.appendChild(trDoc);
   }
-  const sel = el("tUnidad");
-  const usables = estado.unidades.filter((u) => u.activo && u.estadoRegistro === "APROBADA");
-  sel.innerHTML = usables
-    .map((u) => `<option value="${u.id}">${escapar(u.placa)} — ${escapar(descUnidad(u))}</option>`).join("")
-    || `<option value="">(no hay unidades aprobadas todavía)</option>`;
+  el("pagUnidades").innerHTML = controlesPaginacionHTML("unidades", f.pag, totalPaginas, total);
 }
 
 // ---------- solicitudes de registro (superadmin) ----------
@@ -1038,11 +1131,33 @@ async function cargarSolicitudes() {
         <td>${escapar(u.dniTransportista || "—")}</td>
         <td class="fila" style="gap:6px">
           <button class="sec chico" data-revisar-sol="${u.id}">Revisar / editar</button>
+          <button class="tenue chico" data-docsol="${u.id}">Documentos</button>
           <button class="chico" data-aprobar-sol="${u.id}">Liberar</button>
           <button class="tenue chico" data-rechazar-sol="${u.id}">Rechazar</button></td>
       </tr>
-      <tr hidden data-sol-row="${u.id}"><td colspan="6"><div class="sub-panel" id="sol-${u.id}">…</div></td></tr>`).join("")}
+      <tr hidden data-sol-row="${u.id}"><td colspan="6"><div class="sub-panel" id="sol-${u.id}">…</div></td></tr>
+      <tr hidden data-docsol-row="${u.id}"><td colspan="6"><div class="sub-panel" id="docsol-${u.id}">…</div></td></tr>`).join("")}
     </tbody></table></div>` : "";
+}
+function toggleDocsSol(id) {
+  const fila = document.querySelector(`[data-docsol-row="${id}"]`);
+  if (!fila) return;
+  fila.hidden = !fila.hidden;
+  if (!fila.hidden) pintarDocsSolicitud(id);
+}
+async function pintarDocsSolicitud(id) {
+  const u = (estado.solicitudes || []).find((x) => x.id === id) || {};
+  const cont = el(`docsol-${id}`);
+  let docs = [];
+  try { docs = await api(`/api/unidades/${id}/documentos?empresaId=${encodeURIComponent(u.empresaId || "")}`); }
+  catch (e) { cont.textContent = e.message; return; }
+  const filas = docs.length ? docs.map((d) => `<tr>
+      <td>${d.tipoDocumento.replace(/_/g, " ")}</td>
+      <td>${escapar(d.numeroDocumento || "—")}</td>
+      <td>${d.fechaVencimiento ? "vence " + d.fechaVencimiento : "—"}</td>
+      <td>${d.tieneArchivo ? `<button class="tenue chico" data-ver-archivo-sol="${id}:${d.id}">Ver PDF</button>` : "—"}</td>
+    </tr>`).join("") : `<tr><td colspan="4" class="muted">Sin documentos cargados.</td></tr>`;
+  cont.innerHTML = `<table><tbody>${filas}</tbody></table>`;
 }
 function toggleRevisarSol(id) {
   const fila = document.querySelector(`[data-sol-row="${id}"]`);
@@ -1168,9 +1283,21 @@ async function reenviarChofer(id) {
 async function cargarChoferes() {
   await cargarCatalogos();
   estado.choferes = await api("/api/choferes");
+  renderChoferes();
+  const sel = el("tChofer");
+  const usables = estado.choferes.filter((c) => c.activo && c.estadoRegistro === "APROBADA");
+  sel.innerHTML = usables
+    .map((c) => `<option value="${c.id}">${escapar(nombreChofer(c))} — ${escapar(c.dni)}</option>`).join("")
+    || `<option value="">(no hay choferes aprobados todavía)</option>`;
+}
+function renderChoferes() {
+  const f = estado.filtros.choferes;
+  const { pagina, total, totalPaginas } = filtrarYPaginar(
+    estado.choferes, f, ["dni", "apellidos", "nombres", "apellidoPaterno", "apellidoMaterno", "primerNombre", "celular"], "estadoRegistro"
+  );
   const tb = el("tbChoferes"); tb.innerHTML = "";
   el("vacioChoferes").hidden = estado.choferes.length > 0;
-  for (const c of estado.choferes) {
+  for (const c of pagina) {
     const aprobado = c.estadoRegistro === "APROBADA";
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -1198,11 +1325,7 @@ async function cargarChoferes() {
     trDoc.innerHTML = `<td colspan="5"><div class="sub-panel" id="docs-chofer-${c.id}">…</div></td>`;
     tb.appendChild(trDoc);
   }
-  const sel = el("tChofer");
-  const usables = estado.choferes.filter((c) => c.activo && c.estadoRegistro === "APROBADA");
-  sel.innerHTML = usables
-    .map((c) => `<option value="${c.id}">${escapar(nombreChofer(c))} — ${escapar(c.dni)}</option>`).join("")
-    || `<option value="">(no hay choferes aprobados todavía)</option>`;
+  el("pagChoferes").innerHTML = controlesPaginacionHTML("choferes", f.pag, totalPaginas, total);
 }
 
 // ---------- solicitudes de choferes (superadmin) ----------
@@ -1283,8 +1406,10 @@ async function pintarDocs(clave) {
     ? docs.map((d) => `<tr>
         <td>${d.tipoDocumento.replace(/_/g, " ")}${d.categoriaLicencia ? " (" + d.categoriaLicencia + ")" : ""}</td>
         <td>${escapar(d.numeroDocumento || "—")}</td>
-        <td>vence ${d.fechaVencimiento}</td>
-        <td>${esAdmin() ? `<button class="tenue chico" data-doc-del="${tipo}:${id}:${d.id}">Borrar</button>` : ""}</td>
+        <td>${d.fechaVencimiento ? "vence " + d.fechaVencimiento : "—"}</td>
+        <td class="fila" style="gap:6px">
+          ${tipo === "unidad" && d.tieneArchivo ? `<button class="tenue chico" data-ver-archivo="${id}:${d.id}">Ver PDF</button>` : ""}
+          ${esAdmin() ? `<button class="tenue chico" data-doc-del="${tipo}:${id}:${d.id}">Borrar</button>` : ""}</td>
       </tr>`).join("")
     : `<tr><td colspan="4" class="muted">Sin documentos cargados.</td></tr>`;
   cont.innerHTML = `
@@ -1325,6 +1450,41 @@ async function borrarDoc(tipo, id, docId) {
   catch (e) { aviso(e.message); }
 }
 
+// Abre el PDF de un documento de unidad en una pestaña nueva. Se trae
+// como blob (no un <a href> directo) porque la ruta exige el token de
+// sesión en la cabecera Authorization.
+async function verArchivoUnidad(unidadId, docId, empresaId) {
+  try {
+    let url = estado.api + `/api/unidades/${unidadId}/documentos/${docId}/archivo`;
+    if (empresaId) url += `?empresaId=${encodeURIComponent(empresaId)}`;
+    const headers = {};
+    if (estado.sesion && estado.sesion.token) headers.Authorization = "Bearer " + estado.sesion.token;
+    const resp = await fetch(url, { headers });
+    if (!resp.ok) {
+      let msg = `Error ${resp.status}`;
+      try { msg = (await resp.json()).error || msg; } catch (_) {}
+      throw new Error(msg);
+    }
+    const blob = await resp.blob();
+    window.open(URL.createObjectURL(blob), "_blank");
+  } catch (e) { aviso(e.message); }
+}
+
+// Lee un <input type=file> como base64 (sin el prefijo data:...;base64,)
+// para mandarlo en el mismo POST, sin multipart ni storage externo.
+function leerArchivoComoBase64(input) {
+  return new Promise((resolve, reject) => {
+    const file = input.files && input.files[0];
+    if (!file) return resolve(null);
+    if (file.type !== "application/pdf") return reject(new Error(`"${file.name}" no es un PDF`));
+    if (file.size > 5 * 1024 * 1024) return reject(new Error(`"${file.name}" pesa más de 5 MB`));
+    const lector = new FileReader();
+    lector.onload = () => resolve({ base64: String(lector.result).split(",")[1] || "", nombre: file.name });
+    lector.onerror = () => reject(new Error(`No se pudo leer "${file.name}"`));
+    lector.readAsDataURL(file);
+  });
+}
+
 // ---------- catálogos (ticket + unidad) ----------
 // Una sola vez. Fuente: GET /api/catalogos.
 let catalogosCargados = false;
@@ -1353,10 +1513,17 @@ async function cargarCatalogos() {
 
 async function cargarTickets() {
   await cargarCatalogos();
-  const tickets = await api("/api/tickets");
+  estado.tickets = await api("/api/tickets");
+  renderTickets();
+}
+function renderTickets() {
+  const f = estado.filtros.tickets;
+  const { pagina, total, totalPaginas } = filtrarYPaginar(
+    estado.tickets, f, ["codigoInterno", "origen", "destino", "placa", "choferNombres", "descripcionMercancia"], "estadoOperativo"
+  );
   const tb = el("tbTickets"); tb.innerHTML = "";
-  el("vacioTickets").hidden = tickets.length > 0;
-  for (const t of tickets) {
+  el("vacioTickets").hidden = estado.tickets.length > 0;
+  for (const t of pagina) {
     const puede = t.estadoSunat === "ACEPTADO" && t.estadoOperativo !== "ANULADO";
     const acc = [];
     if (!soloLectura()) {
@@ -1364,6 +1531,7 @@ async function cargarTickets() {
       if (puede && t.estadoOperativo === "EN_TRANSITO") acc.push(`<button class="chico" data-avanzar="${t.id}:ENTREGADO">Entregado</button>`);
       if (t.estadoOperativo !== "ANULADO" && t.estadoOperativo !== "ENTREGADO") acc.push(`<button class="tenue chico" data-avanzar="${t.id}:ANULADO">Anular</button>`);
     }
+    acc.push(`<button class="tenue chico" data-detalle-ticket="${t.id}">Detalle</button>`);
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td><strong>${t.codigoInterno}</strong></td>
@@ -1373,9 +1541,53 @@ async function cargarTickets() {
       <td>${Number(t.pesoBrutoKg).toLocaleString("es-PE")} kg</td>
       <td>${pillGre(t.estadoSunat)}${t.serieCorrelativoGre ? `<div class="muted">${t.serieCorrelativoGre}</div>` : ""}${t.motivoRechazo ? `<div class="muted">${escapar(t.motivoRechazo)}</div>` : ""}</td>
       <td>${pillOperativo(t.estadoOperativo)}</td>
-      <td>${acc.join(" ") || "—"}</td>`;
+      <td class="fila" style="gap:6px">${acc.join(" ")}</td>`;
     tb.appendChild(tr);
+    const trDet = document.createElement("tr");
+    trDet.hidden = true; trDet.dataset.detalleRow = t.id;
+    trDet.innerHTML = `<td colspan="8"><div class="sub-panel" id="detalle-ticket-${t.id}">…</div></td>`;
+    tb.appendChild(trDet);
   }
+  el("pagTickets").innerHTML = controlesPaginacionHTML("tickets", f.pag, totalPaginas, total);
+}
+function toggleDetalleTicket(id) {
+  const fila = document.querySelector(`[data-detalle-row="${id}"]`);
+  if (!fila) return;
+  fila.hidden = !fila.hidden;
+  if (!fila.hidden) pintarDetalleTicket(id);
+}
+async function pintarDetalleTicket(id) {
+  const cont = el(`detalle-ticket-${id}`);
+  const t = (estado.tickets || []).find((x) => x.id === id);
+  if (!t) { cont.textContent = "No encontrado."; return; }
+  let hist = [];
+  try { hist = await api(`/api/tickets/${id}/historial`); } catch (_) { /* el detalle igual se muestra sin la línea de tiempo */ }
+  const dato = (etiqueta, valor) => (valor === null || valor === undefined || valor === "" ? "" :
+    `<div><span>${etiqueta}</span><strong>${escapar(String(valor))}</strong></div>`);
+  const info = [
+    dato("Código", t.codigoInterno),
+    dato("Ruta", `${t.origen} → ${t.destino}`),
+    dato("Motivo", t.motivo && t.motivo.replace(/_/g, " ")),
+    dato("Mercancía", t.descripcionMercancia),
+    dato("Peso bruto", Number(t.pesoBrutoKg).toLocaleString("es-PE") + " kg"),
+    dato("Unidad", t.placa + (t.configuracionVehicular ? " (" + t.configuracionVehicular + ")" : "")),
+    dato("Chofer", `${t.choferNombres} — ${t.choferDni}`),
+    dato("Creado", fmtFecha(t.creadoEn)),
+    dato("Despachado", t.fechaTraslado ? fmtFecha(t.fechaTraslado) : null),
+    dato("Entregado", t.fechaEntrega ? fmtFecha(t.fechaEntrega) : null),
+    dato("Estado GRE", t.estadoSunat),
+    dato("Serie GRE", t.serieCorrelativoGre),
+    dato("Motivo de rechazo GRE", t.motivoRechazo)
+  ].filter(Boolean).join("");
+  const linea = hist.length
+    ? hist.map((h) => `<div class="hist-item">
+        <strong>${h.estadoAnterior ? escapar(h.estadoAnterior.replace(/_/g, " ")) + " → " : ""}${escapar(h.estadoNuevo.replace(/_/g, " "))}</strong>
+        <span class="muted">${fmtFecha(h.creadoEn)}${h.usuarioNombre ? " · " + escapar(h.usuarioNombre) : ""}</span>
+      </div>`).join("")
+    : `<p class="muted">Sin cambios de estado registrados.</p>`;
+  cont.innerHTML = `<div class="ficha">${info}</div>
+    <h3 class="grupo" style="margin-top:14px">Línea de tiempo</h3>
+    <div class="hist-lista">${linea}</div>`;
 }
 async function crearTicket() {
   const btn = el("btnCrearTicket"), info = el("tEstadoEmision");
@@ -1427,7 +1639,17 @@ const CAMPOS_UNIDAD = [
   "uRucProp","uNombreProp","uDireccionProp","uDni","uDepartamento","uProvincia","uDistrito",
   "uPlaca","uTipoVehiculo","uMarca","uAnio","uNroEjes","uFormaApertura","uRodadaDel","uRodadaC1","uRodadaC2",
   "uPesoSeco","uAltura","uAncho","uLargo","uAlturaPlataforma","uTolvaCerrada","uCarretaPiston","uUnidadGas",
-  "uNroSoat","uVigenciaSoat","uNroCitv","uVigenciaCitv","uModelo","uCategoria","uConfig"
+  "uNroSoat","uVigenciaSoat","uNroCitv","uVigenciaCitv","uModelo","uCategoria","uConfig",
+  "uArchivoSoat","uArchivoCitv","uArchivoBrevete","uArchivoDni","uArchivoCategoriaMtc"
+];
+// Los 5 documentos que hay que adjuntar para registrar una placa.
+// [id del <input type=file>, campo del cuerpo, etiqueta para el error]
+const ARCHIVOS_UNIDAD = [
+  ["uArchivoSoat", "archivoSoat", "SOAT"],
+  ["uArchivoCitv", "archivoCitv", "CITV"],
+  ["uArchivoBrevete", "archivoBrevete", "brevete del transportista"],
+  ["uArchivoDni", "archivoDni", "DNI del transportista"],
+  ["uArchivoCategoriaMtc", "archivoCategoriaMtc", "categoría MTC"]
 ];
 async function crearUnidad() {
   const b = el("btnCrearUnidad");
@@ -1435,6 +1657,13 @@ async function crearUnidad() {
   const nro = (id) => (el(id).value === "" ? undefined : Number(el(id).value));
   b.disabled = true;
   try {
+    const archivos = {};
+    for (const [inputId, campo, etiqueta] of ARCHIVOS_UNIDAD) {
+      const leido = await leerArchivoComoBase64(el(inputId));
+      if (!leido) throw new Error(`Falta adjuntar el PDF de ${etiqueta}`);
+      archivos[campo] = leido.base64;
+      archivos[campo + "Nombre"] = leido.nombre;
+    }
     const cuerpo = {
       placa: el("uPlaca").value.trim(),
       rucPropietario: el("uRucProp").value.trim(),
@@ -1449,7 +1678,8 @@ async function crearUnidad() {
       largoM: nro("uLargo"), alturaPlataformaM: nro("uAlturaPlataforma"),
       tolvaCerrada: txt("uTolvaCerrada"), carretaConPiston: txt("uCarretaPiston"), unidadAGas: txt("uUnidadGas"),
       nroSoat: txt("uNroSoat"), vigenciaSoat: txt("uVigenciaSoat"),
-      nroCitv: txt("uNroCitv"), vigenciaCitv: txt("uVigenciaCitv")
+      nroCitv: txt("uNroCitv"), vigenciaCitv: txt("uVigenciaCitv"),
+      ...archivos
     };
     const r = await api("/api/unidades", { method: "POST", body: JSON.stringify(cuerpo) });
     CAMPOS_UNIDAD.forEach((id) => { if (el(id)) el(id).value = ""; });
@@ -1849,6 +2079,20 @@ el("btnCrearEmpresa").addEventListener("click", crearEmpresa);
 el("segEmpresa").addEventListener("change", (e) => cambiarEmpresaSegmento(e.target.value));
 document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => mostrarVista(b.dataset.tab)));
 
+// Buscar/filtrar: cada tecla o cambio de select reinicia a la página 1.
+[["qUnidades", "unidades", "q", renderUnidades], ["fUnidades", "unidades", "estado", renderUnidades],
+ ["qChoferes", "choferes", "q", renderChoferes], ["fChoferes", "choferes", "estado", renderChoferes],
+ ["qTickets", "tickets", "q", renderTickets], ["fTickets", "tickets", "estado", renderTickets]
+].forEach(([id, tabla, campo, render]) => {
+  const nodo = el(id);
+  const evento = nodo.tagName === "SELECT" ? "change" : "input";
+  nodo.addEventListener(evento, (e) => {
+    estado.filtros[tabla][campo] = e.target.value;
+    estado.filtros[tabla].pag = 1;
+    render();
+  });
+});
+
 document.body.addEventListener("change", (e) => {
   const t = e.target;
   if (t.id && t.id.startsWith("nd-tipo-")) {
@@ -1888,6 +2132,23 @@ document.body.addEventListener("click", (e) => {
   if (t.dataset.docs) toggleDocs(t.dataset.docs);
   if (t.dataset.docAdd) agregarDoc(t.dataset.docAdd);
   if (t.dataset.docDel) { const [tp, id, docId] = t.dataset.docDel.split(":"); borrarDoc(tp, id, docId); }
+  if (t.dataset.docsol) toggleDocsSol(t.dataset.docsol);
+  if (t.dataset.verArchivo) {
+    const [unidadId, docId] = t.dataset.verArchivo.split(":");
+    const u = estado.unidades.find((x) => x.id === unidadId);
+    verArchivoUnidad(unidadId, docId, u ? u.empresaId : undefined);
+  }
+  if (t.dataset.verArchivoSol) {
+    const [unidadId, docId] = t.dataset.verArchivoSol.split(":");
+    const u = (estado.solicitudes || []).find((x) => x.id === unidadId);
+    verArchivoUnidad(unidadId, docId, u ? u.empresaId : undefined);
+  }
+  if (t.dataset.detalleTicket) toggleDetalleTicket(t.dataset.detalleTicket);
+  if (t.dataset.pag) {
+    const [tabla, dir] = t.dataset.pag.split(":");
+    estado.filtros[tabla].pag += Number(dir);
+    ({ unidades: renderUnidades, choferes: renderChoferes, tickets: renderTickets })[tabla]();
+  }
   if (t.dataset.avanzar) {
     const [id, nuevo] = t.dataset.avanzar.split(":");
     if (nuevo === "ANULADO" && !confirm("¿Anular este ticket? No se puede deshacer.")) return;

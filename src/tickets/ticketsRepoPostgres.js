@@ -168,6 +168,23 @@ class TicketsRepositorioPostgres {
       return rows[0];
     });
   }
+
+  /** Línea de tiempo del ticket: cada cambio de estado, con quién lo hizo. */
+  async listarHistorial(ticketId) {
+    const { rows } = await pool.query(
+      `select h.estado_anterior as "estadoAnterior",
+              h.estado_nuevo    as "estadoNuevo",
+              h.usuario_id      as "usuarioId",
+              u.nombre_completo as "usuarioNombre",
+              h.creado_en       as "creadoEn"
+       from historial_estado_ticket h
+       left join usuarios u on u.id = h.usuario_id
+       where h.ticket_id = $1
+       order by h.creado_en`,
+      [ticketId]
+    );
+    return rows;
+  }
 }
 
 /**

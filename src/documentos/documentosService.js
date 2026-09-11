@@ -1,6 +1,14 @@
-const TIPOS_UNIDAD = ['SOAT', 'REVISION_TECNICA', 'TARJETA_CIRCULACION', 'PERMISO_OPERACION', 'OTRO'];
+const TIPOS_UNIDAD = [
+  'SOAT', 'REVISION_TECNICA', 'TARJETA_CIRCULACION', 'PERMISO_OPERACION',
+  'DNI_TRANSPORTISTA', 'BREVETE_TRANSPORTISTA', 'CATEGORIA_MTC', 'OTRO'
+];
 const TIPOS_CHOFER = ['LICENCIA_CONDUCIR', 'CERTIFICADO_MEDICO', 'OTRO'];
 const CATEGORIAS_LICENCIA = ['A-I', 'A-IIa', 'A-IIb', 'A-IIIa', 'A-IIIb', 'A-IIIc'];
+
+// Estos tres son solo el archivo: no tienen fecha de vencimiento (el
+// brevete y el DNI del transportista se controlan aparte, si/cuando ese
+// transportista se registra como chofer; la categoría MTC no vence).
+const TIPOS_UNIDAD_SIN_VENCIMIENTO = ['DNI_TRANSPORTISTA', 'BREVETE_TRANSPORTISTA', 'CATEGORIA_MTC'];
 
 /**
  * Reglas de negocio para los documentos con vencimiento de unidades y
@@ -36,14 +44,30 @@ class DocumentosService {
   async agregarAUnidad(empresaId, unidadId, datos) {
     await this._unidadDe(empresaId, unidadId);
     const tipoDocumento = exigirEnum('tipoDocumento', datos.tipoDocumento, TIPOS_UNIDAD);
+    const sinVencimiento = TIPOS_UNIDAD_SIN_VENCIMIENTO.includes(tipoDocumento);
     return this.repo.agregarAUnidad({
       unidadId,
       tipoDocumento,
       numeroDocumento: textoOpcional(datos.numeroDocumento),
       fechaEmision: fechaOpcional(datos.fechaEmision, 'fechaEmision'),
-      fechaVencimiento: fechaObligatoria(datos.fechaVencimiento),
-      archivoUrl: textoOpcional(datos.archivoUrl)
+      fechaVencimiento: sinVencimiento
+        ? fechaOpcional(datos.fechaVencimiento, 'fechaVencimiento')
+        : fechaObligatoria(datos.fechaVencimiento),
+      archivoUrl: textoOpcional(datos.archivoUrl),
+      archivo: datos.archivo || null,
+      archivoNombre: textoOpcional(datos.archivoNombre),
+      archivoTipo: textoOpcional(datos.archivoTipo)
     });
+  }
+
+  /** El PDF de un documento de la unidad (verifica que sea de esa empresa). */
+  async obtenerArchivoDeUnidad(empresaId, unidadId, docId) {
+    await this._unidadDe(empresaId, unidadId);
+    const archivo = await this.repo.obtenerArchivoDeUnidad(docId);
+    if (!archivo || archivo.unidadId !== unidadId || !archivo.archivo) {
+      throw new Error('Ese documento no tiene un archivo adjunto');
+    }
+    return archivo;
   }
 
   async listarDeChofer(empresaId, choferId) {
