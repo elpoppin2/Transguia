@@ -163,17 +163,18 @@ paths:
   /api/dashboard:
     get:
       tags: [Dashboard]
-      summary: Métricas para el dashboard *(admin_empresa o superadmin)*
+      summary: Indicadores de gestión del dashboard *(admin_empresa o superadmin)*
       description: >
-        `admin_empresa`: su empresa (del token). `superadmin`:
-        `?empresaId=<uuid>` para una empresa, o sin él / `todas` para la
-        vista acumulada de toda la plataforma.
+        KPI (con variación vs. el período anterior) y series de apoyo,
+        todo medido sobre una ventana móvil. `admin_empresa`: su empresa
+        (del token). `superadmin`: `?empresaId=<uuid>` para una empresa, o
+        sin él / `todas` para la vista acumulada de toda la plataforma.
       parameters:
-        - name: agrupar
+        - name: ventana
           in: query
           required: false
-          schema: { type: string, enum: [dia, mes], default: dia }
-          description: Agrupación del gráfico de traslados por período.
+          schema: { type: string, enum: [7d, 30d, 90d, 12m], default: 30d }
+          description: Ventana móvil de medición (12m agrupa por mes; el resto por día).
         - name: empresaId
           in: query
           required: false
@@ -844,18 +845,46 @@ components:
             creadoEn: { type: string, format: date-time }
         admin: { $ref: "#/components/schemas/UsuarioPublico" }
 
+    Kpi:
+      type: object
+      description: >
+        Un indicador. `valor` es el del período; `delta` la variación % vs.
+        el período previo (o `deltaPuntos` en puntos porcentuales), null si
+        no hay base comparable. `subirEsBueno` dice de qué color pintar la
+        variación. `semaforo` (bien|atencion|critico) solo en los de meta.
+      properties:
+        valor: { type: [number, "null"] }
+        unidad: { type: string, example: "t" }
+        delta: { type: [number, "null"] }
+        deltaPuntos: { type: [number, "null"] }
+        subirEsBueno: { type: boolean }
+        semaforo: { type: string, enum: [bien, atencion, critico, sinDatos] }
+
     Dashboard:
       type: object
       properties:
         alcance: { type: string, example: "Todas las empresas" }
-        agrupacion: { type: string, enum: [dia, mes] }
-        trasladosPorPeriodo:
+        ventana: { type: string, enum: [7d, 30d, 90d, 12m] }
+        ventanaLabel: { type: string, example: "últimos 30 días" }
+        mensual: { type: boolean }
+        kpis:
+          type: object
+          description: 6 indicadores (ver schema Kpi). cicloHoras trae además `despacho`/`transito`; los de flota/GRE traen sus contadores.
+          properties:
+            toneladas: { $ref: "#/components/schemas/Kpi" }
+            viajes: { $ref: "#/components/schemas/Kpi" }
+            cicloHoras: { $ref: "#/components/schemas/Kpi" }
+            tasaAnulacion: { $ref: "#/components/schemas/Kpi" }
+            utilizacionFlota: { $ref: "#/components/schemas/Kpi" }
+            greAceptada: { $ref: "#/components/schemas/Kpi" }
+        toneladasPorPeriodo:
           type: array
           items:
             type: object
             properties:
               periodo: { type: string, example: "2026-09-08" }
-              cantidad: { type: integer }
+              toneladas: { type: number }
+              viajes: { type: integer }
         porEstadoOperativo:
           type: object
           properties:
@@ -870,21 +899,25 @@ components:
             properties:
               material: { $ref: "#/components/schemas/Mercancia" }
               toneladas: { type: number, example: 24.6 }
-              traslados: { type: integer }
-        tiempoFinalizacion:
-          type: object
-          properties:
-            promedioHoras: { type: [number, "null"] }
-            minHoras: { type: [number, "null"] }
-            maxHoras: { type: [number, "null"] }
-            muestras: { type: integer }
-            recientes:
-              type: array
-              items:
-                type: object
-                properties:
-                  codigo: { type: string, example: "TCK-000010" }
-                  horas: { type: number, example: 14.2 }
+              viajes: { type: integer }
+        viajesPorUnidad:
+          type: array
+          items:
+            type: object
+            properties:
+              placa: { type: string, example: "ABC-756" }
+              viajes: { type: integer }
+              toneladas: { type: number }
+        corredores:
+          type: array
+          description: Toneladas y viajes por par centro de origen → destino.
+          items:
+            type: object
+            properties:
+              origen: { $ref: "#/components/schemas/CentroOrigen" }
+              destino: { $ref: "#/components/schemas/Destino" }
+              toneladas: { type: number }
+              viajes: { type: integer }
 
     NuevaUnidad:
       type: object

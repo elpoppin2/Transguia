@@ -306,7 +306,7 @@ El contrato formal está en `contrato-api.yaml` (OpenAPI 3.1, pegable en
 
 | Método y ruta | Para qué sirve |
 |---|---|
-| `GET /api/dashboard?agrupar=dia\|mes` | Datos para los 4 gráficos de barras: traslados por día/mes, tickets por estado, toneladas por material, y tiempo de finalización (promedio + por ticket). Para `admin_empresa` es su empresa; para `superadmin`, `?empresaId=<uuid>` una empresa o `todas` (acumulado). El `operador` no tiene acceso (403). |
+| `GET /api/dashboard?ventana=7d\|30d\|90d\|12m` | **Indicadores de gestión.** Todo medido sobre una ventana móvil (default `30d`; `12m` agrupa por mes). Devuelve: **6 KPI** con variación vs. el período previo — toneladas movidas, viajes, ciclo del traslado (h, con despacho/tránsito), tasa de anulación, utilización de flota, GRE aceptada por SUNAT (los últimos tres con semáforo `bien\|atencion\|critico`); y **series de apoyo** — toneladas por día, viajes por estado, toneladas por material, viajes por unidad (top 10), y corredores (toneladas por par origen→destino, para el heatmap). Para `admin_empresa` es su empresa; para `superadmin`, `?empresaId=<uuid>` una empresa o `todas` (acumulado). El `operador` no tiene acceso (403). |
 
 > La contraseña se guarda como *hash* scrypt. El token va firmado con
 > HMAC-SHA256 (secreto `SESSION_SECRET`, ver `.env`) y no lleva nada

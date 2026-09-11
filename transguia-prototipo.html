@@ -104,7 +104,41 @@
   .bar-row-val { text-align: right; font-variant-numeric: tabular-nums; }
   .resumen-linea { font-size: 13px; margin-bottom: 12px; color: var(--texto-suave); }
   .resumen-linea strong { font-size: 17px; color: var(--texto); }
-  [data-agr].activa { background: var(--primario); color: var(--primario-texto); }
+  [data-agr].activa, [data-ventana].activa { background: var(--primario); color: var(--primario-texto); }
+  /* KPIs (indicadores de gestión) */
+  .kpi-row { display: grid; gap: 12px; margin-bottom: 18px;
+    grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); }
+  .kpi { background: var(--panel-2); border: 1px solid var(--borde); border-left-width: 3px;
+    border-radius: 10px; padding: 11px 13px; }
+  .kpi .lbl { font-size: 11.5px; color: var(--texto-suave); line-height: 1.35; }
+  .kpi .val { font-size: 24px; font-weight: 600; margin: 5px 0 1px; line-height: 1.1; }
+  .kpi .val .u { font-size: 13px; font-weight: 500; color: var(--texto-suave); margin-left: 2px; }
+  .kpi .delta { font-size: 11px; font-weight: 500; }
+  .kpi .delta.up { color: var(--ok-tx); } .kpi .delta.down { color: var(--err-tx); }
+  .kpi .delta.flat { color: var(--texto-suave); }
+  .kpi .sem { font-size: 11px; font-weight: 600; margin-top: 1px; }
+  .kpi .nota { font-size: 10.5px; color: var(--texto-suave); margin-top: 1px; }
+  .kpi.b-bien { border-left-color: var(--ok-tx); } .kpi.b-bien .sem { color: var(--ok-tx); }
+  .kpi.b-atencion { border-left-color: var(--warn-tx); } .kpi.b-atencion .sem { color: var(--warn-tx); }
+  .kpi.b-critico { border-left-color: var(--err-tx); } .kpi.b-critico .sem { color: var(--err-tx); }
+  .kpi.b-neutro { border-left-color: var(--borde); }
+  .kpi-mini { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: var(--borde); margin-top: 7px; }
+  .kpi-mini > i { height: 100%; }
+  /* barra apilada (part-to-whole) */
+  .stack-bar { display: flex; height: 26px; border-radius: 4px; overflow: hidden; background: var(--borde); }
+  .stack-bar > i { height: 100%; border-right: 2px solid var(--panel-2); }
+  .stack-bar > i:last-child { border-right: 0; }
+  .stack-leg { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; font-size: 12px; color: var(--texto-suave); }
+  .stack-leg b { color: var(--texto); font-weight: 600; }
+  .stack-leg .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+  /* heatmap de corredores */
+  .heat { display: grid; gap: 2px; font-variant-numeric: tabular-nums; }
+  .heat > div { padding: 7px 4px; text-align: center; font-size: 11px; border-radius: 3px; }
+  .heat .hd { color: var(--texto-suave); font-size: 10px; font-weight: 600; }
+  .heat .rl { text-align: right; padding-right: 8px; color: var(--texto-suave); font-size: 10.5px; font-weight: 600; }
+  .heat-scale { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 10.5px; color: var(--texto-suave); }
+  .heat-scale i { flex: 1; height: 8px; border-radius: 3px;
+    background: linear-gradient(to right, var(--panel-2), var(--primario)); }
   /* gráfico de línea (evolución diaria) */
   .chart-l { padding-top: 4px; }
   .chl-plot { position: relative; height: 150px; }
@@ -176,29 +210,41 @@
 
     <!-- DASHBOARD -->
     <section class="panel" data-vista="dashboard" hidden>
-      <h2>Dashboard <span class="sub" id="dashAlcance"></span></h2>
-      <div class="fila" style="margin-bottom:14px">
-        <span class="muted">Agrupar traslados:</span>
-        <button class="sec chico" data-agr="dia">Por día</button>
-        <button class="sec chico" data-agr="mes">Por mes</button>
+      <h2>Dashboard — indicadores de gestión <span class="sub" id="dashAlcance"></span></h2>
+      <div class="fila" style="margin-bottom:16px">
+        <span class="muted">Período:</span>
+        <button class="sec chico" data-ventana="7d">7 días</button>
+        <button class="sec chico" data-ventana="30d">30 días</button>
+        <button class="sec chico" data-ventana="90d">90 días</button>
+        <button class="sec chico" data-ventana="12m">12 meses</button>
       </div>
+
+      <div class="kpi-row" id="kpiRow"></div>
+
       <div class="dash-grid">
         <div class="card">
-          <h3>Unidades trasladadas por <span id="dashPeriodoLbl">día</span></h3>
-          <div id="chTraslados"></div>
-        </div>
-        <div class="card">
-          <h3>Tickets por estado (en tránsito / finalizados)</h3>
-          <div id="chEstados"></div>
-        </div>
-        <div class="card">
-          <h3>Toneladas trasladadas por material</h3>
+          <h3>Toneladas movidas por <span id="dashPeriodoLbl">día</span></h3>
           <div id="chToneladas"></div>
         </div>
         <div class="card">
-          <h3>Tiempo de finalización del traslado</h3>
-          <div class="resumen-linea" id="chTiempoResumen"></div>
-          <div id="chTiempo"></div>
+          <h3>Viajes por estado <span class="sub">— en el período</span></h3>
+          <div id="chEstados"></div>
+        </div>
+        <div class="card">
+          <h3>Ciclo del traslado <span class="sub">— espera de despacho vs. tránsito</span></h3>
+          <div id="chCiclo"></div>
+        </div>
+        <div class="card">
+          <h3>Unidades más activas <span class="sub">— viajes en el período</span></h3>
+          <div id="chUnidades"></div>
+        </div>
+        <div class="card">
+          <h3>Corredores <span class="sub">— toneladas por ruta (origen → destino)</span></h3>
+          <div id="chCorredores"></div>
+        </div>
+        <div class="card">
+          <h3>Toneladas por material</h3>
+          <div id="chMaterial"></div>
         </div>
       </div>
     </section>
@@ -453,7 +499,7 @@ const estado = {
   sesion: JSON.parse(localStorage.getItem("transguia.sesion") || "null"),
   empresaSel: JSON.parse(localStorage.getItem("transguia.empresaSel") || "null"), // superadmin: empresa que está viendo (null = todas)
   vistaActual: null,
-  dashAgrupar: "dia",
+  dashVentana: "30d",
   empresas: [], unidades: [], choferes: []
 };
 
@@ -1301,7 +1347,7 @@ function chartVertical(cont, datos, fmt) {
   if (!datos.length) { cont.className = ""; cont.innerHTML = `<p class="muted">Sin datos.</p>`; return; }
   const max = Math.max(...datos.map((d) => d.valor), 1);
   cont.innerHTML = datos.map((d) => `
-    <div class="bar-col" title="${escapar(d.titulo || d.label)}: ${fmt ? fmt(d.valor) : d.valor}">
+    <div class="bar-col" title="${escapar(d.titulo || d.label)}: ${fmt ? fmt(d.valor) : d.valor}" style="${d.alerta ? "--primario:var(--err-tx)" : ""}">
       <div class="bar-val">${fmt ? fmt(d.valor) : d.valor}</div>
       <div class="bar" style="height:${(d.valor / max * 100).toFixed(1)}%"></div>
       <div class="bar-lbl">${escapar(d.label)}</div>
@@ -1322,7 +1368,7 @@ function chartHorizontal(cont, datos, fmt) {
 // eje de tiempo, p. ej. epoch del día). Solo se dibujan los períodos que tienen
 // datos: la línea "une" directamente esos puntos y salta los días en cero,
 // pero la separación horizontal respeta el calendario.
-function chartLinea(cont, datos) {
+function chartLinea(cont, datos, fmtY) {
   cont.className = "chart-l";
   if (!datos.length) { cont.className = ""; cont.innerHTML = `<p class="muted">Sin datos.</p>`; return; }
   const n = datos.length;
@@ -1358,62 +1404,146 @@ function chartLinea(cont, datos) {
         <path d="${linea}" class="chl-linea"/>
       </svg>
       ${dots}
-      <div class="chl-ymax">${max}</div>
+      <div class="chl-ymax">${fmtY ? fmtY(max) : max}</div>
       <div class="chl-hits">${hits}</div>
     </div>
     <div class="chl-xlab">${xlab}</div>`;
 }
 
 const MESES_ABREV = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+const nf = (n, d = 0) => Number(n).toLocaleString("es-PE", { minimumFractionDigits: d, maximumFractionDigits: d });
+
+// Tira de indicadores. `k` = { valor, unidad?, delta?|deltaPuntos?, subirEsBueno, semaforo?, sem?, mini? }
+function kpiTile(lbl, k) {
+  if (k.valor == null) {
+    return `<div class="kpi b-neutro"><div class="lbl">${lbl}</div><div class="val">—</div>
+      <div class="delta flat">sin datos en el período</div></div>`;
+  }
+  const bordes = { bien: "b-bien", atencion: "b-atencion", critico: "b-critico" };
+  const clase = bordes[k.semaforo] || "b-neutro";
+  let deltaHtml = "";
+  if (k.delta != null || k.deltaPuntos != null) {
+    const v = k.delta != null ? k.delta : k.deltaPuntos;
+    const suf = k.delta != null ? "%" : " pp";
+    const bueno = v === 0 ? null : (v > 0) === !!k.subirEsBueno;
+    const cls = bueno == null ? "flat" : bueno ? "up" : "down";
+    const flecha = v > 0 ? "▲" : v < 0 ? "▼" : "▪";
+    deltaHtml = `<div class="delta ${cls}">${flecha} ${nf(Math.abs(v), 1)}${suf} vs. período previo</div>`;
+  } else if (!k.estado && !k.nota) {
+    deltaHtml = `<div class="delta flat">&nbsp;</div>`;
+  }
+  return `<div class="kpi ${clase}">
+    <div class="lbl">${lbl}</div>
+    <div class="val">${nf(k.valor, k.decimales || 0)}${k.unidad ? `<span class="u">${k.unidad}</span>` : ""}</div>
+    ${deltaHtml}
+    ${k.estado ? `<div class="sem">${escapar(k.estado)}</div>` : ""}
+    ${k.nota ? `<div class="nota">${escapar(k.nota)}</div>` : ""}
+    ${k.mini || ""}</div>`;
+}
+
+// Barra apilada horizontal de 2+ segmentos (part-to-whole de una magnitud).
+// segs = [{ label, valor, color }]
+function chartApilada(cont, segs, fmt) {
+  cont.className = "";
+  const total = segs.reduce((a, s) => a + (s.valor || 0), 0);
+  if (!total) { cont.innerHTML = `<p class="muted">Sin datos.</p>`; return; }
+  const barras = segs.map((s) =>
+    `<i style="width:${(s.valor / total * 100).toFixed(1)}%;background:${s.color}" title="${escapar(s.label)}: ${fmt(s.valor)}"></i>`).join("");
+  const leg = segs.map((s) =>
+    `<span><span class="sw" style="background:${s.color}"></span>${escapar(s.label)} <b>${fmt(s.valor)}</b></span>`).join("");
+  cont.innerHTML = `<div class="stack-bar">${barras}</div><div class="stack-leg">${leg}
+    <span style="margin-left:auto">Total <b>${fmt(total)}</b></span></div>`;
+}
+
+// Heatmap: filas (origen) × columnas (destino), color = magnitud (secuencial).
+function chartHeatmap(cont, celdas, filas, cols, fmt) {
+  cont.className = "";
+  if (!celdas.length) { cont.innerHTML = `<p class="muted">Sin datos.</p>`; return; }
+  const mapa = new Map(celdas.map((c) => [c.fila + "||" + c.col, c.valor]));
+  const max = Math.max(...celdas.map((c) => c.valor), 1);
+  let html = `<div class="heat" style="grid-template-columns:minmax(70px,auto) repeat(${cols.length},1fr)">`;
+  html += `<div class="hd"></div>` + cols.map((c) => `<div class="hd">${escapar(c)}</div>`).join("");
+  for (const f of filas) {
+    html += `<div class="rl">${escapar(f)}</div>`;
+    for (const c of cols) {
+      const v = mapa.get(f + "||" + c) || 0;
+      const op = v ? (0.12 + 0.88 * v / max) : 0;
+      const claro = op < 0.55;
+      html += `<div title="${escapar(f)} → ${escapar(c)}: ${fmt(v)}"
+        style="background:${v ? `color-mix(in srgb, var(--primario) ${(op * 100).toFixed(0)}%, var(--panel-2))` : "var(--panel-2)"};
+        color:${v ? (claro ? "var(--texto)" : "#fff") : "var(--texto-suave)"}">${v ? fmt(v) : "·"}</div>`;
+    }
+  }
+  html += `</div><div class="heat-scale"><span>0</span><i></i><span>${fmt(max)}</span></div>`;
+  cont.innerHTML = html;
+}
 
 async function cargarDashboard() {
-  const agr = estado.dashAgrupar;
-  document.querySelectorAll("[data-agr]").forEach((b) => b.classList.toggle("activa", b.dataset.agr === agr));
-  el("dashPeriodoLbl").textContent = agr === "mes" ? "mes" : "día";
+  const v = estado.dashVentana || "30d";
+  document.querySelectorAll("[data-ventana]").forEach((b) => b.classList.toggle("activa", b.dataset.ventana === v));
   el("dashAlcance").textContent = "cargando…";
   let d;
-  try { d = await api(`/api/dashboard?agrupar=${agr}`); }
+  try { d = await api(`/api/dashboard?ventana=${v}`); }
   catch (e) { aviso(e.message); el("dashAlcance").textContent = ""; return; }
-  el("dashAlcance").textContent = `— ${d.alcance}`;
+  el("dashAlcance").textContent = `— ${d.alcance} · ${d.ventanaLabel}`;
+  el("dashPeriodoLbl").textContent = d.mensual ? "mes" : "día";
 
-  chartLinea(el("chTraslados"), d.trasladosPorPeriodo.map((r) => {
-    const plural = r.cantidad === 1 ? "traslado" : "traslados";
+  const K = d.kpis;
+  const cic = K.cicloHoras;
+  const miniCiclo = cic.despacho != null ? `<div class="kpi-mini" title="Despacho ${nf(cic.despacho,1)} h · Tránsito ${nf(cic.transito,1)} h">
+      <i style="width:${(cic.despacho / (cic.despacho + cic.transito) * 100).toFixed(0)}%;background:var(--primario)"></i>
+      <i style="flex:1;background:color-mix(in srgb,var(--primario) 40%,var(--panel-2))"></i></div>` : "";
+  const palabra = { bien: "En meta", atencion: "Atención", critico: "Fuera de meta" };
+  el("kpiRow").innerHTML = [
+    kpiTile("Toneladas movidas", { ...K.toneladas, decimales: 0 }),
+    kpiTile("Viajes realizados", K.viajes),
+    kpiTile("Ciclo del traslado", { ...cic, decimales: 1, mini: miniCiclo,
+      nota: cic.despacho != null ? `despacho ${nf(cic.despacho, 1)} h · tránsito ${nf(cic.transito, 1)} h` : "" }),
+    kpiTile("Tasa de anulación", { ...K.tasaAnulacion, decimales: 1,
+      estado: palabra[K.tasaAnulacion.semaforo], nota: `${K.tasaAnulacion.anulados} de ${K.tasaAnulacion.total} viajes` }),
+    kpiTile("Utilización de flota", { ...K.utilizacionFlota, decimales: 0,
+      estado: palabra[K.utilizacionFlota.semaforo],
+      nota: `${K.utilizacionFlota.unidadesConViaje} de ${K.utilizacionFlota.flotaHabilitada} unidades con viaje` }),
+    kpiTile("GRE aceptada", { ...K.greAceptada, decimales: 1,
+      estado: K.greAceptada.total ? palabra[K.greAceptada.semaforo] : "",
+      nota: K.greAceptada.total ? `${K.greAceptada.rechazadas} rechazada(s) de ${K.greAceptada.total}` : "sin emisiones" })
+  ].join("");
+
+  chartLinea(el("chToneladas"), d.toneladasPorPeriodo.map((r) => {
     const [y, m, dd] = r.periodo.split("-").map(Number);
-    if (agr === "mes") {
-      return {
-        t: y * 12 + (m - 1),
-        label: MESES_ABREV[m - 1],
-        titulo: `${r.periodo.slice(5, 7)}/${y}: ${r.cantidad} ${plural}`,
-        valor: r.cantidad
-      };
-    }
-    return {
-      t: Date.UTC(y, m - 1, dd),
-      label: `${dd}/${m}`,
-      titulo: `${r.periodo.slice(8)}/${r.periodo.slice(5, 7)}/${y}: ${r.cantidad} ${plural}`,
-      valor: r.cantidad
-    };
-  }));
+    if (d.mensual) return { t: y * 12 + (m - 1), label: MESES_ABREV[m - 1],
+      titulo: `${r.periodo.slice(5, 7)}/${y}: ${nf(r.toneladas, 1)} t`, valor: r.toneladas };
+    return { t: Date.UTC(y, m - 1, dd), label: `${dd}/${m}`,
+      titulo: `${dd}/${m}/${y}: ${nf(r.toneladas, 1)} t (${r.viajes} viajes)`, valor: r.toneladas };
+  }), (t) => nf(t, 0) + " t");
 
   const e = d.porEstadoOperativo;
   chartVertical(el("chEstados"), [
     { label: "Generado", valor: e.GENERADO },
     { label: "En tránsito", valor: e.EN_TRANSITO },
     { label: "Entregado", valor: e.ENTREGADO },
-    { label: "Anulado", valor: e.ANULADO }
+    { label: "Anulado", valor: e.ANULADO, alerta: true }
   ]);
 
-  chartHorizontal(el("chToneladas"),
-    d.toneladasPorMaterial.map((r) => ({ label: r.material, valor: r.toneladas })),
-    (v) => v.toLocaleString("es-PE") + " t");
+  if (cic.despacho == null) el("chCiclo").innerHTML = `<p class="muted">Todavía no hay traslados finalizados en el período.</p>`;
+  else chartApilada(el("chCiclo"), [
+    { label: "Espera de despacho", valor: cic.despacho, color: "var(--primario)" },
+    { label: "Tránsito", valor: cic.transito, color: "color-mix(in srgb, var(--primario) 40%, var(--panel-2))" }
+  ], (h) => nf(h, 1) + " h");
 
-  const tf = d.tiempoFinalizacion;
-  el("chTiempoResumen").innerHTML = tf.muestras
-    ? `Promedio <strong>${tf.promedioHoras} h</strong> &nbsp;·&nbsp; mín ${tf.minHoras} h &nbsp;·&nbsp; máx ${tf.maxHoras} h &nbsp;·&nbsp; ${tf.muestras} traslados finalizados`
-    : `Todavía no hay traslados finalizados.`;
-  chartHorizontal(el("chTiempo"),
-    tf.recientes.map((r) => ({ label: r.codigo, valor: r.horas })),
-    (v) => v + " h");
+  chartHorizontal(el("chUnidades"),
+    d.viajesPorUnidad.map((r) => ({ label: r.placa, valor: r.viajes })),
+    (n) => n + (n === 1 ? " viaje" : " viajes"));
+
+  const orig = [...new Set(d.corredores.map((r) => r.origen))].sort();
+  const dest = [...new Set(d.corredores.map((r) => r.destino))].sort();
+  chartHeatmap(el("chCorredores"),
+    d.corredores.map((r) => ({ fila: r.origen, col: r.destino, valor: r.toneladas })),
+    orig, dest, (t) => nf(t, 0) + " t");
+
+  chartHorizontal(el("chMaterial"),
+    d.toneladasPorMaterial.map((r) => ({ label: r.material, valor: r.toneladas })),
+    (v) => nf(v, 1) + " t");
 }
 
 // ---------- plataforma: resumen + tabla de empresas (superadmin) ----------
@@ -1500,7 +1630,7 @@ document.body.addEventListener("change", (e) => {
 });
 document.body.addEventListener("click", (e) => {
   const t = e.target;
-  if (t.dataset.agr) { estado.dashAgrupar = t.dataset.agr; cargarDashboard(); return; }
+  if (t.dataset.ventana) { estado.dashVentana = t.dataset.ventana; cargarDashboard(); return; }
   const fila = t.closest && t.closest("[data-ver-empresa]");
   if (fila) { verEmpresa(JSON.parse(fila.dataset.verEmpresa)); return; }
   if (t.dataset.ficha) toggleFicha(t.dataset.ficha);

@@ -343,6 +343,29 @@ async function generarTickets(ctx, empresaId, ruc, adminId) {
       [empresaId]
     );
     await generarTickets(ctx, empresaId, ruc, admin[0] ? admin[0].id : null);
+
+    // ~4% de las GRE rechazadas por SUNAT: el ticket queda "generado" (no
+    // puede avanzar) y el dashboard muestra la tasa de aceptación real.
+    // Solo la primera vez (si ya hay rechazadas, no se toca).
+    const { rows: aceptadas } = await pool.query(
+      `select t.id from tickets_traslado t
+       join emisiones_gre g on g.ticket_id = t.id
+       where t.empresa_id = $1 and g.estado = 'ACEPTADO'
+       order by md5(t.id::text || 'gre')`, [empresaId]);
+    const { rows: yaRech } = await pool.query(
+      `select count(*)::int n from emisiones_gre g join tickets_traslado t on t.id = g.ticket_id
+       where t.empresa_id = $1 and g.estado <> 'ACEPTADO'`, [empresaId]);
+    if (yaRech[0].n === 0 && aceptadas.length) {
+      const ids = aceptadas.slice(0, Math.max(1, Math.round(aceptadas.length * 0.04))).map((r) => r.id);
+      await pool.query(
+        `update emisiones_gre set estado = 'RECHAZADO',
+           motivo_rechazo = 'Simulado: observación de SUNAT en los datos del transportista.'
+         where ticket_id = any($1)`, [ids]);
+      await pool.query(
+        `update tickets_traslado set estado_operativo = 'GENERADO', fecha_traslado = null, fecha_entrega = null
+         where id = any($1)`, [ids]);
+      console.log(`  GRE rechazadas (demo): ${ids.length}`);
+    }
   }
 
   console.log('\nListo. Refrescá http://localhost:3001 → pestaña Dashboard.');

@@ -165,7 +165,7 @@ app.get('/api/dashboard', requiereSesion, requiereRol('admin_empresa', 'superadm
   } else {
     empresaId = req.sesion.empresaId;
   }
-  res.json(await dashboardService.generar({ empresaId, agrupar: req.query.agrupar }));
+  res.json(await dashboardService.generar({ empresaId, ventana: req.query.ventana }));
 }));
 
 // ==================== UNIDADES ====================
