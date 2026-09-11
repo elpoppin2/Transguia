@@ -76,6 +76,20 @@
   header .sp { flex: 1 1 auto; min-width: var(--sp-3); }
   header .quien { color: var(--texto-suave); font-size: var(--fs-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .userbox { display: flex; align-items: center; gap: var(--sp-3); flex-shrink: 0; }
+  .notif-wrap { position: relative; }
+  .notif-btn { position: relative; display: inline-flex; }
+  .notif-btn .badge-count { position: absolute; top: -6px; right: -6px; }
+  .notif-panel { position: absolute; right: 0; top: calc(100% + 8px); width: 320px; max-width: calc(100vw - 32px);
+    max-height: 380px; overflow-y: auto; background: var(--panel); border: 1px solid var(--borde);
+    border-radius: var(--r-lg); box-shadow: var(--sombra-lg); padding: var(--sp-2); z-index: 50; }
+  .notif-item { display: flex; align-items: flex-start; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3);
+    border-radius: var(--r-md); font-size: var(--fs-sm); cursor: pointer; line-height: 1.4; }
+  .notif-item:hover { background: var(--panel-2); }
+  .notif-item .notif-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; background: var(--texto-suave); }
+  .notif-item.err .notif-dot { background: var(--err-tx); }
+  .notif-item.warn .notif-dot { background: var(--primario); }
+  .notif-item.muted { cursor: default; color: var(--texto-suave); }
+  .notif-item.muted:hover { background: none; }
 
   main { max-width: 1180px; margin: 0 auto; padding: var(--sp-5); }
   .avisos { position: sticky; top: calc(var(--topbar-h) + var(--sp-3)); z-index: 15; }
@@ -146,6 +160,19 @@
   .buscador input[type="search"] { flex: 1; min-width: 180px; }
   .buscador select { width: auto; min-width: 140px; }
   .paginacion { font-size: var(--fs-sm); }
+
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .cal-dow { font-size: var(--fs-xs); color: var(--texto-suave); text-align: center; padding-bottom: 4px; font-weight: 600; }
+  .cal-day { min-height: 78px; border: 1px solid var(--borde); border-radius: var(--r-md); padding: 6px; background: var(--panel); }
+  .cal-day.fuera { background: var(--panel-2); }
+  .cal-day.fuera .cal-num { color: var(--texto-suave); }
+  .cal-day .cal-num { font-size: var(--fs-sm); font-weight: 600; margin-bottom: 4px; }
+  .cal-chip { display: block; border-radius: 6px; padding: 1px 5px; margin-bottom: 2px; font-size: 10.5px;
+    line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cal-chip.err { background: var(--err-bg); color: var(--err-tx); }
+  .cal-chip.warn { background: var(--warn-bg); color: var(--warn-tx); }
+  .cal-chip.gris { background: var(--panel-2); color: var(--texto-suave); }
+  [data-vencvista].activa { background: var(--primario); color: var(--primario-texto); border-color: var(--primario); }
 
   /* línea de tiempo del ticket */
   .hist-lista { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
@@ -346,6 +373,8 @@
     .panel { padding: var(--sp-4); border-radius: var(--r-md); }
     .kpi-row { grid-template-columns: repeat(2, 1fr); }
     .dash-toolbar { flex-direction: column; align-items: stretch; }
+    .cal-day { min-height: 52px; padding: 4px; }
+    .cal-chip { font-size: 9.5px; padding: 1px 3px; }
   }
 </style>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%23c8102e'/%3E%3C/svg%3E" />
@@ -360,6 +389,13 @@
   </div>
   <div class="userbox">
     <span class="quien" id="quien"></span>
+    <div class="notif-wrap">
+      <button class="tenue chico notif-btn" id="btnNotif" hidden aria-label="Notificaciones" aria-haspopup="true">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span class="badge-count" id="notifBadge" hidden>0</span>
+      </button>
+      <div class="notif-panel" id="notifPanel" hidden></div>
+    </div>
     <button class="tenue chico" id="btnSalir" hidden>Cerrar sesión</button>
   </div>
 </header>
@@ -407,6 +443,7 @@
           <button class="sec chico" data-ventana="30d">30 días</button>
           <button class="sec chico" data-ventana="90d">90 días</button>
           <button class="sec chico" data-ventana="12m">12 meses</button>
+          <button class="sec chico" id="btnExportarDashboard">Exportar CSV</button>
         </div>
       </div>
 
@@ -712,6 +749,7 @@
           <option value="ENTREGADO">Entregado</option>
           <option value="ANULADO">Anulado</option>
         </select>
+        <button class="sec chico" id="btnExportarTickets">Exportar CSV</button>
       </div>
       <div class="tabla-scroll">
         <table>
@@ -766,17 +804,36 @@
     <!-- VENCIMIENTOS -->
     <section class="panel" data-vista="vencimientos" hidden>
       <h2>Documentos por vencer <span class="sub">— SOAT, revisión técnica, licencias, certificados médicos</span></h2>
-      <div class="fila">
-        <div><label for="vDias">Próximos… días</label><input id="vDias" type="number" value="30" style="width:110px" /></div>
-        <button class="sec" id="btnVencimientos">Actualizar</button>
+      <div class="fila" style="justify-content:space-between;flex-wrap:wrap">
+        <div class="fila">
+          <div><label for="vDias">Próximos… días</label><input id="vDias" type="number" value="30" style="width:110px" /></div>
+          <button class="sec" id="btnVencimientos">Actualizar</button>
+        </div>
+        <div class="fila">
+          <button class="tenue chico activa" data-vencvista="tabla" id="btnVencTabla">Tabla</button>
+          <button class="tenue chico" data-vencvista="calendario" id="btnVencCal">Calendario</button>
+          <button class="sec chico" id="btnExportarVencimientos">Exportar CSV</button>
+        </div>
       </div>
-      <div class="tabla-scroll" style="margin-top:16px">
-        <table>
-          <thead><tr><th>Tipo</th><th>Referencia</th><th>Documento</th><th>Vence</th><th>Faltan</th></tr></thead>
-          <tbody id="tbVencimientos"></tbody>
-        </table>
+
+      <div id="vencTablaWrap">
+        <div class="tabla-scroll" style="margin-top:16px">
+          <table>
+            <thead><tr><th>Tipo</th><th>Referencia</th><th>Documento</th><th>Vence</th><th>Faltan</th></tr></thead>
+            <tbody id="tbVencimientos"></tbody>
+          </table>
+        </div>
+        <div class="vacio" id="vacioVencimientos" hidden>Nada por vencer en ese rango.</div>
       </div>
-      <div class="vacio" id="vacioVencimientos" hidden>Nada por vencer en ese rango. 👍</div>
+
+      <div id="vencCalWrap" hidden style="margin-top:16px">
+        <div class="fila" style="justify-content:space-between;margin-bottom:10px">
+          <button class="tenue chico" data-calmes="-1">&laquo; Anterior</button>
+          <strong id="calMesLbl"></strong>
+          <button class="tenue chico" data-calmes="1">Siguiente &raquo;</button>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+      </div>
     </section>
 
     <!-- USUARIOS (admin) -->
@@ -815,7 +872,8 @@ const estado = {
   empresaSel: JSON.parse(localStorage.getItem("transguia.empresaSel") || "null"), // superadmin: empresa que está viendo (null = todas)
   vistaActual: null,
   dashVentana: "30d",
-  empresas: [], unidades: [], choferes: [], tickets: [], viajesProgramados: [],
+  empresas: [], unidades: [], choferes: [], tickets: [], viajesProgramados: [], notificaciones: [],
+  vencimientos: [], vencimientosCalendario: [], calMes: 0,
   // Buscar/filtrar/paginar de las tablas (todo en el navegador: ya tenemos la lista completa).
   filtros: {
     unidades: { q: "", estado: "", pag: 1 },
@@ -840,11 +898,15 @@ const fmtFecha = (iso) => {
 
 // ---------- buscar / filtrar / paginar (todo en el navegador) ----------
 const POR_PAGINA = 15;
-function filtrarYPaginar(lista, filtro, camposTexto, campoEstado) {
+function soloFiltrar(lista, filtro, camposTexto, campoEstado) {
   const q = (filtro.q || "").trim().toLowerCase();
   let filtrada = lista;
   if (q) filtrada = filtrada.filter((x) => camposTexto.some((c) => String(x[c] || "").toLowerCase().includes(q)));
   if (filtro.estado) filtrada = filtrada.filter((x) => x[campoEstado] === filtro.estado);
+  return filtrada;
+}
+function filtrarYPaginar(lista, filtro, camposTexto, campoEstado) {
+  const filtrada = soloFiltrar(lista, filtro, camposTexto, campoEstado);
   const totalPaginas = Math.max(1, Math.ceil(filtrada.length / POR_PAGINA));
   filtro.pag = Math.min(Math.max(1, filtro.pag || 1), totalPaginas);
   const inicio = (filtro.pag - 1) * POR_PAGINA;
@@ -859,6 +921,24 @@ function controlesPaginacionHTML(tabla, pag, totalPaginas, total) {
       <span class="muted">página ${pag} de ${totalPaginas}</span>
       <button class="tenue chico" data-pag="${tabla}:1" ${pag >= totalPaginas ? "disabled" : ""}>Siguiente &raquo;</button>
     </span></div>`;
+}
+
+// Exporta un arreglo a CSV y lo descarga (todo en el navegador, sin ruta
+// nueva en el backend: los datos ya están cargados en el cliente).
+function descargarCSV(nombreArchivo, filas, columnas) {
+  const esc = (v) => {
+    const s = String(v ?? "");
+    return /[",\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  const encabezado = columnas.map(([h]) => esc(h)).join(",");
+  const cuerpo = filas.map((f) => columnas.map(([, k]) => esc(typeof k === "function" ? k(f) : f[k])).join(",")).join("\n");
+  const csv = "﻿" + encabezado + "\n" + cuerpo;
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = nombreArchivo;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
 }
 
 function guardarSesion(s) { estado.sesion = s; localStorage.setItem("transguia.sesion", JSON.stringify(s)); }
@@ -884,6 +964,51 @@ function aviso(mensaje, tipo = "err") {
   d.querySelector(".aviso-cerrar").addEventListener("click", () => d.remove());
   z.appendChild(d);
   if (tipo === "ok") setTimeout(() => d.remove(), 4000);
+}
+
+// ---------- notificaciones (campanita) ----------
+// Nada nuevo del lado del backend: solo junta datos que ya se pueden pedir
+// (solicitudes pendientes, documentos por vencer, fichas rechazadas) y los
+// muestra donde se noten, para no tener que entrar pestaña por pestaña.
+const plural = (n, s, p) => (n === 1 ? s : p);
+async function cargarNotificaciones() {
+  const items = [];
+  try {
+    if (esSuper()) {
+      const [pu, pc] = await Promise.all([api("/api/unidades/pendientes"), api("/api/choferes/pendientes")]);
+      if (pu.length) items.push({ tipo: "warn", texto: `${pu.length} ${plural(pu.length, "solicitud", "solicitudes")} de unidades pendiente${plural(pu.length, "", "s")} de revisión`, ir: "empresas" });
+      if (pc.length) items.push({ tipo: "warn", texto: `${pc.length} ${plural(pc.length, "solicitud", "solicitudes")} de choferes pendiente${plural(pc.length, "", "s")} de revisión`, ir: "empresas" });
+    } else if (estado.sesion && !necesitaElegirEmpresa()) {
+      const venc = await api("/api/vencimientos?dias=7");
+      const vencidos = venc.filter((v) => Number(v.diasRestantes) < 0).length;
+      const porVencer = venc.length - vencidos;
+      if (vencidos) items.push({ tipo: "err", texto: `${vencidos} documento${plural(vencidos, "", "s")} vencido${plural(vencidos, "", "s")}`, ir: "vencimientos" });
+      if (porVencer) items.push({ tipo: "warn", texto: `${porVencer} documento${plural(porVencer, "", "s")} vence${plural(porVencer, "", "n")} esta semana`, ir: "vencimientos" });
+      if (esAdmin()) {
+        const [uds, cfs] = await Promise.all([api("/api/unidades"), api("/api/choferes")]);
+        const rechU = uds.filter((u) => u.estadoRegistro === "RECHAZADA").length;
+        const rechC = cfs.filter((c) => c.estadoRegistro === "RECHAZADA").length;
+        if (rechU) items.push({ tipo: "err", texto: `${rechU} unidad${plural(rechU, "", "es")} rechazada${plural(rechU, "", "s")}: corrige y reenvía`, ir: "unidades" });
+        if (rechC) items.push({ tipo: "err", texto: `${rechC} chofer${plural(rechC, "", "es")} rechazado${plural(rechC, "", "s")}: corrige y reenvía`, ir: "choferes" });
+      }
+    }
+  } catch (_) { /* silencioso: la campanita no debe romper el resto de la app */ }
+  estado.notificaciones = items;
+  pintarNotificaciones();
+}
+function pintarNotificaciones() {
+  const items = estado.notificaciones || [];
+  const badge = el("notifBadge");
+  badge.textContent = items.length;
+  badge.hidden = items.length === 0;
+  el("notifPanel").innerHTML = items.length
+    ? items.map((it, i) => `<div class="notif-item ${it.tipo}" data-notifir="${i}"><span class="notif-dot"></span><span>${escapar(it.texto)}</span></div>`).join("")
+    : `<div class="notif-item muted">Sin novedades.</div>`;
+}
+function toggleNotificaciones() {
+  const panel = el("notifPanel");
+  if (panel.hidden) cargarNotificaciones();
+  panel.hidden = !panel.hidden;
 }
 
 async function api(ruta, opciones = {}) {
@@ -936,6 +1061,7 @@ function render() {
   el("panelLogin").hidden = dentro;
   el("app").hidden = !dentro;
   el("btnSalir").hidden = !dentro;
+  el("btnNotif").hidden = !dentro;
 
   el("quien").textContent = dentro
     ? `${estado.sesion.nombreCompleto || estado.sesion.username} · ${estado.sesion.rol}`
@@ -960,6 +1086,7 @@ function render() {
     cargarUnidades().catch(() => {});
     cargarChoferes().catch(() => {});
   }
+  cargarNotificaciones();
 }
 
 function mostrarVista(nombre) {
@@ -1675,6 +1802,18 @@ async function avanzar(id, nuevo) {
   try { await api(`/api/tickets/${id}/avanzar`, { method: "POST", body: JSON.stringify({ estadoOperativo: nuevo }) }); await cargarTickets(); }
   catch (e) { aviso(e.message); }
 }
+function exportarTickets() {
+  const filtrados = soloFiltrar(
+    estado.tickets, estado.filtros.tickets,
+    ["codigoInterno", "origen", "destino", "placa", "choferNombres", "descripcionMercancia"], "estadoOperativo"
+  );
+  descargarCSV("tickets.csv", filtrados, [
+    ["Código", "codigoInterno"], ["Origen", "origen"], ["Destino", "destino"],
+    ["Unidad", "placa"], ["Chofer", "choferNombres"], ["Mercancía", "descripcionMercancia"],
+    ["Peso (kg)", "pesoBrutoKg"], ["Estado GRE", "estadoSunat"], ["Estado operativo", "estadoOperativo"],
+    ["Creado", (t) => fmtFecha(t.creadoEn)]
+  ]);
+}
 
 // ---------- programación de viajes ----------
 function pillProgramacion(e) {
@@ -1744,6 +1883,7 @@ async function cargarVencimientos() {
   const dias = Number(el("vDias").value) || 30;
   let filas = [];
   try { filas = await api(`/api/vencimientos?dias=${dias}`); } catch (e) { aviso(e.message); return; }
+  estado.vencimientos = filas;
   const tb = el("tbVencimientos"); tb.innerHTML = "";
   el("vacioVencimientos").hidden = filas.length > 0;
   for (const f of filas) {
@@ -1752,6 +1892,58 @@ async function cargarVencimientos() {
       <td>${String(f.fechaVencimiento).slice(0, 10)}</td><td>${pillDias(f.diasRestantes)}</td>`;
     tb.appendChild(tr);
   }
+  // El calendario navega meses hacia adelante/atrás, así que usa una
+  // ventana propia (más ancha que el filtro de "próximos... días" de la
+  // tabla) para tener datos aunque el usuario cambie de mes.
+  try { estado.vencimientosCalendario = await api("/api/vencimientos?dias=180"); }
+  catch (_) { estado.vencimientosCalendario = filas; }
+  pintarCalendarioVencimientos();
+}
+function exportarVencimientos() {
+  descargarCSV("vencimientos.csv", estado.vencimientos, [
+    ["Tipo", "tipo"], ["Referencia", "referencia"],
+    ["Documento", (f) => String(f.documento).replace(/_/g, " ")],
+    ["Vence", (f) => String(f.fechaVencimiento).slice(0, 10)],
+    ["Días restantes", "diasRestantes"]
+  ]);
+}
+function cambiarVencVista(vista) {
+  el("vencTablaWrap").hidden = vista !== "tabla";
+  el("vencCalWrap").hidden = vista !== "calendario";
+  el("btnVencTabla").classList.toggle("activa", vista === "tabla");
+  el("btnVencCal").classList.toggle("activa", vista === "calendario");
+}
+const DOW_ABREV = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+function pintarCalendarioVencimientos() {
+  const base = new Date();
+  base.setDate(1);
+  base.setMonth(base.getMonth() + (estado.calMes || 0));
+  const anio = base.getFullYear(), mes = base.getMonth();
+  el("calMesLbl").textContent = base.toLocaleDateString("es-PE", { month: "long", year: "numeric" });
+
+  const porDia = {};
+  for (const f of estado.vencimientosCalendario || []) {
+    const clave = String(f.fechaVencimiento).slice(0, 10);
+    (porDia[clave] = porDia[clave] || []).push(f);
+  }
+
+  const primerDiaSemana = new Date(anio, mes, 1).getDay();
+  const diasEnMes = new Date(anio, mes + 1, 0).getDate();
+  let html = DOW_ABREV.map((d) => `<div class="cal-dow">${d}</div>`).join("");
+  for (let i = 0; i < primerDiaSemana; i++) html += `<div class="cal-day fuera"></div>`;
+  for (let dia = 1; dia <= diasEnMes; dia++) {
+    const fechaISO = `${anio}-${String(mes + 1).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
+    const items = porDia[fechaISO] || [];
+    const MOSTRAR = 3;
+    const chips = items.slice(0, MOSTRAR).map((f) => {
+      const clase = Number(f.diasRestantes) < 0 ? "err" : Number(f.diasRestantes) <= 7 ? "warn" : "gris";
+      const titulo = `${f.referencia} — ${String(f.documento).replace(/_/g, " ")}`;
+      return `<span class="cal-chip ${clase}" title="${escapar(titulo)}">${escapar(f.referencia)}</span>`;
+    }).join("");
+    const extra = items.length > MOSTRAR ? `<span class="cal-chip gris">+${items.length - MOSTRAR} más</span>` : "";
+    html += `<div class="cal-day"><div class="cal-num">${dia}</div>${chips}${extra}</div>`;
+  }
+  el("calGrid").innerHTML = html;
 }
 
 // ---------- altas simples ----------
@@ -2057,6 +2249,7 @@ async function cargarDashboard() {
   let d;
   try { d = await api(`/api/dashboard?ventana=${v}`); }
   catch (e) { aviso(e.message); el("dashAlcance").textContent = ""; return; }
+  estado.dashboardData = d;
   el("dashAlcance").textContent = `— ${d.alcance} · ${d.ventanaLabel}`;
   el("dashPeriodoLbl").textContent = d.mensual ? "mes" : "día";
 
@@ -2128,6 +2321,22 @@ async function cargarDashboard() {
     d.toneladasPorMaterial.map((r) => ({ label: r.material, valor: r.toneladas })),
     (v) => nf(v, 1) + " t");
 }
+function exportarDashboard() {
+  const d = estado.dashboardData;
+  if (!d) return;
+  const K = d.kpis;
+  const filas = [
+    { nombre: "Toneladas movidas", valor: K.toneladas.valor, unidad: K.toneladas.unidad || "" },
+    { nombre: "Viajes realizados", valor: K.viajes.valor, unidad: "" },
+    { nombre: "Ciclo del traslado", valor: K.cicloHoras.valor, unidad: K.cicloHoras.unidad || "" },
+    { nombre: "Tasa de anulación", valor: K.tasaAnulacion.valor, unidad: K.tasaAnulacion.unidad || "" },
+    { nombre: "Utilización de flota", valor: K.utilizacionFlota.valor, unidad: K.utilizacionFlota.unidad || "" },
+    { nombre: "GRE aceptada", valor: K.greAceptada.valor, unidad: K.greAceptada.unidad || "" }
+  ];
+  descargarCSV(`dashboard-${d.ventana}.csv`, filas, [
+    ["Indicador", "nombre"], ["Valor", "valor"], ["Unidad", "unidad"]
+  ]);
+}
 
 // ---------- plataforma: resumen + tabla de empresas (superadmin) ----------
 function stat(n, t, alerta) {
@@ -2189,6 +2398,13 @@ async function crearEmpresa() {
 // ---------- eventos ----------
 el("uConfig").innerHTML = `<option value="">—</option>` + CONFIG_VEHICULAR.map((c) => `<option>${c}</option>`).join("");
 el("btnSalir").addEventListener("click", () => cerrarSesion());
+el("btnNotif").addEventListener("click", (e) => { e.stopPropagation(); toggleNotificaciones(); });
+document.addEventListener("click", (e) => {
+  const panel = el("notifPanel");
+  if (!panel.hidden && !panel.contains(e.target) && e.target !== el("btnNotif") && !el("btnNotif").contains(e.target)) {
+    panel.hidden = true;
+  }
+});
 el("btnLogin").addEventListener("click", login);
 el("loginPass").addEventListener("keydown", (e) => { if (e.key === "Enter") login(); });
 el("btnCrearUnidad").addEventListener("click", crearUnidad);
@@ -2200,6 +2416,9 @@ el("btnCrearTicket").addEventListener("click", crearTicket);
 el("btnCrearProgramacion").addEventListener("click", crearProgramacion);
 el("btnCrearUsuario").addEventListener("click", crearUsuario);
 el("btnVencimientos").addEventListener("click", cargarVencimientos);
+el("btnExportarTickets").addEventListener("click", exportarTickets);
+el("btnExportarVencimientos").addEventListener("click", exportarVencimientos);
+el("btnExportarDashboard").addEventListener("click", exportarDashboard);
 el("btnCrearEmpresa").addEventListener("click", crearEmpresa);
 el("segEmpresa").addEventListener("change", (e) => cambiarEmpresaSegmento(e.target.value));
 document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => mostrarVista(b.dataset.tab)));
@@ -2272,6 +2491,13 @@ document.body.addEventListener("click", (e) => {
   if (t.dataset.detalleTicket) toggleDetalleTicket(t.dataset.detalleTicket);
   if (t.dataset.progcumplir) cumplirProgramacion(t.dataset.progcumplir);
   if (t.dataset.progcancelar) cancelarProgramacion(t.dataset.progcancelar);
+  if (t.dataset.notifir !== undefined) {
+    const it = (estado.notificaciones || [])[Number(t.dataset.notifir)];
+    el("notifPanel").hidden = true;
+    if (it) mostrarVista(it.ir);
+  }
+  if (t.dataset.vencvista) cambiarVencVista(t.dataset.vencvista);
+  if (t.dataset.calmes) { estado.calMes = (estado.calMes || 0) + Number(t.dataset.calmes); pintarCalendarioVencimientos(); }
   if (t.dataset.pag) {
     const [tabla, dir] = t.dataset.pag.split(":");
     estado.filtros[tabla].pag += Number(dir);
