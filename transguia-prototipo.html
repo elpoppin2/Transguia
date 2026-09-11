@@ -7,24 +7,28 @@
 <style>
   :root {
     color-scheme: light dark;
-    --bg: #f4f5f7; --panel: #fff; --panel-2: #fafbfc;
-    --texto: #1c2430; --texto-suave: #5b6673; --borde: #dde1e6;
-    --primario: #1f6feb; --primario-texto: #fff;
-    --ok-bg: #e6f4ea; --ok-tx: #1a7f37;
-    --warn-bg: #fff4e5; --warn-tx: #9a6700;
-    --err-bg: #fde8e8; --err-tx: #b42318;
-    --info-bg: #e8f0fe; --info-tx: #1f4fa8;
-    --radio: 10px; --sombra: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.1);
+    /* Blanco / negro / rojo — look de operaciones (management by exception:
+       el negro es "sin novedad", el rojo es lo único que pide atención). */
+    --bg: #ffffff; --panel: #ffffff; --panel-2: #f7f7f7;
+    --texto: #111111; --texto-suave: #6b6b6b; --borde: #e3e3e3;
+    --dato: #111111; /* color por defecto de los gráficos con categorías (segmentados) */
+    --primario: #c8102e; --primario-texto: #fff; /* acento rojo: acciones, enlaces, series únicas */
+    --ok-bg: #f2f2f2; --ok-tx: #171717;
+    --warn-bg: #fdecee; --warn-tx: #c8102e;
+    --err-bg: #f8dde1; --err-tx: #8c0b22;
+    --info-bg: #f2f2f2; --info-tx: #171717;
+    --radio: 8px; --sombra: 0 1px 2px rgba(0,0,0,.05);
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #0f141a; --panel: #172029; --panel-2: #1c2732;
-      --texto: #e6edf3; --texto-suave: #9aa7b4; --borde: #2a3742;
-      --primario: #4c8dff;
-      --ok-bg: #10281a; --ok-tx: #57d68a;
-      --warn-bg: #2b2110; --warn-tx: #e2b341;
-      --err-bg: #2c1616; --err-tx: #f4a29a;
-      --info-bg: #131f33; --info-tx: #8bb4ff;
+      --bg: #0b0b0b; --panel: #151515; --panel-2: #1c1c1c;
+      --texto: #f2f2f2; --texto-suave: #a3a3a3; --borde: #2c2c2c;
+      --dato: #f2f2f2;
+      --primario: #ff4d5e;
+      --ok-bg: #1c1c1c; --ok-tx: #f2f2f2;
+      --warn-bg: #2b1416; --warn-tx: #ff6b78;
+      --err-bg: #331013; --err-tx: #ff8a93;
+      --info-bg: #1c1c1c; --info-tx: #f2f2f2;
       --sombra: none;
     }
   }
@@ -92,7 +96,7 @@
   .chart-v { display: flex; align-items: flex-end; gap: 5px; height: 150px; overflow-x: auto; padding-bottom: 2px; }
   .bar-col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
     min-width: 24px; height: 100%; flex: 1 0 auto; }
-  .bar-col .bar { width: 60%; max-width: 26px; min-width: 8px; background: var(--primario);
+  .bar-col .bar { width: 60%; max-width: 26px; min-width: 8px; background: var(--dato);
     border-radius: 3px 3px 0 0; min-height: 2px; }
   .bar-col .bar-val { font-size: 10px; color: var(--texto-suave); margin-bottom: 3px; font-variant-numeric: tabular-nums; }
   .bar-col .bar-lbl { font-size: 9px; color: var(--texto-suave); margin-top: 5px; white-space: nowrap; }
@@ -1347,9 +1351,9 @@ function chartVertical(cont, datos, fmt) {
   if (!datos.length) { cont.className = ""; cont.innerHTML = `<p class="muted">Sin datos.</p>`; return; }
   const max = Math.max(...datos.map((d) => d.valor), 1);
   cont.innerHTML = datos.map((d) => `
-    <div class="bar-col" title="${escapar(d.titulo || d.label)}: ${fmt ? fmt(d.valor) : d.valor}" style="${d.alerta ? "--primario:var(--err-tx)" : ""}">
+    <div class="bar-col" title="${escapar(d.titulo || d.label)}: ${fmt ? fmt(d.valor) : d.valor}">
       <div class="bar-val">${fmt ? fmt(d.valor) : d.valor}</div>
-      <div class="bar" style="height:${(d.valor / max * 100).toFixed(1)}%"></div>
+      <div class="bar" style="height:${(d.valor / max * 100).toFixed(1)}%;${d.alerta ? "background:var(--primario)" : ""}"></div>
       <div class="bar-lbl">${escapar(d.label)}</div>
     </div>`).join("");
 }
@@ -1491,8 +1495,8 @@ async function cargarDashboard() {
   const K = d.kpis;
   const cic = K.cicloHoras;
   const miniCiclo = cic.despacho != null ? `<div class="kpi-mini" title="Despacho ${nf(cic.despacho,1)} h · Tránsito ${nf(cic.transito,1)} h">
-      <i style="width:${(cic.despacho / (cic.despacho + cic.transito) * 100).toFixed(0)}%;background:var(--primario)"></i>
-      <i style="flex:1;background:color-mix(in srgb,var(--primario) 40%,var(--panel-2))"></i></div>` : "";
+      <i style="width:${(cic.despacho / (cic.despacho + cic.transito) * 100).toFixed(0)}%;background:var(--dato)"></i>
+      <i style="flex:1;background:color-mix(in srgb,var(--dato) 35%,var(--panel-2))"></i></div>` : "";
   const palabra = { bien: "En meta", atencion: "Atención", critico: "Fuera de meta" };
   el("kpiRow").innerHTML = [
     kpiTile("Toneladas movidas", { ...K.toneladas, decimales: 0 }),
@@ -1527,8 +1531,8 @@ async function cargarDashboard() {
 
   if (cic.despacho == null) el("chCiclo").innerHTML = `<p class="muted">Todavía no hay traslados finalizados en el período.</p>`;
   else chartApilada(el("chCiclo"), [
-    { label: "Espera de despacho", valor: cic.despacho, color: "var(--primario)" },
-    { label: "Tránsito", valor: cic.transito, color: "color-mix(in srgb, var(--primario) 40%, var(--panel-2))" }
+    { label: "Espera de despacho", valor: cic.despacho, color: "var(--dato)" },
+    { label: "Tránsito", valor: cic.transito, color: "color-mix(in srgb, var(--dato) 35%, var(--panel-2))" }
   ], (h) => nf(h, 1) + " h");
 
   chartHorizontal(el("chUnidades"),
