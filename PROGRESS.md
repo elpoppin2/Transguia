@@ -300,7 +300,7 @@ o certificado digital; punto 9: piloto con transportistas reales).
 6m. [x] **Más datos ficticios** (2026-10-23). `sembrar-proveedores.js`
    (`npm run sembrar-proveedores`, después de `sembrar-datos.js`):
    completa el proveedor Lurín (8 unidades, 6 choferes, operador
-   `lurinop`), crea un 2º proveedor "Concretos y Agregados Chilca S.A.C."
+   `lurinop`), crea un 2º proveedor "Canteras y Agregados Chilca S.A.C."
    (`chilca` / `chilca2026seguro`, operador `chilcaop` / `operador2026`),
    agenda ~90 días de viajes, y deja 3 unidades y 2 choferes PENDIENTES +
    1 unidad RECHAZADA en los transportistas para el superadmin. Ojo:

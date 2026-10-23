@@ -85,7 +85,7 @@ Abrir **http://localhost:3001** en el navegador. Usuarios de demo:
 | `delsur` | `delsur2026seguro` | admin de "Logística del Sur E.I.R.L." |
 | `lurin` | `lurin2026seguro` | admin de "Agregados y Canteras Lurín S.A.C." (**proveedor** con flota propia) |
 | `lurinop` | `operador2026` | operador del proveedor Lurín (programa viajes) |
-| `chilca` | `chilca2026seguro` | admin de "Concretos y Agregados Chilca S.A.C." (**proveedor**) |
+| `chilca` | `chilca2026seguro` | admin de "Canteras y Agregados Chilca S.A.C." (**proveedor**) |
 | `chilcaop` | `operador2026` | operador del proveedor Chilca |
 | `super` | `superdemo2026` | superadmin (ve las cuatro) |
 

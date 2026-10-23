@@ -4,7 +4,9 @@
 // propia y deja trabajo pendiente para el superadmin:
 //   - Completa "Agregados y Canteras Lurín S.A.C." (más volquetes, choferes,
 //     documentos y un usuario operador).
-//   - Crea un segundo proveedor, "Concretos y Agregados Chilca S.A.C.".
+//   - Crea un segundo proveedor, "Canteras y Agregados Chilca S.A.C.".
+//   Solo materias primas (agregados, caliza, puzolana...): nada de
+//   productos terminados como concreto premezclado o cemento.
 //   - Agenda ~90 días de viajes programados (y 10 a futuro) para los dos.
 //   - Deja solicitudes PENDIENTES y una RECHAZADA en los transportistas,
 //     para que el superadmin tenga algo que revisar.
@@ -69,14 +71,14 @@ const PROVEEDORES = [
   },
   {
     ruc: '20611888002',
-    razonSocial: 'Concretos y Agregados Chilca S.A.C.',
+    razonSocial: 'Canteras y Agregados Chilca S.A.C.',
     admin: { username: 'chilca', password: 'chilca2026seguro', nombreCompleto: 'Marco Chilca' },
     operador: { username: 'chilcaop', password: 'operador2026', nombreCompleto: 'Diego Paucar (despacho)' },
     unidades: [
       { placa: 'H3C-101', tipoVehiculo: 'Volquete', marca: 'Volvo', modelo: 'FMX 440', anioFabricacion: 2023, nroEjes: 3, soat: 280, rt: 340 },
       { placa: 'H3C-102', tipoVehiculo: 'Volquete', marca: 'Volvo', modelo: 'FMX 440', anioFabricacion: 2023, nroEjes: 3, soat: 280, rt: 340 },
       { placa: 'H3C-103', tipoVehiculo: 'Volquete', marca: 'International', modelo: 'HV 607', anioFabricacion: 2019, nroEjes: 3, soat: 22, rt: 180 },
-      { placa: 'J8P-440', tipoVehiculo: 'Otro', marca: 'Mercedes-Benz', modelo: 'Atego mixer 8 m³', anioFabricacion: 2021, nroEjes: 3, soat: 190, rt: -15 },
+      { placa: 'J8P-440', tipoVehiculo: 'Volquete', marca: 'Mercedes-Benz', modelo: 'Actros 3344', anioFabricacion: 2021, nroEjes: 3, soat: 190, rt: -15 },
       { placa: 'K5R-219', tipoVehiculo: 'Cisterna', marca: 'Isuzu', modelo: 'FVR', anioFabricacion: 2017, nroEjes: 2, soat: 75, rt: 75 },
       { placa: 'M6A-077', tipoVehiculo: 'Volquete', marca: 'Sinotruk', modelo: 'Sitrak C7H', anioFabricacion: 2022, nroEjes: 3, soat: 360, rt: 25 }
     ],
@@ -89,8 +91,8 @@ const PROVEEDORES = [
     ],
     rutas: [
       ['Cantera Chilca', 'Planta Atocongo', 'Piedra chancada 1/2"'],
-      ['Cantera Chilca', 'Obra Asia - Condominio Playa', 'Concreto premezclado f\'c 210'],
-      ['Planta de concreto Chilca', 'Obra Mala - Colegio', 'Concreto premezclado f\'c 280'],
+      ['Cantera Chilca', 'Planta Atocongo', 'Arena gruesa'],
+      ['Cantera Papa León XIII', 'Depósito San Antonio', 'Piedra chancada 3/4"'],
       ['Cantera Chilca', 'Depósito San Antonio', 'Arena gruesa'],
       ['Cantera Papa León XIII', 'Planta Atocongo', 'Hormigón']
     ]
