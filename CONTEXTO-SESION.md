@@ -5,10 +5,10 @@
 > otros `.md` que se mencionan más abajo.
 > Última actualización: 2026-10-23.
 >
-> **Estado al 2026-10-23:** la base de Supabase no responde (proyecto
-> pausado por inactividad, casi seguro). Hay que reactivarla desde
-> supabase.com antes de probar o desplegar. Ver "Dónde quedamos" en
-> `PROGRESS.md`.
+> **Estado al 2026-10-23:** en producción en **https://transguias.vercel.app**.
+> Cada push a `main` se despliega solo en Vercel. Si la app deja de
+> responder, revisar primero si Supabase pausó el proyecto por
+> inactividad (se reactiva con *Restore project*).
 
 ---
 

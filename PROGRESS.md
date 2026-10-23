@@ -87,21 +87,21 @@ grandes o instalar cosas nuevas.
 
 ## Dónde quedamos (siguiente paso inmediato)
 
-**2026-10-23 — la base de Supabase no responde.** `probar-conexion-db.js`
-da `tenant/user postgres.<ref> not found` y el dominio del proyecto no
-resuelve: casi seguro Supabase **pausó** el proyecto por inactividad
-(plan gratuito). El servidor no arranca sin base. Hay que entrar a
-supabase.com → proyecto "TransGuia" → **Restore project** (solo el
-usuario puede). Si se borró: proyecto nuevo, correr `transguia-schema.sql`,
-nueva `DATABASE_URL` en `.env` y `node sembrar-datos.js`.
+**2026-10-23 — desplegado y funcionando en producción:
+https://transguias.vercel.app** (interfaz + API, base Supabase).
 
-Con la base de vuelta: `npm run probar`, `node sembrar-datos.js` (crea
-también el proveedor de demo) y **desplegar en Vercel** (punto 7). No se
-encontró ningún despliegue previo en Vercel.
+- Vercel (equipo `supply-chain6`, proyecto `transguias`) está conectado
+  al repo de GitHub: **cada push a `main` se despliega solo**. No hace
+  falta CLI ni pasos manuales.
+- Ese día Supabase había **pausado** el proyecto por inactividad (plan
+  gratuito: síntoma `tenant/user postgres.<ref> not found`). Se
+  reactivó con *Restore project* en supabase.com. Si vuelve a pasar,
+  la app publicada falla hasta reactivarla.
+- Verificado contra la base real: `npm run probar` (todas pasan),
+  `node sembrar-datos.js` (creó el proveedor de demo) y una prueba HTTP
+  de punta a punta del flujo de proveedor (local y en producción).
 
-Lo hecho el 2026-10-23 (puntos 6j y 6k) **todavía no se probó contra la
-base real**; sí con repos en memoria y con capturas de la interfaz
-contra datos ficticios.
+Siguiente: puntos 8 (PSE / certificado para la GRE real) y 9 (piloto).
 
 Después quedan cosas que dependen de terceros (punto 8: contratar un PSE
 o certificado digital; punto 9: piloto con transportistas reales).
@@ -289,10 +289,8 @@ o certificado digital; punto 9: piloto con transportistas reales).
    (Entre 6i y 6j también se habían hecho, sin anotarlos aquí:
    programación de viajes, métricas por chofer, notificaciones,
    calendario de vencimientos, exportar CSV y KPI de cumplimiento.)
-7. **(pendiente — necesita cuenta del usuario)** Deploy a Vercel. Todo el
-   código y la config están; solo falta importar el repo en vercel.com y
-   cargar las variables de entorno. **Un solo deploy** publica la
-   interfaz y la API juntas. Guía en `DESPLIEGUE.md`.
+7. [x] **Deploy a Vercel** — https://transguias.vercel.app, despliegue
+   automático en cada push a `main` (verificado 2026-10-23).
 8. **(pendiente — externo)** Conseguir un PSE (Nubefact, EFACT…) o
    certificado digital para emitir la GRE real ante SUNAT.
 9. **(pendiente — externo)** Pilotear con 1-2 transportistas reales.
