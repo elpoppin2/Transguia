@@ -109,6 +109,28 @@ const h = (fn) => (req, res) => {
   });
 };
 
+// ¿La empresa es un PROVEEDOR con flota propia? Se lee de la base (no del
+// token) para que un cambio de tipo rija al instante.
+async function esFlotaPropia(empresaId) {
+  if (!empresaId) return false;
+  const empresa = await empresasRepo.buscarPorId(empresaId);
+  return !!empresa && empresa.tipoEmpresa === 'PROVEEDOR';
+}
+
+// Los proveedores controlan su flota pero no emiten tickets ni GRE. El
+// superadmin pasa (solo lee).
+function soloTransportistas(req, res, next) {
+  if (req.sesion.rol === 'superadmin') return next();
+  esFlotaPropia(req.sesion.empresaId).then((proveedor) => {
+    if (proveedor) {
+      return res.status(403).json({
+        error: 'Tu empresa está registrada como proveedor con flota propia: no emite tickets ni guías de remisión'
+      });
+    }
+    next();
+  }).catch(next);
+}
+
 // ==================== INTERFAZ WEB ====================
 // El backend sirve también el prototipo, así el front y la API viven en
 // el mismo origen y las llamadas son relativas (fetch("/api/...")): no
@@ -160,8 +182,8 @@ app.get('/api/empresas', requiereSesion, requiereRol('superadmin'), h(async (req
 }));
 
 app.post('/api/empresas', requiereSesion, requiereRol('superadmin'), h(async (req, res) => {
-  const { ruc, razonSocial, admin } = req.body || {};
-  res.status(201).json(await empresasService.crearConAdmin({ ruc, razonSocial, admin }));
+  const { ruc, razonSocial, tipoEmpresa, admin } = req.body || {};
+  res.status(201).json(await empresasService.crearConAdmin({ ruc, razonSocial, tipoEmpresa, admin }));
 }));
 
 // ==================== DASHBOARD ====================
@@ -180,6 +202,19 @@ app.get('/api/dashboard', requiereSesion, requiereRol('admin_empresa', 'superadm
   res.json(await dashboardService.generar({ empresaId, ventana: req.query.ventana }));
 }));
 
+// Dashboard de flota (empresas PROVEEDOR): papeles al día, uso de la flota
+// y viajes programados. superadmin sin ?empresaId = todos los proveedores.
+app.get('/api/dashboard/flota', requiereSesion, requiereRol('admin_empresa', 'superadmin'), h(async (req, res) => {
+  let empresaId;
+  if (req.sesion.rol === 'superadmin') {
+    const q = req.query.empresaId;
+    empresaId = (!q || q === 'todas') ? null : String(q);
+  } else {
+    empresaId = req.sesion.empresaId;
+  }
+  res.json(await dashboardService.generarFlota({ empresaId, ventana: req.query.ventana }));
+}));
+
 // ==================== UNIDADES ====================
 
 app.get('/api/unidades', requiereSesion, h(async (req, res) => {
@@ -188,11 +223,14 @@ app.get('/api/unidades', requiereSesion, h(async (req, res) => {
 
 app.post('/api/unidades', requiereSesion, requiereRol('admin_empresa'), h(async (req, res) => {
   const empresaId = req.sesion.empresaId;
+  const empresa = await empresasRepo.buscarPorId(empresaId);
+  const flotaPropia = !!empresa && empresa.tipoEmpresa === 'PROVEEDOR';
   // El SOAT y el CITV no son columnas de la unidad: se guardan como
   // documentos con vencimiento (así los ve la pestaña "Vencimientos").
   // Para registrar una placa, la plataforma exige el PDF (base64, sin
   // multipart) de estos 5 documentos: SOAT, CITV, brevete y DNI del
-  // transportista, y la constancia de categoría MTC.
+  // transportista, y la constancia de categoría MTC. Un PROVEEDOR (flota
+  // propia) solo está obligado a SOAT y CITV; los otros 3 son opcionales.
   const {
     nroSoat, vigenciaSoat, nroCitv, vigenciaCitv,
     archivoSoat, archivoSoatNombre,
@@ -209,11 +247,16 @@ app.post('/api/unidades', requiereSesion, requiereRol('admin_empresa'), h(async 
   // o no es un PDF válido, no se registra nada.
   const pdfSoat = decodificarPdf(archivoSoat, 'SOAT');
   const pdfCitv = decodificarPdf(archivoCitv, 'CITV');
-  const pdfBrevete = decodificarPdf(archivoBrevete, 'brevete del transportista');
-  const pdfDni = decodificarPdf(archivoDni, 'DNI del transportista');
-  const pdfCategoriaMtc = decodificarPdf(archivoCategoriaMtc, 'categoría MTC');
+  const pdfOpcional = (archivo, etiqueta) => (flotaPropia && !archivo ? null : decodificarPdf(archivo, etiqueta));
+  const pdfBrevete = pdfOpcional(archivoBrevete, 'brevete del transportista');
+  const pdfDni = pdfOpcional(archivoDni, 'DNI del transportista');
+  const pdfCategoriaMtc = pdfOpcional(archivoCategoriaMtc, 'categoría MTC');
 
-  const unidad = await unidadesService.registrarUnidad({ ...datosUnidad, empresaId });
+  // En flota propia el dueño es la misma empresa: si no lo indican, su RUC.
+  const dueno = flotaPropia && !datosUnidad.rucPropietario
+    ? { rucPropietario: empresa.ruc, nombrePropietario: datosUnidad.nombrePropietario || empresa.razonSocial }
+    : {};
+  const unidad = await unidadesService.registrarUnidad({ ...datosUnidad, ...dueno, empresaId }, { flotaPropia });
 
   const avisos = [];
   const guardarDoc = async (tipo, numero, vencimiento, archivo, archivoNombre, etiqueta) => {
@@ -228,9 +271,9 @@ app.post('/api/unidades', requiereSesion, requiereRol('admin_empresa'), h(async 
   };
   await guardarDoc('SOAT', nroSoat, vigenciaSoat, pdfSoat, archivoSoatNombre, 'SOAT');
   await guardarDoc('REVISION_TECNICA', nroCitv, vigenciaCitv, pdfCitv, archivoCitvNombre, 'CITV');
-  await guardarDoc('BREVETE_TRANSPORTISTA', null, null, pdfBrevete, archivoBreveteNombre, 'Brevete del transportista');
-  await guardarDoc('DNI_TRANSPORTISTA', null, null, pdfDni, archivoDniNombre, 'DNI del transportista');
-  await guardarDoc('CATEGORIA_MTC', null, null, pdfCategoriaMtc, archivoCategoriaMtcNombre, 'Categoría MTC');
+  if (pdfBrevete) await guardarDoc('BREVETE_TRANSPORTISTA', null, null, pdfBrevete, archivoBreveteNombre, 'Brevete del transportista');
+  if (pdfDni) await guardarDoc('DNI_TRANSPORTISTA', null, null, pdfDni, archivoDniNombre, 'DNI del transportista');
+  if (pdfCategoriaMtc) await guardarDoc('CATEGORIA_MTC', null, null, pdfCategoriaMtc, archivoCategoriaMtcNombre, 'Categoría MTC');
 
   res.status(201).json(avisos.length ? { ...unidad, avisos } : unidad);
 }));
@@ -244,7 +287,9 @@ app.get('/api/unidades/pendientes', requiereSesion, requiereRol('superadmin'), h
 // Editar la ficha: admin_empresa (su unidad, si está pendiente o
 // rechazada) o superadmin (cualquiera, sin cambiar el estado).
 app.put('/api/unidades/:id', requiereSesion, requiereRol('admin_empresa', 'superadmin'), h(async (req, res) => {
-  res.json(await unidadesService.editarUnidad(req.params.id, req.body || {}, req.sesion));
+  const actual = await unidadesRepo.buscarPorId(req.params.id);
+  const flotaPropia = actual ? await esFlotaPropia(actual.empresaId) : false;
+  res.json(await unidadesService.editarUnidad(req.params.id, req.body || {}, req.sesion, { flotaPropia }));
 }));
 
 // El superadmin libera o rechaza (con motivo) una solicitud.
@@ -296,7 +341,8 @@ app.post('/api/choferes', requiereSesion, requiereRol('admin_empresa'), h(async 
   const empresaId = req.sesion.empresaId;
   // El brevete no es columna del chofer: va como documento LICENCIA_CONDUCIR.
   const { brevete, claseCategoria, fechaExpedicion, fechaRevalidacion, ...datosChofer } = req.body || {};
-  const chofer = await choferesService.registrarChofer({ ...datosChofer, empresaId });
+  const flotaPropia = await esFlotaPropia(empresaId);
+  const chofer = await choferesService.registrarChofer({ ...datosChofer, empresaId }, { flotaPropia });
 
   const avisos = [];
   if (fechaRevalidacion || brevete || claseCategoria) {
@@ -326,7 +372,9 @@ app.get('/api/choferes/pendientes', requiereSesion, requiereRol('superadmin'), h
 }));
 
 app.put('/api/choferes/:id', requiereSesion, requiereRol('admin_empresa', 'superadmin'), h(async (req, res) => {
-  res.json(await choferesService.editarChofer(req.params.id, req.body || {}, req.sesion));
+  const actual = await choferesRepo.buscarPorId(req.params.id);
+  const flotaPropia = actual ? await esFlotaPropia(actual.empresaId) : false;
+  res.json(await choferesService.editarChofer(req.params.id, req.body || {}, req.sesion, { flotaPropia }));
 }));
 
 app.post('/api/choferes/:id/aprobar', requiereSesion, requiereRol('superadmin'), h(async (req, res) => {
@@ -389,8 +437,9 @@ app.get('/api/consulta/dni/:dni', requiereSesion, h(async (req, res) => {
 }));
 
 // ==================== TICKETS ====================
+// Solo empresas TRANSPORTISTA (soloTransportistas bloquea a los proveedores).
 
-app.post('/api/tickets', requiereSesion, requiereRol('admin_empresa', 'operador'), h(async (req, res) => {
+app.post('/api/tickets', requiereSesion, requiereRol('admin_empresa', 'operador'), soloTransportistas, h(async (req, res) => {
   const ticket = await ticketService.crearTicket({
     ...req.body,
     empresaId: req.sesion.empresaId,
@@ -399,11 +448,11 @@ app.post('/api/tickets', requiereSesion, requiereRol('admin_empresa', 'operador'
   res.status(201).json(ticket);
 }));
 
-app.get('/api/tickets', requiereSesion, h(async (req, res) => {
+app.get('/api/tickets', requiereSesion, soloTransportistas, h(async (req, res) => {
   res.json(await ticketService.listarTickets(empresaDeLaPeticion(req)));
 }));
 
-app.get('/api/tickets/:id', requiereSesion, h(async (req, res) => {
+app.get('/api/tickets/:id', requiereSesion, soloTransportistas, h(async (req, res) => {
   const ticket = await ticketService.obtenerTicket(req.params.id);
   if (!ticket || ticket.empresaId !== empresaDeLaPeticion(req)) {
     return res.status(404).json({ error: 'Ticket no encontrado' });
@@ -412,7 +461,7 @@ app.get('/api/tickets/:id', requiereSesion, h(async (req, res) => {
 }));
 
 // Línea de tiempo del ticket (cada cambio de estado, con quién lo hizo).
-app.get('/api/tickets/:id/historial', requiereSesion, h(async (req, res) => {
+app.get('/api/tickets/:id/historial', requiereSesion, soloTransportistas, h(async (req, res) => {
   const ticket = await ticketService.obtenerTicket(req.params.id);
   if (!ticket || ticket.empresaId !== empresaDeLaPeticion(req)) {
     return res.status(404).json({ error: 'Ticket no encontrado' });
@@ -420,7 +469,7 @@ app.get('/api/tickets/:id/historial', requiereSesion, h(async (req, res) => {
   res.json(await ticketService.obtenerHistorial(req.params.id));
 }));
 
-app.post('/api/tickets/:id/avanzar', requiereSesion, requiereRol('admin_empresa', 'operador'), h(async (req, res) => {
+app.post('/api/tickets/:id/avanzar', requiereSesion, requiereRol('admin_empresa', 'operador'), soloTransportistas, h(async (req, res) => {
   const actual = await ticketService.obtenerTicket(req.params.id);
   if (!actual || actual.empresaId !== req.sesion.empresaId) {
     return res.status(404).json({ error: 'Ticket no encontrado' });
@@ -443,7 +492,7 @@ app.post('/api/viajes-programados', requiereSesion, requiereRol('admin_empresa',
     ...req.body,
     empresaId: req.sesion.empresaId,
     creadoPor: req.sesion.usuarioId
-  });
+  }, { flotaPropia: await esFlotaPropia(req.sesion.empresaId) });
   res.status(201).json(viaje);
 }));
 

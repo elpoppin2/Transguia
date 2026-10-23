@@ -31,13 +31,21 @@ class ChoferesService {
     return this.repo.listarPendientes();
   }
 
-  async registrarChofer(datos) {
+  /**
+   * @param {{ flotaPropia?: boolean }} opciones - flotaPropia: la empresa es
+   *   PROVEEDOR; el chofer queda APROBADO sin revisión de la plataforma.
+   */
+  async registrarChofer(datos, { flotaPropia = false } = {}) {
     const chofer = normalizarYValidar(datos);
     const existente = await this.repo.buscarPorDni(chofer.empresaId, chofer.dni);
     if (existente) {
       throw new Error('Ya existe un chofer con ese documento en esta empresa');
     }
-    return this.repo.crearChofer(chofer);
+    const creado = await this.repo.crearChofer(chofer);
+    if (flotaPropia) {
+      return this.repo.cambiarEstadoRegistro(creado.id, 'APROBADA', { revisadoPor: null });
+    }
+    return creado;
   }
 
   /**
@@ -45,8 +53,10 @@ class ChoferesService {
    *  - admin_empresa: su chofer y solo si está PENDIENTE o RECHAZADA.
    *    Si estaba RECHAZADA, al guardar vuelve a PENDIENTE (reenvío).
    *  - superadmin: cualquiera, sin cambiar el estado.
+   *  - flotaPropia (chofer de un PROVEEDOR): su admin lo edita en
+   *    cualquier estado.
    */
-  async editarChofer(id, datos, sesion = {}) {
+  async editarChofer(id, datos, sesion = {}, { flotaPropia = false } = {}) {
     const actual = await this.repo.buscarPorId(id);
     if (!actual) throw new Error('El chofer indicado no existe');
 
@@ -55,7 +65,7 @@ class ChoferesService {
       if (actual.empresaId !== sesion.empresaId) {
         throw new Error('Ese chofer no pertenece a tu empresa');
       }
-      if (!['PENDIENTE', 'RECHAZADA'].includes(actual.estadoRegistro)) {
+      if (!flotaPropia && !['PENDIENTE', 'RECHAZADA'].includes(actual.estadoRegistro)) {
         throw new Error('Solo se puede editar una solicitud pendiente o rechazada');
       }
     } else if (sesion.rol !== 'superadmin') {

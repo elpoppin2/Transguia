@@ -26,8 +26,13 @@ class ViajesProgramadosService {
     return this.repo.listarPorEmpresa(empresaId);
   }
 
-  async programar(datos) {
-    const limpio = await this._validar(datos);
+  /**
+   * @param {{ flotaPropia?: boolean }} opciones - flotaPropia: la empresa es
+   *   PROVEEDOR; origen, destino y mercancía son texto libre (sus propias
+   *   canteras y clientes) en vez de los catálogos de los tickets.
+   */
+  async programar(datos, { flotaPropia = false } = {}) {
+    const limpio = await this._validar(datos, { flotaPropia });
     const conflicto = await this.repo.buscarConflicto(
       limpio.empresaId, limpio.unidadId, limpio.choferId, limpio.fechaProgramada
     );
@@ -62,7 +67,7 @@ class ViajesProgramadosService {
     return viaje;
   }
 
-  async _validar(d) {
+  async _validar(d, { flotaPropia = false } = {}) {
     if (!d || typeof d !== 'object') throw new Error('Faltan los datos del viaje');
     const requeridos = ['empresaId', 'unidadId', 'choferId', 'fechaProgramada', 'origen', 'destino'];
     const faltantes = requeridos.filter(
@@ -93,15 +98,20 @@ class ViajesProgramadosService {
       throw new Error('El chofer todavía no fue liberado por la plataforma; no se puede programar');
     }
 
-    const origen = normalizarContra(CENTROS_ORIGEN, d.origen);
-    if (!origen) throw new Error(`origen debe ser un centro de origen del catálogo: ${CENTROS_ORIGEN.join(', ')}`);
-    const destino = normalizarContra(DESTINOS, d.destino);
-    if (!destino) throw new Error(`destino debe ser uno del catálogo: ${DESTINOS.join(', ')}`);
-
-    let mercancia = null;
-    if (d.descripcionMercancia) {
-      mercancia = normalizarContra(MERCANCIAS, d.descripcionMercancia);
-      if (!mercancia) throw new Error(`descripcionMercancia debe ser una del catálogo: ${MERCANCIAS.join(', ')}`);
+    let origen, destino, mercancia = null;
+    if (flotaPropia) {
+      origen = textoLibre(d.origen, 'el origen');
+      destino = textoLibre(d.destino, 'el destino');
+      mercancia = d.descripcionMercancia ? textoLibre(d.descripcionMercancia, 'la mercancía') : null;
+    } else {
+      origen = normalizarContra(CENTROS_ORIGEN, d.origen);
+      if (!origen) throw new Error(`origen debe ser un centro de origen del catálogo: ${CENTROS_ORIGEN.join(', ')}`);
+      destino = normalizarContra(DESTINOS, d.destino);
+      if (!destino) throw new Error(`destino debe ser uno del catálogo: ${DESTINOS.join(', ')}`);
+      if (d.descripcionMercancia) {
+        mercancia = normalizarContra(MERCANCIAS, d.descripcionMercancia);
+        if (!mercancia) throw new Error(`descripcionMercancia debe ser una del catálogo: ${MERCANCIAS.join(', ')}`);
+      }
     }
 
     return {
@@ -116,6 +126,14 @@ class ViajesProgramadosService {
       creadoPor: d.creadoPor || null
     };
   }
+}
+
+/** Texto libre de hasta 80 caracteres, con los espacios colapsados. `campo` lleva su artículo ("el origen"). */
+function textoLibre(valor, campo) {
+  const t = String(valor || '').replace(/\s+/g, ' ').trim();
+  if (!t) throw new Error(`Falta ${campo}`);
+  if (t.length > 80) throw new Error(`${campo[0].toUpperCase()}${campo.slice(1)} no puede pasar de 80 caracteres`);
+  return t;
 }
 
 module.exports = { ViajesProgramadosService, ESTADOS };

@@ -22,15 +22,25 @@ class UnidadesService {
     return this.repo.listarPorEmpresa(empresaId);
   }
 
-  async registrarUnidad(datos) {
-    const unidad = normalizarYValidar(datos);
+  /**
+   * @param {object} datos
+   * @param {{ flotaPropia?: boolean }} opciones - flotaPropia: la empresa es
+   *   PROVEEDOR. Solo exige la placa (RUC del dueño y DNI del transportista
+   *   pasan a opcionales) y la unidad queda APROBADA sin revisión.
+   */
+  async registrarUnidad(datos, { flotaPropia = false } = {}) {
+    const unidad = normalizarYValidar(datos, { flotaPropia });
 
     const existente = await this.repo.buscarPorPlaca(unidad.placa);
     if (existente) {
       throw new Error('Ya existe una unidad registrada con esa placa');
     }
 
-    return this.repo.crearUnidad(unidad);
+    const creada = await this.repo.crearUnidad(unidad);
+    if (flotaPropia) {
+      return this.repo.cambiarEstadoRegistro(creada.id, 'APROBADA', { revisadoPor: null });
+    }
+    return creada;
   }
 
   /** Solicitudes de registro pendientes de todas las empresas (superadmin). */
@@ -43,8 +53,10 @@ class UnidadesService {
    *  - admin_empresa: solo su empresa y solo si está PENDIENTE o RECHAZADA.
    *    Si estaba RECHAZADA, al guardar vuelve a PENDIENTE (reenvío).
    *  - superadmin: cualquier unidad, sin cambiar el estado.
+   *  - flotaPropia (la unidad es de un PROVEEDOR): su admin la edita en
+   *    cualquier estado; no hay revisión de por medio.
    */
-  async editarUnidad(id, datos, sesion = {}) {
+  async editarUnidad(id, datos, sesion = {}, { flotaPropia = false } = {}) {
     const actual = await this.repo.buscarPorId(id);
     if (!actual) throw new Error('La unidad indicada no existe');
 
@@ -53,14 +65,14 @@ class UnidadesService {
       if (actual.empresaId !== sesion.empresaId) {
         throw new Error('Esa unidad no pertenece a tu empresa');
       }
-      if (!['PENDIENTE', 'RECHAZADA'].includes(actual.estadoRegistro)) {
+      if (!flotaPropia && !['PENDIENTE', 'RECHAZADA'].includes(actual.estadoRegistro)) {
         throw new Error('Solo se puede editar una solicitud pendiente o rechazada');
       }
     } else if (sesion.rol !== 'superadmin') {
       throw new Error('No tenés permiso para editar unidades');
     }
 
-    const combinado = normalizarYValidar({ ...actual, ...datos, empresaId: actual.empresaId });
+    const combinado = normalizarYValidar({ ...actual, ...datos, empresaId: actual.empresaId }, { flotaPropia });
     let unidad = await this.repo.actualizar(id, combinado);
 
     if (esAdmin && actual.estadoRegistro === 'RECHAZADA') {
@@ -135,22 +147,25 @@ function booleano(v, campo) {
   throw new Error(`${campo} debe ser Sí o No`);
 }
 
-function normalizarYValidar(datos = {}) {
+function normalizarYValidar(datos = {}, { flotaPropia = false } = {}) {
   const d = datos;
 
   if (vacio(d.empresaId)) throw new Error('empresaId es obligatorio');
 
-  const faltan = ['placa', 'rucPropietario', 'dniTransportista'].filter((c) => vacio(d[c]));
+  // Flota propia (PROVEEDOR): el dueño es la misma empresa y no hay un
+  // transportista tercero, así que solo la placa es obligatoria.
+  const obligatorios = flotaPropia ? ['placa'] : ['placa', 'rucPropietario', 'dniTransportista'];
+  const faltan = obligatorios.filter((c) => vacio(d[c]));
   if (faltan.length) {
     throw new Error(`Faltan campos obligatorios: ${faltan.join(', ')}`);
   }
 
-  const rucPropietario = String(d.rucPropietario).replace(/\D/g, '');
-  if (!/^\d{11}$/.test(rucPropietario)) {
+  const rucPropietario = vacio(d.rucPropietario) ? undefined : String(d.rucPropietario).replace(/\D/g, '');
+  if (rucPropietario !== undefined && !/^\d{11}$/.test(rucPropietario)) {
     throw new Error('El RUC del dueño debe tener exactamente 11 dígitos');
   }
-  const dniTransportista = String(d.dniTransportista).replace(/\D/g, '');
-  if (!/^\d{8}$/.test(dniTransportista)) {
+  const dniTransportista = vacio(d.dniTransportista) ? undefined : String(d.dniTransportista).replace(/\D/g, '');
+  if (dniTransportista !== undefined && !/^\d{8}$/.test(dniTransportista)) {
     throw new Error('El DNI del transportista debe tener exactamente 8 dígitos');
   }
 

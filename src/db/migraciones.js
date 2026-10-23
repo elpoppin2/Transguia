@@ -17,6 +17,17 @@ const PASOS = [
   // El superadmin no pertenece a ninguna empresa.
   `alter table usuarios alter column empresa_id drop not null`,
 
+  // --- Tipo de empresa ---
+  // TRANSPORTISTA: emite tickets y GRE. PROVEEDOR: proveedor de materiales
+  // con flota propia; solo controla su flota (unidades, choferes,
+  // documentos, programación), sin tickets ni guías. Las existentes
+  // quedan como TRANSPORTISTA.
+  `alter table empresas add column if not exists tipo_empresa text not null default 'TRANSPORTISTA'`,
+  `do $$ begin
+     alter table empresas add constraint chk_tipo_empresa
+       check (tipo_empresa in ('TRANSPORTISTA', 'PROVEEDOR'));
+   exception when duplicate_object then null; end $$`,
+
   // --- Unidades: ficha ampliada (dueño, transportista, técnica, medidas) ---
   // Los únicos obligatorios pasan a ser placa, ruc_propietario y
   // dni_transportista; el resto se puede completar después.

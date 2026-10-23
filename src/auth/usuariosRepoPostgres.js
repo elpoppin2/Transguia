@@ -8,11 +8,16 @@ const { pool } = require('../db/pool');
  */
 class UsuariosRepositorioPostgres {
   async buscarPorUsername(username) {
+    // El tipo y nombre de la empresa viajan en el login para que la
+    // interfaz muestre las pantallas que le tocan (transportista o
+    // proveedor). El superadmin no tiene empresa: quedan en null.
     const { rows } = await pool.query(
-      `select id, empresa_id as "empresaId", username,
-              password_hash as "passwordHash", nombre_completo as "nombreCompleto", rol
-       from usuarios
-       where username = $1`,
+      `select u.id, u.empresa_id as "empresaId", u.username,
+              u.password_hash as "passwordHash", u.nombre_completo as "nombreCompleto", u.rol,
+              e.tipo_empresa as "tipoEmpresa", e.razon_social as "empresaRazonSocial"
+       from usuarios u
+       left join empresas e on e.id = u.empresa_id
+       where u.username = $1`,
       [username]
     );
     return rows[0] || null;

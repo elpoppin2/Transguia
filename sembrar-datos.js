@@ -55,6 +55,40 @@ const EMPRESA_2 = {
   ]
 };
 
+// Tercera empresa: un PROVEEDOR de materiales con flota propia. No emite
+// tickets ni GRE; usa la plataforma solo para controlar su flota.
+// Sus unidades y choferes quedan aprobados al registrarlos (sin revisión).
+const PROVEEDOR = {
+  ruc: '20611888001',
+  razonSocial: 'Agregados y Canteras Lurín S.A.C.',
+  admin: { username: 'lurin', password: 'lurin2026seguro', nombreCompleto: 'Julio Lurín' },
+  unidades: [
+    { placa: 'V1L-301', tipoVehiculo: 'Volquete', marca: 'Volvo', modelo: 'FMX 440', anioFabricacion: 2021, nroEjes: 3 },
+    { placa: 'V1L-302', tipoVehiculo: 'Volquete', marca: 'Volvo', modelo: 'FMX 440', anioFabricacion: 2021, nroEjes: 3 },
+    { placa: 'AHX-845', tipoVehiculo: 'Volquete', marca: 'Sinotruk', modelo: 'Howo', anioFabricacion: 2019, nroEjes: 3 },
+    { placa: 'B9R-117', tipoVehiculo: 'Volquete', marca: 'Mercedes-Benz', modelo: 'Actros 3341', anioFabricacion: 2023, nroEjes: 3 }
+  ],
+  choferes: [
+    { dni: '40711235', nombres: 'Teodoro', apellidos: 'Pachas Rivas' },
+    { dni: '44820917', nombres: 'Wilmer', apellidos: 'Ccanto Huarcaya' },
+    { dni: '47390051', nombres: 'Fredy Alonso', apellidos: 'Mendoza Llanos' }
+  ],
+  // [placa, días para que venza el SOAT, días para que venza la revisión técnica]
+  documentos: [
+    ['V1L-301', 210, 160],
+    ['V1L-302', 18, 240],   // SOAT por vencer
+    ['AHX-845', -9, 120],   // SOAT vencido
+    ['B9R-117', 300, 330]
+  ],
+  licencias: [['40711235', 'A-IIIc', 520], ['44820917', 'A-IIIb', 25], ['47390051', 'A-IIIc', 700]],
+  rutas: [
+    ['Cantera Lurín', 'Planta Atocongo', 'Piedra chancada 1/2"'],
+    ['Cantera Lurín', 'Obra Pachacámac', 'Arena gruesa'],
+    ['Cantera Pucusana', 'Planta Atocongo', 'Hormigón'],
+    ['Cantera Pucusana', 'Depósito Villa El Salvador', 'Piedra chancada 3/4"']
+  ]
+};
+
 const UNIDADES = [
   { placa: 'ABC-756', marca: 'Volvo',      modelo: 'FH 460',   anioFabricacion: 2021, categoriaMtc: 'N3', configuracionVehicular: 'T3S3' },
   { placa: 'CDF-903', marca: 'Scania',     modelo: 'R 450',    anioFabricacion: 2019, categoriaMtc: 'N3', configuracionVehicular: 'T3S2' },
@@ -293,9 +327,92 @@ function esperarEmision(ticketService, datos) {
     console.log('solicitud de chofer pendiente creada: DNI 76543210');
   }
 
+  // --- Proveedor con flota propia ---
+  let proveedor = await empresasRepo.buscarPorRuc(PROVEEDOR.ruc);
+  if (!proveedor) {
+    const creada = await empresasSvc.crearConAdmin({
+      ruc: PROVEEDOR.ruc, razonSocial: PROVEEDOR.razonSocial, tipoEmpresa: 'PROVEEDOR', admin: PROVEEDOR.admin
+    });
+    proveedor = creada.empresa;
+    console.log('proveedor creado:', proveedor.razonSocial, '/ admin', PROVEEDOR.admin.username);
+  } else {
+    console.log('proveedor ya existía:', PROVEEDOR.razonSocial);
+    await pool.query(`update empresas set tipo_empresa = 'PROVEEDOR' where id = $1`, [proveedor.id]);
+    if (!(await usuariosRepo.buscarPorUsername(PROVEEDOR.admin.username))) {
+      await auth.registrarUsuario({ empresaId: proveedor.id, ...PROVEEDOR.admin, rol: 'admin_empresa' });
+    }
+  }
+  for (const u of PROVEEDOR.unidades) {
+    if (await unidadesRepo.buscarPorPlaca(u.placa)) continue;
+    await unidades.registrarUnidad({
+      empresaId: proveedor.id, rucPropietario: PROVEEDOR.ruc, nombrePropietario: PROVEEDOR.razonSocial,
+      rodadaEjeDelantero: 'Simple', formaApertura: 'Volteo', ...u
+    }, { flotaPropia: true });
+    console.log('  unidad proveedor:', u.placa);
+  }
+  for (const c of PROVEEDOR.choferes) {
+    if (await choferesRepo.buscarPorDni(proveedor.id, c.dni)) continue;
+    await choferes.registrarChofer({ empresaId: proveedor.id, ...c }, { flotaPropia: true });
+    console.log('  chofer proveedor:', c.dni);
+  }
+  const udsProv = Object.fromEntries((await unidades.listarUnidades(proveedor.id)).map((u) => [u.placa, u.id]));
+  const chfProv = Object.fromEntries((await choferes.listarChoferes(proveedor.id)).map((c) => [c.dni, c.id]));
+  for (const [placa, diasSoat, diasRt] of PROVEEDOR.documentos) {
+    const unidadId = udsProv[placa];
+    if (!unidadId) continue;
+    const tiene = (await documentosRepo.listarDeUnidad(unidadId)).map((x) => x.tipoDocumento);
+    if (!tiene.includes('SOAT')) {
+      await documentos.agregarAUnidad(proveedor.id, unidadId, { tipoDocumento: 'SOAT', numeroDocumento: `SOAT-${placa}`, fechaVencimiento: dias(diasSoat) });
+    }
+    if (!tiene.includes('REVISION_TECNICA')) {
+      await documentos.agregarAUnidad(proveedor.id, unidadId, { tipoDocumento: 'REVISION_TECNICA', numeroDocumento: `CITV-${placa}`, fechaVencimiento: dias(diasRt) });
+    }
+  }
+  for (const [dni, categoria, diasLic] of PROVEEDOR.licencias) {
+    const choferId = chfProv[dni];
+    if (!choferId) continue;
+    const tiene = (await documentosRepo.listarDeChofer(choferId)).some((x) => x.tipoDocumento === 'LICENCIA_CONDUCIR');
+    if (!tiene) {
+      await documentos.agregarAChofer(proveedor.id, choferId, {
+        tipoDocumento: 'LICENCIA_CONDUCIR', categoriaLicencia: categoria, numeroDocumento: `Q${dni}`, fechaVencimiento: dias(diasLic)
+      });
+    }
+  }
+  // Viajes programados: 4 semanas hacia atrás (cumplidos, algún cancelado,
+  // los 2 últimos días aún sin cerrar) y 6 días hacia adelante. Uno o dos
+  // por día, sin repetir unidad ni chofer el mismo día.
+  const { rows: cuentaVp } = await pool.query(
+    'select count(*)::int as n from viajes_programados where empresa_id = $1', [proveedor.id]
+  );
+  if (cuentaVp[0].n === 0) {
+    const placas = PROVEEDOR.unidades.map((u) => u.placa);
+    const dnis = PROVEEDOR.choferes.map((c) => c.dni);
+    let n = 0;
+    for (let i = 28; i >= -6; i--) {
+      if (i > 0 && i % 7 === 0) continue; // domingos sin despacho
+      const viajesDelDia = i % 2 === 0 ? 2 : 1;
+      for (let k = 0; k < viajesDelDia; k++) {
+        const j = Math.abs(i) + k;
+        const [origen, destino, mercancia] = PROVEEDOR.rutas[j % PROVEEDOR.rutas.length];
+        let estado = 'PROGRAMADO';
+        if (i > 2) estado = j % 9 === 0 ? 'CANCELADO' : 'CUMPLIDO';
+        await pool.query(
+          `insert into viajes_programados
+             (empresa_id, unidad_id, chofer_id, fecha_programada, origen, destino, descripcion_mercancia, estado, motivo_cancelacion)
+           values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          [proveedor.id, udsProv[placas[j % placas.length]], chfProv[dnis[j % dnis.length]], dias(-i),
+           origen, destino, mercancia, estado, estado === 'CANCELADO' ? 'Cantera sin stock' : null]
+        );
+        n++;
+      }
+    }
+    console.log(`  ${n} viajes programados del proveedor`);
+  }
+
   console.log('\nListo. Ingresá en http://localhost:3001');
   console.log(`  Empresa (admin):  ${USUARIO.username} / ${USUARIO.password}`);
   console.log(`  Segunda empresa:  ${EMPRESA_2.admin.username} / ${EMPRESA_2.admin.password}`);
+  console.log(`  Proveedor:        ${PROVEEDOR.admin.username} / ${PROVEEDOR.admin.password}`);
   console.log(`  Superadmin:       ${SUPERADMIN.username} / ${SUPERADMIN.password}`);
 
   await pool.end();

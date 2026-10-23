@@ -14,6 +14,7 @@ class EmpresasRepositorioPostgres {
         e.id,
         e.ruc,
         e.razon_social as "razonSocial",
+        e.tipo_empresa as "tipoEmpresa",
         e.creado_en    as "creadoEn",
         (select count(*)::int from unidades u
            where u.empresa_id = e.id and u.activo and u.estado_registro = 'APROBADA') as "unidadesActivas",
@@ -26,17 +27,21 @@ class EmpresasRepositorioPostgres {
         (select count(*)::int from tickets_traslado t where t.empresa_id = e.id)      as "tickets",
         (select count(*)::int from tickets_traslado t
            where t.empresa_id = e.id and t.estado_operativo = 'EN_TRANSITO')          as "ticketsEnTransito",
+        (select count(*)::int from viajes_programados vp
+           where vp.empresa_id = e.id and vp.estado = 'PROGRAMADO'
+             and vp.fecha_programada >= current_date)                                 as "viajesProgramados",
         (select count(*)::int from vencimientos_proximos v
            where v.empresa_id = e.id and v.fecha_vencimiento < current_date)          as "documentosVencidos"
       from empresas e
-      order by e.razon_social
+      order by e.tipo_empresa desc, e.razon_social
     `);
     return rows;
   }
 
   async buscarPorId(id) {
     const { rows } = await pool.query(
-      'select id, ruc, razon_social as "razonSocial", creado_en as "creadoEn" from empresas where id = $1',
+      `select id, ruc, razon_social as "razonSocial", tipo_empresa as "tipoEmpresa", creado_en as "creadoEn"
+       from empresas where id = $1`,
       [id]
     );
     return rows[0] || null;
@@ -47,10 +52,11 @@ class EmpresasRepositorioPostgres {
     return rows[0] || null;
   }
 
-  async crear({ ruc, razonSocial }) {
+  async crear({ ruc, razonSocial, tipoEmpresa = 'TRANSPORTISTA' }) {
     const { rows } = await pool.query(
-      'insert into empresas (ruc, razon_social) values ($1, $2) returning id, ruc, razon_social as "razonSocial", creado_en as "creadoEn"',
-      [ruc, razonSocial]
+      `insert into empresas (ruc, razon_social, tipo_empresa) values ($1, $2, $3)
+       returning id, ruc, razon_social as "razonSocial", tipo_empresa as "tipoEmpresa", creado_en as "creadoEn"`,
+      [ruc, razonSocial, tipoEmpresa]
     );
     return rows[0];
   }
@@ -59,6 +65,8 @@ class EmpresasRepositorioPostgres {
     const { rows } = await pool.query(`
       select
         (select count(*)::int from empresas)                                       as "empresas",
+        (select count(*)::int from empresas where tipo_empresa = 'TRANSPORTISTA')  as "transportistas",
+        (select count(*)::int from empresas where tipo_empresa = 'PROVEEDOR')      as "proveedores",
         (select count(*)::int from unidades where activo and estado_registro = 'APROBADA') as "unidadesActivas",
         (select count(*)::int from unidades where estado_registro = 'PENDIENTE')    as "unidadesPendientes",
         (select count(*)::int from choferes where activo and estado_registro = 'APROBADA') as "choferesActivos",

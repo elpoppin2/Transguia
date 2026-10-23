@@ -180,6 +180,145 @@ class DashboardRepositorioPostgres {
     return rows;
   }
 
+  // ==================== DASHBOARD DE FLOTA (proveedores) ====================
+  // Sin tickets: se mide sobre la flota, sus documentos y los viajes
+  // programados. `empresaId` null = todas las empresas PROVEEDOR.
+
+  // Filtro por empresa para la tabla con alias `a`, empezando en $n.
+  _flota(empresaId, a, n = 1) {
+    return empresaId
+      ? { sql: `and ${a}.empresa_id = $${n}`, params: [empresaId], n: n + 1 }
+      : { sql: `and ${a}.empresa_id in (select id from empresas where tipo_empresa = 'PROVEEDOR')`, params: [], n };
+  }
+
+  /**
+   * Situación documental de cada unidad habilitada, según su SOAT y su
+   * revisión técnica (el que venza primero manda):
+   * AL_DIA | POR_VENCER (≤ 30 días) | VENCIDA | SIN_DOCUMENTOS.
+   */
+  async situacionFlota(empresaId) {
+    const e = this._flota(empresaId, 'u');
+    const { rows } = await pool.query(`
+      with f as (
+        select u.placa, u.marca, u.tipo_vehiculo,
+          (select max(d.fecha_vencimiento) from documentos_unidad d
+             where d.unidad_id = u.id and d.tipo_documento = 'SOAT')             as soat,
+          (select max(d.fecha_vencimiento) from documentos_unidad d
+             where d.unidad_id = u.id and d.tipo_documento = 'REVISION_TECNICA') as rt
+        from unidades u
+        where u.activo and u.estado_registro = 'APROBADA' ${e.sql}
+      )
+      select placa, marca, tipo_vehiculo as "tipoVehiculo",
+             to_char(soat, 'YYYY-MM-DD') as soat, to_char(rt, 'YYYY-MM-DD') as rt,
+             (least(soat, rt) - current_date)::int as "diasRestantes",
+             case when soat is null or rt is null           then 'SIN_DOCUMENTOS'
+                  when least(soat, rt) < current_date       then 'VENCIDA'
+                  when least(soat, rt) <= current_date + 30 then 'POR_VENCER'
+                  else 'AL_DIA' end as situacion
+      from f
+      order by least(soat, rt) nulls first, placa
+    `, e.params);
+    return rows;
+  }
+
+  /** Choferes habilitados y cuántos tienen la licencia de conducir vigente. */
+  async choferesFlota(empresaId) {
+    const e = this._flota(empresaId, 'c');
+    const { rows } = await pool.query(`
+      select count(*)::int as activos,
+             count(*) filter (where exists (
+               select 1 from documentos_chofer d
+               where d.chofer_id = c.id and d.tipo_documento = 'LICENCIA_CONDUCIR'
+                 and d.fecha_vencimiento >= current_date))::int as "conLicencia"
+      from choferes c
+      where c.activo and c.estado_registro = 'APROBADA' ${e.sql}
+    `, e.params);
+    return rows[0];
+  }
+
+  /** Documentos (de unidades y choferes) ya vencidos y por vencer en 30 días. */
+  async documentosFlota(empresaId) {
+    const e = this._flota(empresaId, 'v');
+    const { rows } = await pool.query(`
+      select count(*) filter (where fecha_vencimiento < current_date)::int as vencidos,
+             count(*) filter (where fecha_vencimiento >= current_date
+                                and fecha_vencimiento <= current_date + 30)::int as "porVencer"
+      from vencimientos_proximos v
+      where true ${e.sql}
+    `, e.params);
+    return rows[0];
+  }
+
+  /**
+   * Viajes programados de la ventana (por fecha programada, hasta hoy) y
+   * de la ventana previa, más los ya agendados para los próximos 7 días.
+   */
+  async viajesFlota(empresaId, dias) {
+    const e = this._flota(empresaId, 'vp');
+    const D = `$${e.n}::int`;
+    const { rows } = await pool.query(`
+      with b as (
+        select vp.*,
+          (fecha_programada >  current_date - ${D}     and fecha_programada <= current_date)           as act,
+          (fecha_programada >  current_date - ${D} * 2 and fecha_programada <= current_date - ${D})    as prev
+        from viajes_programados vp
+        where fecha_programada > current_date - ${D} * 2 ${e.sql}
+      )
+      select
+        count(*) filter (where act  and estado <> 'CANCELADO')::int  as "viajesAct",
+        count(*) filter (where prev and estado <> 'CANCELADO')::int  as "viajesPrev",
+        count(*) filter (where act  and estado = 'CUMPLIDO')::int    as "cumplidosAct",
+        count(*) filter (where prev and estado = 'CUMPLIDO')::int    as "cumplidosPrev",
+        count(*) filter (where act  and estado = 'CANCELADO')::int   as "canceladosAct",
+        count(*) filter (where act  and estado = 'PROGRAMADO')::int  as "sinCerrarAct",
+        count(distinct unidad_id) filter (where act and estado <> 'CANCELADO')::int as "unidadesConViaje",
+        (select count(*)::int from viajes_programados vp
+          where vp.estado = 'PROGRAMADO'
+            and vp.fecha_programada > current_date
+            and vp.fecha_programada <= current_date + 7 ${e.sql}) as "proximos7d"
+      from b
+    `, [...e.params, dias]);
+    return rows[0];
+  }
+
+  /** Viajes (no cancelados) por día programado, o por mes si la ventana es larga. */
+  async viajesFlotaPorPeriodo(empresaId, dias, mensual) {
+    const e = this._flota(empresaId, 'vp');
+    const fmt = mensual ? 'YYYY-MM' : 'YYYY-MM-DD';
+    const trunc = mensual ? 'month' : 'day';
+    const { rows } = await pool.query(`
+      select to_char(date_trunc('${trunc}', fecha_programada), '${fmt}') as periodo,
+             count(*)::int as viajes,
+             count(*) filter (where estado = 'CUMPLIDO')::int as cumplidos
+      from viajes_programados vp
+      where estado <> 'CANCELADO'
+        and fecha_programada > current_date - $${e.n}::int
+        and fecha_programada <= current_date ${e.sql}
+      group by 1 order by 1
+    `, [...e.params, dias]);
+    return rows;
+  }
+
+  /** Top 10 por unidad, por chofer o por ruta, de los viajes no cancelados de la ventana. */
+  async viajesFlotaPor(empresaId, dias, por) {
+    const e = this._flota(empresaId, 'vp');
+    const grupos = {
+      unidad: { sel: 'u.placa as etiqueta', join: 'join unidades u on u.id = vp.unidad_id', grp: 'u.placa' },
+      chofer: { sel: `(c.nombres || ' ' || c.apellidos) as etiqueta`, join: 'join choferes c on c.id = vp.chofer_id', grp: 'c.id, c.nombres, c.apellidos' },
+      ruta: { sel: `(vp.origen || ' → ' || vp.destino) as etiqueta`, join: '', grp: 'vp.origen, vp.destino' }
+    };
+    const g = grupos[por];
+    const { rows } = await pool.query(`
+      select ${g.sel}, count(*)::int as viajes
+      from viajes_programados vp ${g.join}
+      where vp.estado <> 'CANCELADO'
+        and vp.fecha_programada > current_date - $${e.n}::int
+        and vp.fecha_programada <= current_date ${e.sql}
+      group by ${g.grp} order by viajes desc, etiqueta limit 10
+    `, [...e.params, dias]);
+    return rows;
+  }
+
   /** Toneladas y viajes por corredor (centro de origen -> destino) en la ventana. */
   async corredores(empresaId, dias) {
     const e = this._emp(empresaId);

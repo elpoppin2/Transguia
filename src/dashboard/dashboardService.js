@@ -121,6 +121,89 @@ class DashboardService {
   }
 }
 
+/**
+ * Dashboard de FLOTA, para empresas PROVEEDOR (no emiten tickets): papeles
+ * al día, licencias, uso de la flota y viajes programados. Se suma como
+ * método aparte para no tocar el dashboard de transporte.
+ */
+DashboardService.prototype.generarFlota = async function ({ empresaId = null, ventana }) {
+  const v = VENTANAS[ventana] || VENTANAS['30d'];
+
+  let alcance = 'Todos los proveedores';
+  if (empresaId) {
+    const empresa = await this.empresas.buscarPorId(empresaId);
+    if (!empresa) throw new Error('La empresa indicada no existe');
+    alcance = empresa.razonSocial;
+  }
+
+  const [situacion, choferes, docs, viajes, periodo, porUnidad, porChofer, porRuta] = await Promise.all([
+    this.repo.situacionFlota(empresaId),
+    this.repo.choferesFlota(empresaId),
+    this.repo.documentosFlota(empresaId),
+    this.repo.viajesFlota(empresaId, v.dias),
+    this.repo.viajesFlotaPorPeriodo(empresaId, v.dias, v.mensual),
+    this.repo.viajesFlotaPor(empresaId, v.dias, 'unidad'),
+    this.repo.viajesFlotaPor(empresaId, v.dias, 'chofer'),
+    this.repo.viajesFlotaPor(empresaId, v.dias, 'ruta')
+  ]);
+
+  const flota = { AL_DIA: 0, POR_VENCER: 0, VENCIDA: 0, SIN_DOCUMENTOS: 0 };
+  for (const u of situacion) flota[u.situacion] += 1;
+  const total = situacion.length;
+  const alDia = flota.AL_DIA + flota.POR_VENCER; // por vencer todavía puede circular
+  const pct = (a, b) => (b ? redondear((a / b) * 100) : null);
+  const cumplAct = pct(viajes.cumplidosAct, viajes.viajesAct);
+  const cumplPrev = pct(viajes.cumplidosPrev, viajes.viajesPrev);
+
+  const kpis = {
+    flotaHabilitada: {
+      valor: pct(alDia, total), unidad: '%', habilitadas: alDia, total,
+      semaforo: total ? umbral((alDia / total) * 100, { bien: 95, atencion: 80 }, 'mayorEsMejor') : 'sinDatos'
+    },
+    choferesConLicencia: {
+      valor: pct(choferes.conLicencia, choferes.activos), unidad: '%',
+      conLicencia: choferes.conLicencia, activos: choferes.activos,
+      semaforo: choferes.activos
+        ? umbral((choferes.conLicencia / choferes.activos) * 100, { bien: 100, atencion: 90 }, 'mayorEsMejor')
+        : 'sinDatos'
+    },
+    documentosVencidos: {
+      valor: docs.vencidos, porVencer: docs.porVencer,
+      semaforo: docs.vencidos > 0 ? 'critico' : docs.porVencer > 0 ? 'atencion' : 'bien'
+    },
+    viajes: {
+      valor: viajes.viajesAct, proximos7d: viajes.proximos7d,
+      delta: variacionPorc(viajes.viajesAct, viajes.viajesPrev), subirEsBueno: true
+    },
+    utilizacionFlota: {
+      valor: total ? redondear((viajes.unidadesConViaje / total) * 100) : 0, unidad: '%',
+      unidadesConViaje: viajes.unidadesConViaje, flotaHabilitada: total,
+      semaforo: umbral(total ? (viajes.unidadesConViaje / total) * 100 : 0, { bien: 85, atencion: 65 }, 'mayorEsMejor')
+    },
+    cumplimiento: {
+      valor: cumplAct, unidad: '%',
+      deltaPuntos: cumplAct != null && cumplPrev != null ? redondear(cumplAct - cumplPrev) : null, subirEsBueno: true,
+      cumplidos: viajes.cumplidosAct, programados: viajes.viajesAct,
+      sinCerrar: viajes.sinCerrarAct, cancelados: viajes.canceladosAct,
+      semaforo: viajes.viajesAct ? umbral(cumplAct, { bien: 90, atencion: 70 }, 'mayorEsMejor') : 'sinDatos'
+    }
+  };
+
+  return {
+    alcance,
+    ventana: Object.keys(VENTANAS).find((x) => VENTANAS[x] === v),
+    ventanaLabel: v.label,
+    mensual: v.mensual,
+    kpis,
+    situacionFlota: flota,                                     // { AL_DIA, POR_VENCER, VENCIDA, SIN_DOCUMENTOS }
+    unidadesConAtencion: situacion.filter((u) => u.situacion !== 'AL_DIA').slice(0, 8),
+    viajesPorPeriodo: periodo,                                 // [{ periodo, viajes, cumplidos }]
+    viajesPorUnidad: porUnidad,                                // [{ etiqueta, viajes }]
+    viajesPorChofer: porChofer,
+    viajesPorRuta: porRuta
+  };
+};
+
 const redondear = (n) => Math.round(n * 10) / 10;
 
 /** Variación porcentual de `act` respecto de `prev` (null si no hay base). */

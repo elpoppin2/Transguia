@@ -44,7 +44,9 @@ class AuthService {
       empresaId: usuario.empresaId,
       username: usuario.username,
       nombreCompleto: usuario.nombreCompleto,
-      rol: usuario.rol
+      rol: usuario.rol,
+      tipoEmpresa: usuario.tipoEmpresa || null,
+      empresaRazonSocial: usuario.empresaRazonSocial || null
     };
   }
 }

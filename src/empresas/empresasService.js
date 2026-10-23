@@ -2,7 +2,15 @@
  * Reglas de negocio de plataforma (superadmin): listar empresas con
  * resumen, crear una empresa junto con su primer usuario administrador,
  * y totales globales.
+ *
+ * Tipos de empresa:
+ *  - TRANSPORTISTA: registra flota, emite tickets y GRE.
+ *  - PROVEEDOR: proveedor de materiales con flota propia. Solo controla
+ *    su flota (sin tickets ni guías) y sus unidades/choferes no pasan por
+ *    la revisión de la plataforma.
  */
+const TIPOS_EMPRESA = ['TRANSPORTISTA', 'PROVEEDOR'];
+
 class EmpresasService {
   /**
    * @param {object} deps
@@ -33,9 +41,13 @@ class EmpresasService {
 
   /**
    * Crea la empresa y su primer usuario admin_empresa, en un mismo paso.
-   * @param {{ ruc: string, razonSocial: string, admin: { username, password, nombreCompleto } }} datos
+   * @param {{ ruc: string, razonSocial: string, tipoEmpresa?: string, admin: { username, password, nombreCompleto } }} datos
    */
-  async crearConAdmin({ ruc, razonSocial, admin }) {
+  async crearConAdmin({ ruc, razonSocial, tipoEmpresa, admin }) {
+    const tipo = String(tipoEmpresa || 'TRANSPORTISTA').toUpperCase().trim();
+    if (!TIPOS_EMPRESA.includes(tipo)) {
+      throw new Error('El tipo de empresa debe ser TRANSPORTISTA o PROVEEDOR');
+    }
     const rucLimpio = String(ruc || '').trim();
     if (!/^\d{11}$/.test(rucLimpio)) {
       throw new Error('El RUC debe tener 11 dígitos');
@@ -50,7 +62,9 @@ class EmpresasService {
       throw new Error(`Ya existe una empresa con RUC ${rucLimpio}`);
     }
 
-    const empresa = await this.repo.crear({ ruc: rucLimpio, razonSocial: String(razonSocial).trim() });
+    const empresa = await this.repo.crear({
+      ruc: rucLimpio, razonSocial: String(razonSocial).trim(), tipoEmpresa: tipo
+    });
     const usuarioAdmin = await this.auth.registrarUsuario({
       empresaId: empresa.id,
       username: admin.username,
@@ -63,4 +77,4 @@ class EmpresasService {
   }
 }
 
-module.exports = { EmpresasService };
+module.exports = { EmpresasService, TIPOS_EMPRESA };

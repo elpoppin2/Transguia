@@ -15,7 +15,8 @@ por sentado vocabulario técnico, y confirma antes de hacer cambios
 grandes o instalar cosas nuevas.
 
 ## Entorno
-- Windows. Proyecto en `E:\Proyecto\transguia-backend`
+- Windows. Proyecto en `E:\HUECO\Transguia` (antes `E:\Proyecto\transguia-backend`).
+  Repo: github.com/elpoppin2/Transguia
 - Node.js, VS Code y Git ya instalados y verificados
 - Base de datos: proyecto de Supabase (Postgres) ya creado — nombre
   "TransGuia", región São Paulo (sa-east-1), organización "Proyecto Hub
@@ -41,6 +42,8 @@ grandes o instalar cosas nuevas.
   arrancar (secuencia del ticket, rol `superadmin`, `empresa_id` nullable).
 - 3 roles: `operador`, `admin_empresa`, `superadmin` (este último ve
   todas las empresas y es de solo lectura).
+- 2 tipos de empresa: `TRANSPORTISTA` (tickets + GRE) y `PROVEEDOR`
+  (proveedor de materiales con flota propia: solo control de flota).
 - `src/documentos/` — SOAT, revisión técnica, licencias, certificados
   médicos (tablas `documentos_unidad` / `documentos_chofer`) + la vista
   `vencimientos_proximos`. La licencia vigente del chofer se manda en la GRE.
@@ -84,22 +87,31 @@ grandes o instalar cosas nuevas.
 
 ## Dónde quedamos (siguiente paso inmediato)
 
-Todo lo que es **código** de la hoja de ruta está hecho (puntos 5, 6, y
-los extras de sesiones/roles y documentos). El proyecto corre entero
-contra Supabase real y pasa `npm run probar`.
+**2026-10-23 — la base de Supabase no responde.** `probar-conexion-db.js`
+da `tenant/user postgres.<ref> not found` y el dominio del proyecto no
+resuelve: casi seguro Supabase **pausó** el proyecto por inactividad
+(plan gratuito). El servidor no arranca sin base. Hay que entrar a
+supabase.com → proyecto "TransGuia" → **Restore project** (solo el
+usuario puede). Si se borró: proyecto nuevo, correr `transguia-schema.sql`,
+nueva `DATABASE_URL` en `.env` y `node sembrar-datos.js`.
 
-**Siguiente paso: punto 7 — desplegar** el backend en Render o Railway.
-Requiere una cuenta del usuario; los pasos están en `DESPLIEGUE.md`. El
-usuario todavía no eligió plataforma.
+Con la base de vuelta: `npm run probar`, `node sembrar-datos.js` (crea
+también el proveedor de demo) y **desplegar en Vercel** (punto 7). No se
+encontró ningún despliegue previo en Vercel.
+
+Lo hecho el 2026-10-23 (puntos 6j y 6k) **todavía no se probó contra la
+base real**; sí con repos en memoria y con capturas de la interfaz
+contra datos ficticios.
 
 Después quedan cosas que dependen de terceros (punto 8: contratar un PSE
 o certificado digital; punto 9: piloto con transportistas reales).
 
 ### Para levantar y demostrar ahora mismo (local)
 1. `node server.js`
-2. `node sembrar-datos.js` — 2 empresas con sus datos + 3 usuarios:
+2. `node sembrar-datos.js` — 3 empresas con sus datos + 4 usuarios:
    `andina`/`demo2026seguro` (admin), `delsur`/`delsur2026seguro`
-   (admin de la 2ª), `super`/`superdemo2026` (superadmin). Idempotente.
+   (admin de la 2ª), `lurin`/`lurin2026seguro` (admin del proveedor con
+   flota propia), `super`/`superdemo2026` (superadmin). Idempotente.
 3. Abrir **http://localhost:3001** en el navegador. El backend sirve la
    interfaz; ya no hay que configurar ninguna URL de API (las llamadas
    son relativas al mismo servidor).
@@ -245,6 +257,38 @@ o certificado digital; punto 9: piloto con transportistas reales).
    - Verificado con capturas automáticas (login, cada pestaña, celular,
      modo claro y oscuro, con usuario admin y superadmin) sin errores
      de consola.
+6j. [x] **Proveedores de materiales con flota propia** (2026-10-23,
+   decisión del usuario). Nueva columna `empresas.tipo_empresa`
+   (`TRANSPORTISTA` | `PROVEEDOR`, migración idempotente; las existentes
+   quedan TRANSPORTISTA). Decisiones del usuario: distinguir **por tipo
+   de empresa** (no por rol), unidad del proveedor con **solo SOAT y CITV,
+   sin aprobación**, y el proveedor ve todas las pestañas menos Tickets.
+   - Backend: `soloTransportistas` (403) en todas las rutas de tickets;
+     `esFlotaPropia(empresaId)` se lee de la base, no del token.
+     Unidades/choferes de un proveedor nacen APROBADOS y su admin los
+     edita en cualquier estado (opción `{ flotaPropia }` en los services).
+     Unidad: solo placa obligatoria; RUC del dueño = el de la empresa si no
+     se indica; PDFs de brevete/DNI/categoría MTC opcionales. Programación:
+     origen/destino/mercancía de texto libre (no los catálogos UNACEM).
+   - `GET /api/dashboard/flota` (`generarFlota`): flota con papeles en
+     regla (SOAT + RT por unidad), documentos vencidos, choferes con
+     licencia vigente, viajes, utilización y cumplimiento de la agenda.
+   - Login devuelve `tipoEmpresa` y `empresaRazonSocial`. `POST
+     /api/empresas` acepta `tipoEmpresa`.
+   - Demo: proveedor "Agregados y Canteras Lurín S.A.C." (`lurin` /
+     `lurin2026seguro`), 4 volquetes, 3 choferes, ~45 viajes programados.
+6k. [x] **Identidad visual nueva** (2026-10-23, decisión del usuario, con
+   la guía /frontend-design). Paleta "carretera y cantera": asfalto
+   (menú lateral), concreto (fondo), amarillo de señalización vial
+   (acción principal), óxido (solo vencido/rechazado), verde (al día).
+   Tipografía única Archivo (Google Fonts) con eje de ancho: expandida en
+   títulos, condensada en placas y cifras. Elemento distintivo: cada placa
+   se dibuja como placa peruana (`.placa`, `placaHTML()`). Login partido
+   en dos, menú lateral con la tarjeta de la empresa y su tipo, título de
+   cada vista arriba, avisos flotantes. Ids y lógica JS se mantuvieron.
+   (Entre 6i y 6j también se habían hecho, sin anotarlos aquí:
+   programación de viajes, métricas por chofer, notificaciones,
+   calendario de vencimientos, exportar CSV y KPI de cumplimiento.)
 7. **(pendiente — necesita cuenta del usuario)** Deploy a Vercel. Todo el
    código y la config están; solo falta importar el repo en vercel.com y
    cargar las variables de entorno. **Un solo deploy** publica la

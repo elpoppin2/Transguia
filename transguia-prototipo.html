@@ -3,39 +3,39 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>TransGuía — Prototipo</title>
+<title>TransGuía</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" />
 <style>
   /* =========================================================================
-     TOKENS
-     Paleta blanco / grafito / rojo — identidad UNACEM (industrial, sobria)
-     ejecutada con la sencillez de un panel Apple: superficies limpias,
-     jerarquía tipográfica clara, radios moderados, sombras discretas.
-     "Management by exception": el gris/negro es "sin novedad", el rojo
-     es lo único que pide atención. Un solo diseño (claro), a propósito:
-     no seguimos el modo oscuro del sistema operativo.
-     Los nombres --bg/--panel/--primario/etc. los usa también el JS en
-     estilos inline (gráficos) — no renombrar.
+     TOKENS — identidad "carretera y cantera"
+     Asfalto (menú), concreto (fondo), amarillo de señalización vial (la
+     acción principal), óxido (solo lo vencido / rechazado) y verde ruta
+     (lo que está al día). Una sola familia tipográfica, Archivo, con su
+     eje de ancho: expandida en títulos, condensada en placas y cifras.
+     Los nombres --bg/--panel/--primario/--dato/etc. los usa también el JS
+     en estilos inline (gráficos) — no renombrar.
      ========================================================================= */
   :root {
     color-scheme: light;
-    --bg: #f5f5f7; --panel: #ffffff; --panel-2: #f6f6f7;
-    --texto: #1d1d1f; --texto-suave: #6e6e73; --borde: #e2e2e6; --borde-fuerte: #d1d1d6;
-    --dato: #1d1d1f; /* color neutro por defecto de los gráficos */
-    --primario: #c8102e; --primario-600: #a80d27; --primario-tint: #fdecee; --primario-texto: #fff;
-    --ok-bg: #f0f0f1; --ok-tx: #1d1d1f;
-    --warn-bg: #fdecee; --warn-tx: #c8102e;
-    --err-bg: #f8dbe0; --err-tx: #8c0b22;
-    --info-bg: #f0f0f1; --info-tx: #1d1d1f;
-    --radio: 10px; --sombra: 0 1px 2px rgba(0,0,0,.05);
-    --sombra-sm: 0 1px 2px rgba(17,17,17,.04);
-    --sombra-md: 0 6px 20px rgba(17,17,17,.07), 0 1px 3px rgba(17,17,17,.05);
-    --sombra-lg: 0 20px 48px rgba(17,17,17,.14), 0 2px 8px rgba(17,17,17,.06);
-    --r-sm: 8px; --r-md: 10px; --r-lg: 14px; --r-xl: 20px; --r-pill: 999px;
-    --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px; --sp-7: 32px;
-    --fuente: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, Roboto, Helvetica, Arial, sans-serif;
-    --fs-xs: 11.5px; --fs-sm: 12.5px; --fs-md: 15px; --fs-lg: 17px; --fs-xl: 21px; --fs-2xl: 27px;
-    --ease: cubic-bezier(.4,0,.2,1); --dur: 160ms;
-    --topbar-h: 56px; --sidenav-w: 228px;
+    --asfalto: #1f2b30; --asfalto-2: #2a383e; --asfalto-texto: #c9d2cf; --asfalto-suave: #8c9a98;
+    --bg: #e9ebe7; --panel: #fcfcfa; --panel-2: #f1f2ee;
+    --texto: #1b2428; --texto-suave: #5e6a6e; --borde: #d9dcd5; --borde-fuerte: #c3c8c0;
+    --senal: #f2b200; --senal-600: #d89f00; --senal-tint: #fdf3d0;
+    --primario: var(--senal); --primario-600: var(--senal-600); --primario-tint: var(--senal-tint); --primario-texto: #1b2428;
+    --dato: #35525c; --dato-claro: #a9bcc0;
+    --ok-bg: #e2efe7; --ok-tx: #2d6e4f;
+    --warn-bg: #fcefc7; --warn-tx: #8a5a00;
+    --err-bg: #f7e0d9; --err-tx: #a8321a;
+    --info-bg: #e3ecee; --info-tx: #2f4f5a;
+    --r-sm: 6px; --r-md: 8px; --r-lg: 10px; --r-pill: 999px;
+    --sombra-lg: 0 18px 44px rgba(27,36,40,.16), 0 2px 6px rgba(27,36,40,.06);
+    --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px; --sp-7: 32px; --sp-8: 44px;
+    --fuente: "Archivo", "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
+    --fs-xs: 12px; --fs-sm: 13px; --fs-md: 15px; --fs-lg: 17px; --fs-xl: 22px; --fs-2xl: 30px;
+    --ease: cubic-bezier(.3,0,.2,1); --dur: 150ms;
+    --sidenav-w: 252px;
   }
 
   /* =========================================================================
@@ -44,457 +44,615 @@
   * { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; }
   body { margin: 0; background: var(--bg); color: var(--texto);
-    font: var(--fs-md)/1.5 var(--fuente); -webkit-font-smoothing: antialiased; }
-  ::selection { background: var(--primario-tint); color: var(--texto); }
-  ::-webkit-scrollbar { width: 11px; height: 11px; }
-  ::-webkit-scrollbar-thumb { background: var(--borde-fuerte); border-radius: var(--r-pill); border: 3px solid var(--bg); }
-  ::-webkit-scrollbar-track { background: transparent; }
-  a { color: var(--primario); }
+    font: 400 var(--fs-md)/1.5 var(--fuente); font-stretch: 100%; -webkit-font-smoothing: antialiased; }
+  ::selection { background: var(--senal); color: var(--texto); }
+  a { color: var(--dato); }
   [hidden] { display: none !important; }
   .oculto { display: none !important; }
+  .num, .kpi .val, .stat .n { font-variant-numeric: tabular-nums; }
 
-  /* foco accesible y consistente en toda la app */
   a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible,
   [tabindex]:focus-visible, tr.clic:focus-visible {
-    outline: 2px solid var(--primario); outline-offset: 2px; border-radius: var(--r-sm);
+    outline: 2px solid var(--texto); outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
   }
 
   /* =========================================================================
-     ESTRUCTURA — barra superior, navegación lateral, contenido
+     PLACA — la placa peruana es el dato que identifica todo en la
+     plataforma; se dibuja como una placa real en tablas y listas.
      ========================================================================= */
-  header.topbar {
-    position: sticky; top: 0; z-index: 20; height: var(--topbar-h);
-    background: color-mix(in srgb, var(--panel) 88%, transparent);
-    backdrop-filter: saturate(180%) blur(14px); -webkit-backdrop-filter: saturate(180%) blur(14px);
-    border-bottom: 1px solid var(--borde);
-    padding: 0 var(--sp-5); display: flex; align-items: center; gap: var(--sp-4); flex-wrap: nowrap;
+  .placa { display: inline-flex; flex-direction: column; vertical-align: middle; min-width: 76px;
+    background: #fff; border: 1.5px solid var(--texto); border-radius: 4px; overflow: hidden;
+    line-height: 1; box-shadow: 0 1px 0 rgba(27,36,40,.12); }
+  .placa::before { content: "PERÚ"; display: block; background: var(--texto); color: #fff;
+    font-size: 7px; font-weight: 600; letter-spacing: .32em; text-align: center; padding: 1.5px 0 1.5px .32em; }
+  .placa b { display: block; padding: 3px 8px 4px; text-align: center; white-space: nowrap;
+    font-stretch: 72%; font-weight: 750; font-size: 16px; letter-spacing: .05em; }
+  .placa.grande { min-width: 128px; border-width: 2px; border-radius: 6px; }
+  .placa.grande::before { font-size: 9px; padding: 2px 0 2px .32em; }
+  .placa.grande b { font-size: 30px; padding: 5px 14px 7px; }
+
+  /* =========================================================================
+     ESTRUCTURA — menú lateral de asfalto + contenido
+     ========================================================================= */
+  #app.shell { display: grid; grid-template-columns: var(--sidenav-w) minmax(0, 1fr); min-height: 100vh; }
+
+  .sidenav { position: sticky; top: 0; height: 100vh; overflow-y: auto; background: var(--asfalto);
+    color: var(--asfalto-texto); display: flex; flex-direction: column; gap: var(--sp-5); padding: var(--sp-5) var(--sp-3); }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 0 var(--sp-2); text-decoration: none; }
+  .brand-mark { width: 30px; height: 30px; flex-shrink: 0; display: block; }
+  .brand-name { margin: 0; font-size: 19px; font-weight: 700; font-stretch: 112%; letter-spacing: -.01em; color: #fff; }
+
+  .empresa-card { margin: 0 var(--sp-1); padding: var(--sp-3); border-radius: var(--r-md);
+    background: var(--asfalto-2); display: flex; flex-direction: column; gap: 3px; }
+  .empresa-card .e-nombre { color: #fff; font-weight: 600; font-size: var(--fs-sm); line-height: 1.3; }
+  .empresa-card .e-tipo { font-size: var(--fs-xs); color: var(--asfalto-suave); display: flex; align-items: center; gap: 6px; }
+  .empresa-card .e-tipo::before { content: ""; width: 8px; height: 8px; border-radius: 2px; background: var(--asfalto-suave); flex-shrink: 0; }
+  .empresa-card[data-tipo="PROVEEDOR"] .e-tipo { color: var(--senal); }
+  .empresa-card[data-tipo="PROVEEDOR"] .e-tipo::before { background: var(--senal); }
+
+  .tabs { display: flex; flex-direction: column; gap: 2px; }
+  .tabs button {
+    display: flex; align-items: center; gap: var(--sp-3); width: 100%; text-align: left;
+    background: transparent; color: var(--asfalto-texto); border: 0; border-radius: var(--r-sm);
+    padding: 10px var(--sp-3); font: inherit; font-size: 14.5px; font-weight: 500; cursor: pointer;
+    transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
   }
-  .brand { display: flex; align-items: center; gap: var(--sp-2); flex-shrink: 0; }
-  .brand-mark { width: 22px; height: 22px; border-radius: 6px; background: var(--primario); flex-shrink: 0;
-    box-shadow: inset 0 0 0 1px rgba(0,0,0,.05); }
-  header h1, .brand-name { font-size: var(--fs-lg); margin: 0; font-weight: 600; letter-spacing: -.01em; white-space: nowrap; }
-  header .sp { flex: 1 1 auto; min-width: var(--sp-3); }
-  header .quien { color: var(--texto-suave); font-size: var(--fs-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .userbox { display: flex; align-items: center; gap: var(--sp-3); flex-shrink: 0; }
+  .tabs button:hover { background: var(--asfalto-2); color: #fff; }
+  .tabs button.activa { background: rgba(242,178,0,.13); color: #fff; box-shadow: inset 3px 0 0 var(--senal); }
+  .tabs button .nav-ic { display: flex; flex-shrink: 0; opacity: .8; }
+  .tabs button.activa .nav-ic { opacity: 1; color: var(--senal); }
+  .tabs button .nav-ic svg { width: 18px; height: 18px; }
+  .sidenav :focus-visible { outline-color: var(--senal); }
+
+  .sidenav-pie { margin-top: auto; padding: var(--sp-3) var(--sp-2) 0; border-top: 1px solid var(--asfalto-2);
+    display: flex; flex-direction: column; gap: var(--sp-2); }
+  .sidenav-pie .quien { color: #fff; font-size: var(--fs-sm); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sidenav-pie .rol { color: var(--asfalto-suave); font-size: var(--fs-xs); }
+  .sidenav-pie button { align-self: flex-start; background: transparent; color: var(--asfalto-texto); border-color: var(--asfalto-2); }
+  .sidenav-pie button:hover { background: var(--asfalto-2); color: #fff; border-color: var(--asfalto-2); }
+
+  .contenido { min-width: 0; display: flex; flex-direction: column; }
+  header.topbar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: var(--sp-4);
+    padding: var(--sp-5) var(--sp-7) var(--sp-4);
+    background: color-mix(in srgb, var(--bg) 90%, transparent);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+  .titulo-vista { min-width: 0; flex: 1 1 auto; }
+  .titulo-vista h1 { margin: 0; font-size: var(--fs-2xl); line-height: 1.1; font-weight: 700; font-stretch: 112%; letter-spacing: -.015em; }
+  .titulo-vista p { margin: 4px 0 0; color: var(--texto-suave); font-size: var(--fs-sm); max-width: 72ch; }
+  .topbar-acciones { display: flex; align-items: center; gap: var(--sp-3); flex-shrink: 0; }
+
+  main { width: 100%; max-width: 1240px; padding: var(--sp-2) var(--sp-7) var(--sp-8); }
+  /* avisos flotantes arriba a la derecha (sirven también en el login) */
+  .avisos { position: fixed; top: var(--sp-4); right: var(--sp-4); z-index: 60; width: min(440px, calc(100vw - 32px)); }
+  .avisos:empty { display: none; }
+
+  /* notificaciones */
   .notif-wrap { position: relative; }
   .notif-btn { position: relative; display: inline-flex; }
-  .notif-btn .badge-count { position: absolute; top: -6px; right: -6px; }
+  .notif-btn .badge-count { position: absolute; top: -7px; right: -7px; }
   .notif-panel { position: absolute; right: 0; top: calc(100% + 8px); width: 320px; max-width: calc(100vw - 32px);
     max-height: 380px; overflow-y: auto; background: var(--panel); border: 1px solid var(--borde);
     border-radius: var(--r-lg); box-shadow: var(--sombra-lg); padding: var(--sp-2); z-index: 50; }
   .notif-item { display: flex; align-items: flex-start; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3);
-    border-radius: var(--r-md); font-size: var(--fs-sm); cursor: pointer; line-height: 1.4; }
+    border-radius: var(--r-sm); font-size: var(--fs-sm); cursor: pointer; line-height: 1.4; }
   .notif-item:hover { background: var(--panel-2); }
-  .notif-item .notif-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; background: var(--texto-suave); }
+  .notif-item .notif-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; margin-top: 5px; background: var(--texto-suave); }
   .notif-item.err .notif-dot { background: var(--err-tx); }
-  .notif-item.warn .notif-dot { background: var(--primario); }
+  .notif-item.warn .notif-dot { background: var(--senal); }
   .notif-item.muted { cursor: default; color: var(--texto-suave); }
   .notif-item.muted:hover { background: none; }
-
-  main { max-width: 1180px; margin: 0 auto; padding: var(--sp-5); }
-  .avisos { position: sticky; top: calc(var(--topbar-h) + var(--sp-3)); z-index: 15; }
-  .avisos:empty { display: none; }
-
-  #app.shell-body { display: grid; grid-template-columns: var(--sidenav-w) 1fr; gap: var(--sp-6); align-items: start; }
-  .sidenav { position: sticky; top: calc(var(--topbar-h) + var(--sp-5)); }
-  .views { min-width: 0; }
-
-  /* =========================================================================
-     NAVEGACIÓN (pestañas / sidenav) — mismos <button data-tab> de siempre
-     ========================================================================= */
-  .tabs { display: flex; flex-direction: column; gap: 2px; }
-  .tabs button {
-    display: flex; align-items: center; gap: var(--sp-3);
-    background: transparent; color: var(--texto-suave); border: 1px solid transparent;
-    border-radius: var(--r-md); padding: 9px var(--sp-3); font-size: var(--fs-md); font-weight: 500;
-    text-align: left; width: 100%; justify-content: flex-start;
-    transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
-  }
-  .tabs button:hover { background: var(--panel-2); color: var(--texto); }
-  .tabs button.activa { background: var(--primario-tint); color: var(--primario); border-color: transparent; }
-  .tabs button .nav-ic { flex-shrink: 0; display: flex; opacity: .85; }
-  .tabs button.activa .nav-ic { opacity: 1; }
-  .tabs button .nav-ic svg { width: 17px; height: 17px; }
 
   /* =========================================================================
      TIPOGRAFÍA Y TEXTOS AUXILIARES
      ========================================================================= */
-  h2 { font-size: var(--fs-lg); margin: 0 0 var(--sp-4); font-weight: 600; letter-spacing: -.01em; }
-  h2 .sub { color: var(--texto-suave); font-weight: 400; font-size: var(--fs-sm); }
+  h2 { font-size: var(--fs-lg); margin: 0 0 var(--sp-4); font-weight: 650; font-stretch: 106%; letter-spacing: -.005em; }
+  h2 .sub { display: block; margin-top: 2px; color: var(--texto-suave); font-weight: 400; font-size: var(--fs-sm); font-stretch: 100%; }
   .muted { color: var(--texto-suave); font-size: var(--fs-sm); }
-  .vacio { color: var(--texto-suave); font-size: 13.5px; padding: var(--sp-6) 0; text-align: center; }
-  code { background: var(--panel-2); padding: 1px 5px; border-radius: 5px; font-size: var(--fs-sm); }
+  .vacio { color: var(--texto-suave); font-size: 14px; padding: var(--sp-7) var(--sp-4); text-align: center;
+    border: 1.5px dashed var(--borde-fuerte); border-radius: var(--r-md); margin-top: var(--sp-3); }
+  code { background: var(--panel-2); padding: 1px 5px; border-radius: 4px; font-size: var(--fs-sm); }
 
   /* =========================================================================
      FORMULARIOS
      ========================================================================= */
-  label { display: block; font-size: var(--fs-sm); color: var(--texto-suave); margin: 0 0 4px; }
+  label { display: block; font-size: var(--fs-sm); font-weight: 500; color: var(--texto-suave); margin: 0 0 5px; }
   input, select {
-    width: 100%; padding: 9px 10px; border: 1px solid var(--borde); border-radius: var(--r-sm);
-    background: var(--panel-2); color: var(--texto); font: inherit;
-    transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+    width: 100%; padding: 9px 11px; border: 1px solid var(--borde-fuerte); border-radius: var(--r-sm);
+    background: #fff; color: var(--texto); font: inherit; font-size: 14.5px;
+    transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
   }
-  input::placeholder { color: color-mix(in srgb, var(--texto-suave) 75%, transparent); }
-  input:hover, select:hover { border-color: var(--borde-fuerte); }
-  input:focus, select:focus { outline: 2px solid var(--primario); outline-offset: -1px; background: var(--panel); }
+  input::placeholder { color: #98a2a3; }
+  input:hover, select:hover { border-color: var(--texto-suave); }
+  input:focus, select:focus { outline: none; border-color: var(--texto); box-shadow: 0 0 0 3px rgba(242,178,0,.45); }
   input:disabled, select:disabled { opacity: .55; cursor: not-allowed; }
-  input[type="file"] { padding: 7px 8px; font-size: 12.5px; }
-  .grid { display: grid; gap: var(--sp-3) var(--sp-4); grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  input[type="file"] { padding: 7px 8px; font-size: var(--fs-sm); background: var(--panel-2); }
+  .grid { display: grid; gap: var(--sp-3) var(--sp-4); grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
   .fila { display: flex; gap: var(--sp-3); align-items: flex-end; flex-wrap: wrap; }
   .conbtn { display: flex; gap: 6px; }
   .conbtn input { flex: 1; min-width: 0; }
   .conbtn button { white-space: nowrap; }
 
-  h3.grupo { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .06em; font-weight: 600;
-    color: var(--texto-suave); margin: var(--sp-5) 0 var(--sp-3); border-top: 1px solid var(--borde); padding-top: var(--sp-4); }
-  h3.grupo .sub { text-transform: none; letter-spacing: 0; font-weight: 400; }
-  h3.grupo:first-of-type { border-top: 0; padding-top: 0; margin-top: 2px; }
+  h3.grupo { font-size: 14px; font-weight: 650; color: var(--texto); margin: var(--sp-6) 0 var(--sp-3);
+    padding-top: var(--sp-4); border-top: 1px solid var(--borde); }
+  h3.grupo .sub { color: var(--texto-suave); font-weight: 400; }
+  h3.grupo:first-child, .oculto:first-child + h3.grupo { border-top: 0; padding-top: 0; margin-top: 0; }
 
-  /* bloque de formulario colapsable (alta de unidad/chofer/empresa) */
   .form-toggle-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap; }
-  .form-toggle-bar h2 { margin-bottom: 2px; }
-  [data-form-body] { margin-top: var(--sp-4); }
+  .form-toggle-bar h2 { margin-bottom: 0; }
+  [data-form-body] { margin-top: var(--sp-5); padding-top: var(--sp-5); border-top: 1px solid var(--borde); }
+  .form-acciones { display: flex; gap: var(--sp-3); align-items: center; flex-wrap: wrap; margin-top: var(--sp-5); }
 
-  /* buscar / filtrar / paginar */
-  .buscador { display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap; margin: var(--sp-1) 0 var(--sp-3); }
-  .buscador input[type="search"] { flex: 1; min-width: 180px; }
-  .buscador select { width: auto; min-width: 140px; }
+  .tipo-elegir { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--sp-3); margin-bottom: var(--sp-4); }
+  .tipo-elegir label { display: flex; gap: var(--sp-3); align-items: flex-start; margin: 0; padding: var(--sp-3) var(--sp-4);
+    border: 1.5px solid var(--borde-fuerte); border-radius: var(--r-md); background: #fff; cursor: pointer; color: var(--texto); }
+  .tipo-elegir label:has(input:checked) { border-color: var(--texto); box-shadow: inset 4px 0 0 var(--senal); }
+  .tipo-elegir input { width: auto; margin-top: 3px; accent-color: var(--texto); }
+  .tipo-elegir strong { display: block; font-size: 14.5px; }
+  .tipo-elegir span { display: block; font-size: var(--fs-sm); color: var(--texto-suave); }
+
+  .buscador { display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap; margin: 0 0 var(--sp-3); }
+  .buscador input[type="search"] { flex: 1; min-width: 200px; }
+  .buscador select { width: auto; min-width: 150px; }
   .paginacion { font-size: var(--fs-sm); }
 
+  /* calendario de vencimientos */
   .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
   .cal-dow { font-size: var(--fs-xs); color: var(--texto-suave); text-align: center; padding-bottom: 4px; font-weight: 600; }
-  .cal-day { min-height: 78px; border: 1px solid var(--borde); border-radius: var(--r-md); padding: 6px; background: var(--panel); }
-  .cal-day.fuera { background: var(--panel-2); }
-  .cal-day.fuera .cal-num { color: var(--texto-suave); }
-  .cal-day .cal-num { font-size: var(--fs-sm); font-weight: 600; margin-bottom: 4px; }
-  .cal-chip { display: block; border-radius: 6px; padding: 1px 5px; margin-bottom: 2px; font-size: 10.5px;
-    line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cal-day { min-height: 80px; border: 1px solid var(--borde); border-radius: var(--r-sm); padding: 6px; background: #fff; }
+  .cal-day.fuera { background: transparent; border-style: dashed; }
+  .cal-day .cal-num { font-size: var(--fs-sm); font-weight: 650; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
+  .cal-chip { display: block; border-radius: 3px; padding: 1px 5px; margin-bottom: 2px; font-size: 11px;
+    line-height: 1.45; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .cal-chip.err { background: var(--err-bg); color: var(--err-tx); }
   .cal-chip.warn { background: var(--warn-bg); color: var(--warn-tx); }
   .cal-chip.gris { background: var(--panel-2); color: var(--texto-suave); }
-  [data-vencvista].activa { background: var(--primario); color: var(--primario-texto); border-color: var(--primario); }
 
   /* línea de tiempo del ticket */
-  .hist-lista { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
-  .hist-item { font-size: var(--fs-sm); padding: 8px 10px; background: var(--panel); border: 1px solid var(--borde);
-    border-radius: var(--r-sm); display: flex; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap; }
+  .hist-lista { display: flex; flex-direction: column; gap: 0; margin-top: 6px; border-left: 2px solid var(--borde-fuerte); }
+  .hist-item { position: relative; font-size: var(--fs-sm); padding: 7px 12px 7px 16px;
+    display: flex; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap; }
+  .hist-item::before { content: ""; position: absolute; left: -6px; top: 12px; width: 10px; height: 10px;
+    border-radius: 2px; background: var(--texto); }
 
   /* =========================================================================
-     BOTONES
+     BOTONES — amarillo señal = la acción principal de la pantalla
      ========================================================================= */
   button {
-    padding: 9px 15px; border: 1px solid var(--primario); border-radius: var(--r-sm);
-    background: var(--primario); color: var(--primario-texto); font: inherit; font-weight: 500; cursor: pointer;
-    transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease), transform var(--dur) var(--ease), opacity var(--dur) var(--ease);
+    padding: 9px 16px; border: 1px solid var(--senal-600); border-radius: var(--r-sm);
+    background: var(--primario); color: var(--primario-texto); font: inherit; font-size: 14.5px; font-weight: 600; cursor: pointer; white-space: nowrap;
+    transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease), color var(--dur) var(--ease);
   }
-  button:hover { background: var(--primario-600); border-color: var(--primario-600); }
-  button:active { transform: scale(.97); }
-  button.sec { background: transparent; color: var(--primario); }
-  button.sec:hover { background: var(--primario-tint); border-color: var(--primario); }
-  button.tenue { background: transparent; color: var(--texto-suave); border-color: var(--borde); }
-  button.tenue:hover { background: var(--panel-2); color: var(--texto); border-color: var(--borde-fuerte); }
+  button:hover { background: var(--primario-600); }
+  button:active { transform: translateY(1px); }
+  button.sec { background: #fff; color: var(--texto); border-color: var(--borde-fuerte); }
+  button.sec:hover { background: var(--panel-2); border-color: var(--texto-suave); }
+  button.tenue { background: transparent; color: var(--texto-suave); border-color: var(--borde); font-weight: 500; }
+  button.tenue:hover { background: #fff; color: var(--texto); border-color: var(--borde-fuerte); }
+  button.peligro { background: transparent; color: var(--err-tx); border-color: color-mix(in srgb, var(--err-tx) 40%, transparent); font-weight: 500; }
+  button.peligro:hover { background: var(--err-bg); }
   button:disabled { opacity: .45; cursor: not-allowed; transform: none; }
   button.chico { padding: 5px 10px; font-size: var(--fs-sm); }
+  [data-ventana].activa, [data-vencvista].activa { background: var(--texto); color: #fff; border-color: var(--texto); }
 
   /* =========================================================================
      TABLAS
      ========================================================================= */
-  .tabla-scroll { overflow-x: auto; margin: 0 calc(var(--sp-4) * -1); padding: 0 var(--sp-4); }
-  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
-  th, td { text-align: left; padding: 10px; border-bottom: 1px solid var(--borde); vertical-align: top; }
-  th { color: var(--texto-suave); font-weight: 600; font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .04em; }
-  tbody tr:hover td { background: var(--panel-2); }
+  .tabla-scroll { overflow-x: auto; margin: 0 calc(var(--sp-5) * -1); padding: 0 var(--sp-5); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 10px 10px; border-bottom: 1px solid var(--borde); vertical-align: middle; }
+  th { color: var(--texto-suave); font-weight: 600; font-size: var(--fs-sm); border-bottom: 1.5px solid var(--borde-fuerte); white-space: nowrap; }
+  tbody tr:hover > td { background: var(--panel-2); }
   tr.clic { cursor: pointer; }
-  tr.clic:hover td { background: var(--primario-tint); }
+  td.acciones, td.num { white-space: nowrap; }
+  td.acciones > * + * { margin-left: 4px; }
+  .sub-panel td, .sub-panel th { padding: 7px 8px; }
 
   /* =========================================================================
-     ETIQUETAS DE ESTADO (pills)
+     ETIQUETAS DE ESTADO
      ========================================================================= */
-  .pill { display: inline-block; padding: 3px 9px; border-radius: var(--r-pill); font-size: var(--fs-xs); font-weight: 600; white-space: nowrap; }
+  .pill { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px 2px 7px; border-radius: 4px;
+    font-size: var(--fs-xs); font-weight: 600; white-space: nowrap; line-height: 1.6; }
+  .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .85; }
   .pill.ok { background: var(--ok-bg); color: var(--ok-tx); }
   .pill.warn { background: var(--warn-bg); color: var(--warn-tx); }
   .pill.err { background: var(--err-bg); color: var(--err-tx); }
   .pill.info { background: var(--info-bg); color: var(--info-tx); }
-  .pill.gris { background: var(--panel-2); color: var(--texto-suave); border: 1px solid var(--borde); }
+  .pill.gris { background: var(--panel-2); color: var(--texto-suave); box-shadow: inset 0 0 0 1px var(--borde); }
+  .pill.tipo-prov { background: var(--senal-tint); color: #6b4a00; }
+  .pill.tipo-prov::before { border-radius: 1px; background: var(--senal); opacity: 1; }
 
   /* =========================================================================
-     AVISOS (banners de error / éxito)
+     AVISOS
      ========================================================================= */
-  .aviso { display: flex; align-items: center; gap: var(--sp-2); padding: 11px var(--sp-4); border-radius: var(--r-md);
-    font-size: 13.5px; margin-bottom: var(--sp-3); background: var(--err-bg); color: var(--err-tx);
-    box-shadow: var(--sombra-sm); animation: aviso-in var(--dur) var(--ease); }
-  .aviso.ok { background: var(--ok-bg); color: var(--ok-tx); }
+  .aviso { display: flex; align-items: center; gap: var(--sp-3); padding: 11px var(--sp-4); border-radius: var(--r-md);
+    font-size: 14px; margin-bottom: var(--sp-3); background: var(--err-bg); color: var(--err-tx);
+    border-left: 4px solid var(--err-tx); box-shadow: var(--sombra-lg); animation: aviso-in 180ms var(--ease); }
+  .aviso.ok { background: var(--ok-bg); color: var(--ok-tx); border-left-color: var(--ok-tx); }
   .aviso .aviso-msg { flex: 1; }
   .aviso .aviso-icon { flex-shrink: 0; font-weight: 700; }
-  .aviso .aviso-cerrar { flex-shrink: 0; background: none; border: none; color: inherit; opacity: .55;
+  .aviso .aviso-cerrar { flex-shrink: 0; background: none; border: none; color: inherit; opacity: .6;
     padding: 0 2px; font-size: 15px; line-height: 1; cursor: pointer; }
   .aviso .aviso-cerrar:hover { opacity: 1; background: none; }
   @keyframes aviso-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 
   /* =========================================================================
-     TARJETAS / PANELES
+     PANELES Y TARJETAS
      ========================================================================= */
   .panel { background: var(--panel); border: 1px solid var(--borde); border-radius: var(--r-lg);
-    box-shadow: var(--sombra-sm); padding: var(--sp-5); margin-bottom: var(--sp-5); }
-  .sub-panel { background: var(--panel-2); border: 1px solid var(--borde); border-radius: var(--r-md); padding: var(--sp-4); margin-top: var(--sp-2); }
-  .ficha { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: var(--sp-2) var(--sp-4); }
-  .ficha > div { display: flex; flex-direction: column; font-size: 12.5px; }
-  .ficha > div > span { color: var(--texto-suave); font-size: 11px; }
+    padding: var(--sp-5); margin-bottom: var(--sp-5); }
+  .sub-panel { background: var(--panel-2); border: 1px solid var(--borde); border-radius: var(--r-md); padding: var(--sp-4); margin: var(--sp-1) 0 var(--sp-2); }
+  .ficha { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: var(--sp-3) var(--sp-4); }
+  .ficha > div { display: flex; flex-direction: column; font-size: 13.5px; }
+  .ficha > div > span { color: var(--texto-suave); font-size: var(--fs-xs); }
 
-  .section-title { font-size: var(--fs-md); font-weight: 600; margin: 0 0 var(--sp-1); letter-spacing: -.01em; }
-  .section-title .sub { color: var(--texto-suave); font-weight: 400; font-size: var(--fs-sm); }
+  .section-title { font-size: var(--fs-lg); font-weight: 650; font-stretch: 106%; margin: 0 0 var(--sp-3); }
+  .section-title .sub { display: block; color: var(--texto-suave); font-weight: 400; font-size: var(--fs-sm); font-stretch: 100%; }
   .card-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-3); margin-bottom: var(--sp-4); flex-wrap: wrap; }
-  .badge-count { display: inline-flex; align-items: center; justify-content: center; min-width: 19px; height: 19px; padding: 0 5px;
-    border-radius: var(--r-pill); background: var(--primario); color: var(--primario-texto); font-size: 11px; font-weight: 700; }
+  .badge-count { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px;
+    border-radius: var(--r-pill); background: var(--senal); color: var(--texto); font-size: 11.5px; font-weight: 700; vertical-align: 1px; }
 
   /* =========================================================================
-     PLATAFORMA (superadmin) — resumen en cifras
+     PLATAFORMA (superadmin)
      ========================================================================= */
-  #segmentador { padding: 6px 10px 6px 12px; background: var(--panel-2); border: 1px solid var(--borde);
-    border-radius: var(--r-pill); display: flex; align-items: center; gap: var(--sp-2); flex-shrink: 1; min-width: 0; }
+  #segmentador { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; }
   #segmentador label { margin: 0; white-space: nowrap; }
-  #segmentador select { width: auto; min-width: 160px; max-width: 46vw; background: var(--panel); border: none; padding: 3px 6px; }
-  .stats { display: grid; gap: var(--sp-3); grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
-  .stat { background: var(--panel-2); border: 1px solid var(--borde); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); }
-  .stat .n { font-size: var(--fs-xl); font-weight: 700; font-variant-numeric: tabular-nums; }
+  #segmentador select { width: auto; min-width: 200px; max-width: 34vw; font-weight: 500; }
+  .stats { display: grid; gap: var(--sp-3); grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  .stat { background: #fff; border: 1px solid var(--borde); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); }
+  .stat .n { font-size: 28px; font-weight: 700; font-stretch: 75%; line-height: 1.1; }
   .stat .t { font-size: var(--fs-sm); color: var(--texto-suave); margin-top: 2px; }
   .stat.alerta .n { color: var(--err-tx); }
 
   /* =========================================================================
-     DASHBOARD — indicadores y gráficos
+     DASHBOARD
      ========================================================================= */
   .dash-toolbar { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap; margin-bottom: var(--sp-5); }
+  .dash-alcance { font-weight: 600; }
   .ventanas { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-  [data-ventana].activa { background: var(--primario); color: var(--primario-texto); border-color: var(--primario); }
 
-  .kpi-group + .kpi-group { margin-top: var(--sp-4); }
-  .kpi-group-title { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .06em; font-weight: 600;
-    color: var(--texto-suave); margin: 0 0 var(--sp-2); }
-  .kpi-row { display: grid; gap: var(--sp-3); margin-bottom: var(--sp-4);
-    grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); }
-  .kpi { background: var(--panel); border: 1px solid var(--borde); border-left-width: 3px; border-radius: var(--r-md);
-    padding: var(--sp-3) var(--sp-4); box-shadow: var(--sombra-sm); }
-  .kpi .lbl { font-size: var(--fs-xs); color: var(--texto-suave); line-height: 1.35; }
-  .kpi .val { font-size: var(--fs-2xl); font-weight: 700; margin: 5px 0 1px; line-height: 1.1; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
-  .kpi .val .u { font-size: 13px; font-weight: 500; color: var(--texto-suave); margin-left: 2px; }
-  .kpi .delta { font-size: 11px; font-weight: 600; }
+  .kpi-group + .kpi-group { margin-top: var(--sp-5); }
+  .kpi-group-title { font-size: 14px; font-weight: 650; color: var(--texto); margin: 0 0 var(--sp-2); }
+  .kpi-row { display: grid; gap: var(--sp-3); grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); }
+  .kpi { background: var(--panel); border: 1px solid var(--borde); border-top: 4px solid var(--borde-fuerte); border-radius: var(--r-md);
+    padding: var(--sp-3) var(--sp-4) var(--sp-4); }
+  .kpi .lbl { font-size: var(--fs-sm); color: var(--texto-suave); line-height: 1.35; font-weight: 500; }
+  .kpi .val { font-size: 34px; font-weight: 750; font-stretch: 75%; margin: 4px 0 2px; line-height: 1; letter-spacing: -.01em; }
+  .kpi .val .u { font-size: 15px; font-weight: 600; color: var(--texto-suave); margin-left: 3px; font-stretch: 100%; }
+  .kpi .delta { font-size: var(--fs-xs); font-weight: 600; }
   .kpi .delta.up { color: var(--ok-tx); } .kpi .delta.down { color: var(--err-tx); }
   .kpi .delta.flat { color: var(--texto-suave); font-weight: 500; }
-  .kpi .sem { font-size: 11px; font-weight: 700; margin-top: 1px; }
-  .kpi .nota { font-size: 10.5px; color: var(--texto-suave); margin-top: 1px; }
-  .kpi.b-bien { border-left-color: var(--ok-tx); } .kpi.b-bien .sem { color: var(--ok-tx); }
-  .kpi.b-atencion { border-left-color: var(--warn-tx); } .kpi.b-atencion .sem { color: var(--warn-tx); }
-  .kpi.b-critico { border-left-color: var(--err-tx); } .kpi.b-critico .sem { color: var(--err-tx); }
-  .kpi.b-neutro { border-left-color: var(--borde); }
-  .kpi-mini { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: var(--borde); margin-top: 7px; }
+  .kpi .sem { font-size: var(--fs-xs); font-weight: 700; margin-top: 2px; }
+  .kpi .nota { font-size: var(--fs-xs); color: var(--texto-suave); margin-top: 2px; }
+  .kpi.b-bien { border-top-color: var(--ok-tx); } .kpi.b-bien .sem { color: var(--ok-tx); }
+  .kpi.b-atencion { border-top-color: var(--senal); } .kpi.b-atencion .sem { color: var(--warn-tx); }
+  .kpi.b-critico { border-top-color: var(--err-tx); } .kpi.b-critico .sem { color: var(--err-tx); }
+  .kpi.b-neutro { border-top-color: var(--borde-fuerte); }
+  .kpi-mini { display: flex; height: 6px; border-radius: 2px; overflow: hidden; background: var(--borde); margin-top: 8px; }
   .kpi-mini > i { height: 100%; }
 
-  .dash-section + .dash-section { margin-top: var(--sp-6); }
+  .dash-section { margin-top: var(--sp-7); }
   .dash-grid { display: grid; gap: var(--sp-4); grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
   .dash-grid-2 { display: grid; gap: var(--sp-4); grid-template-columns: 1.6fr 1fr; align-items: stretch; }
-  .card { background: var(--panel); border: 1px solid var(--borde); border-radius: var(--r-lg); padding: var(--sp-4); box-shadow: var(--sombra-sm); }
-  .card h3 { font-size: 13px; margin: 0 0 var(--sp-4); color: var(--texto); font-weight: 600; }
+  .card { background: var(--panel); border: 1px solid var(--borde); border-radius: var(--r-md); padding: var(--sp-4) var(--sp-5); }
+  .card h3 { font-size: 14px; margin: 0 0 var(--sp-4); color: var(--texto); font-weight: 650; }
   .card h3 .sub { color: var(--texto-suave); font-weight: 400; }
 
-  .chart-v { display: flex; align-items: flex-end; gap: 5px; height: 150px; overflow-x: auto; padding-bottom: 2px; }
+  .chart-v { display: flex; align-items: flex-end; gap: 6px; height: 160px; overflow-x: auto; padding-bottom: 2px; }
   .bar-col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
-    min-width: 24px; height: 100%; flex: 1 0 auto; }
-  .bar-col .bar { width: 60%; max-width: 26px; min-width: 8px; background: var(--dato);
-    border-radius: 4px 4px 0 0; min-height: 2px; transition: height var(--dur) var(--ease); }
-  .bar-col .bar-val { font-size: 10px; color: var(--texto-suave); margin-bottom: 3px; font-variant-numeric: tabular-nums; }
-  .bar-col .bar-lbl { font-size: 9px; color: var(--texto-suave); margin-top: 5px; white-space: nowrap; }
-  .bar-row { display: grid; grid-template-columns: minmax(90px, 34%) 1fr 62px; gap: var(--sp-2);
-    align-items: center; margin-bottom: 8px; font-size: 12px; }
-  .bar-row-lbl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--texto-suave); }
-  .bar-row-track { background: var(--panel-2); border-radius: 4px; height: 14px; overflow: hidden; }
-  .bar-row-fill { background: var(--primario); height: 100%; border-radius: 4px; min-width: 2px; transition: width var(--dur) var(--ease); }
-  .bar-row-val { text-align: right; font-variant-numeric: tabular-nums; }
+    min-width: 26px; height: 100%; flex: 1 0 auto; }
+  .bar-col .bar { width: 62%; max-width: 30px; min-width: 8px; background: var(--dato);
+    border-radius: 3px 3px 0 0; min-height: 2px; transition: height var(--dur) var(--ease); }
+  .bar-col .bar-val { font-size: 11px; color: var(--texto); margin-bottom: 3px; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .bar-col .bar-lbl { font-size: 11px; color: var(--texto-suave); margin-top: 6px; white-space: nowrap; }
+  .bar-row { display: grid; grid-template-columns: minmax(90px, 34%) 1fr 70px; gap: var(--sp-2);
+    align-items: center; margin-bottom: 9px; font-size: var(--fs-sm); }
+  .bar-row-lbl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--texto); }
+  .bar-row-track { background: var(--panel-2); border-radius: 2px; height: 12px; overflow: hidden; }
+  .bar-row-fill { background: var(--dato); height: 100%; border-radius: 2px; min-width: 2px; transition: width var(--dur) var(--ease); }
+  .bar-row-val { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
 
-  /* barra apilada (part-to-whole) */
-  .stack-bar { display: flex; height: 26px; border-radius: 6px; overflow: hidden; background: var(--panel-2); }
+  .stack-bar { display: flex; height: 28px; border-radius: 4px; overflow: hidden; background: var(--panel-2); }
   .stack-bar > i { height: 100%; border-right: 2px solid var(--panel); }
   .stack-bar > i:last-child { border-right: 0; }
-  .stack-leg { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-top: var(--sp-3); font-size: 12px; color: var(--texto-suave); }
-  .stack-leg b { color: var(--texto); font-weight: 600; }
-  .stack-leg .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+  .stack-leg { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-4); margin-top: var(--sp-3); font-size: var(--fs-sm); color: var(--texto-suave); }
+  .stack-leg b { color: var(--texto); font-weight: 650; }
+  .stack-leg .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
 
-  /* heatmap de corredores */
   .heat { display: grid; gap: 3px; font-variant-numeric: tabular-nums; }
-  .heat > div { padding: 8px 4px; text-align: center; font-size: 11px; border-radius: 5px; }
-  .heat .hd { color: var(--texto-suave); font-size: 10px; font-weight: 600; }
-  .heat .rl { text-align: right; padding-right: 8px; color: var(--texto-suave); font-size: 10.5px; font-weight: 600; }
-  .heat-scale { display: flex; align-items: center; gap: 6px; margin-top: var(--sp-3); font-size: 10.5px; color: var(--texto-suave); }
-  .heat-scale i { flex: 1; height: 8px; border-radius: 4px;
-    background: linear-gradient(to right, var(--panel-2), var(--primario)); }
+  .heat > div { padding: 9px 4px; text-align: center; font-size: 12px; border-radius: 3px; }
+  .heat .hd { color: var(--texto-suave); font-size: 11.5px; font-weight: 600; }
+  .heat .rl { text-align: right; padding-right: 8px; color: var(--texto-suave); font-size: 12px; font-weight: 600; }
+  .heat-scale { display: flex; align-items: center; gap: 6px; margin-top: var(--sp-3); font-size: 11.5px; color: var(--texto-suave); }
+  .heat-scale i { flex: 1; height: 8px; border-radius: 2px; background: linear-gradient(to right, var(--panel-2), var(--dato)); }
 
-  /* gráfico de línea (evolución diaria) */
   .chart-l { padding-top: 4px; }
-  .chl-plot { position: relative; height: 150px; }
+  .chl-plot { position: relative; height: 160px; }
   .chl-plot svg { width: 100%; height: 100%; display: block; overflow: visible; }
   .chl-guia { stroke: var(--borde); stroke-width: 1; vector-effect: non-scaling-stroke; }
-  .chl-area { fill: var(--primario); opacity: .10; stroke: none; }
-  .chl-linea { fill: none; stroke: var(--primario); stroke-width: 2; vector-effect: non-scaling-stroke;
+  .chl-area { fill: var(--dato); opacity: .1; stroke: none; }
+  .chl-linea { fill: none; stroke: var(--dato); stroke-width: 2.2; vector-effect: non-scaling-stroke;
     stroke-linejoin: round; stroke-linecap: round; }
-  .chl-punto { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: var(--primario);
-    transform: translate(-50%, -50%); box-shadow: 0 0 0 3px var(--panel); }
-  .chl-ymax { position: absolute; top: -3px; left: 0; font-size: 10px; color: var(--texto-suave);
+  .chl-punto { position: absolute; width: 8px; height: 8px; border-radius: 2px; background: var(--dato);
+    transform: translate(-50%, -50%); box-shadow: 0 0 0 2.5px var(--panel); }
+  .chl-ymax { position: absolute; top: -3px; left: 0; font-size: 11px; color: var(--texto-suave);
     background: var(--panel); padding: 0 3px; font-variant-numeric: tabular-nums; }
   .chl-hits { position: absolute; inset: 0; }
   .chl-hits > div { position: absolute; top: 0; bottom: 0; }
-  .chl-hits > div:hover { background: color-mix(in srgb, var(--primario) 9%, transparent); }
-  .chl-xlab { position: relative; height: 14px; margin-top: 5px; }
-  .chl-xlab span { position: absolute; transform: translateX(-50%); font-size: 9px;
-    color: var(--texto-suave); white-space: nowrap; }
+  .chl-hits > div:hover { background: color-mix(in srgb, var(--senal) 18%, transparent); }
+  .chl-xlab { position: relative; height: 15px; margin-top: 6px; }
+  .chl-xlab span { position: absolute; transform: translateX(-50%); font-size: 11px; color: var(--texto-suave); white-space: nowrap; }
+
+  /* unidades que piden atención (dashboard de flota) */
+  .atencion-lista { display: flex; flex-direction: column; }
+  .atencion-item { display: grid; grid-template-columns: auto 1fr auto; gap: var(--sp-3); align-items: center;
+    padding: 9px 0; border-bottom: 1px solid var(--borde); font-size: var(--fs-sm); }
+  .atencion-item:last-child { border-bottom: 0; }
+  .atencion-item .det { color: var(--texto-suave); min-width: 0; }
+  .atencion-item .det strong { color: var(--texto); font-weight: 600; display: block; }
 
   /* =========================================================================
      LOGIN
      ========================================================================= */
-  .login-card { width: 100%; max-width: 380px; margin: min(14vh, 96px) auto var(--sp-7); box-shadow: var(--sombra-lg); }
-  .login-head { text-align: center; margin-bottom: var(--sp-5); }
-  .login-head .brand-mark { width: 40px; height: 40px; border-radius: 11px; margin: 0 auto var(--sp-3); }
-  .login-head h2 { margin-bottom: 2px; }
+  .login { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); min-height: 100vh; }
+  .login-lado { background: var(--asfalto); color: var(--asfalto-texto); padding: var(--sp-8) clamp(28px, 5vw, 72px);
+    display: flex; flex-direction: column; justify-content: space-between; gap: var(--sp-8); position: relative; overflow: hidden; }
+  /* la línea discontinua del carril, una sola vez y solo aquí */
+  .login-lado::after { content: ""; position: absolute; top: 0; bottom: 0; right: 56px; width: 6px;
+    background: repeating-linear-gradient(to bottom, var(--senal) 0 46px, transparent 46px 92px); opacity: .9; }
+  .login-lado .brand { padding: 0; }
+  .login-lado h2 { color: #fff; font-size: clamp(30px, 3.6vw, 46px); line-height: 1.05; font-weight: 750; font-stretch: 115%;
+    letter-spacing: -.02em; margin: 0 0 var(--sp-5); max-width: 15ch; }
+  .login-lado .perfiles { display: grid; gap: var(--sp-4); max-width: 46ch; padding-right: 72px; }
+  .login-lado .perfiles div { border-left: 3px solid var(--asfalto-2); padding-left: var(--sp-4); }
+  .login-lado .perfiles strong { display: block; color: #fff; font-weight: 600; }
+  .login-lado .perfiles span { font-size: 14px; }
+  .login-form { display: flex; align-items: center; justify-content: center; padding: var(--sp-8) var(--sp-6); }
+  .login-form-in { width: 100%; max-width: 360px; }
+  .login-form h2 { font-size: var(--fs-xl); font-stretch: 110%; margin-bottom: var(--sp-1); }
+  .login-form .grid { grid-template-columns: 1fr; gap: var(--sp-4); margin-top: var(--sp-6); }
+  .login-form button { width: 100%; padding: 12px 16px; margin-top: var(--sp-5); }
+  .login-ayuda { margin-top: var(--sp-5); font-size: var(--fs-sm); color: var(--texto-suave); }
 
   /* =========================================================================
      RESPONSIVE
      ========================================================================= */
-  @media (max-width: 900px) {
-    #app.shell-body { grid-template-columns: 1fr; gap: var(--sp-3); }
-    .sidenav { position: static; }
-    .tabs { flex-direction: row; overflow-x: auto; gap: 6px; padding-bottom: 2px; }
-    .tabs button { width: auto; flex-shrink: 0; }
+  @media (max-width: 960px) {
+    #app.shell { grid-template-columns: minmax(0, 1fr); }
+    .sidenav { position: static; height: auto; padding: var(--sp-3) var(--sp-4); gap: var(--sp-3); }
+    .brand-name { font-size: 17px; }
+    .empresa-card { margin: 0; padding: var(--sp-2) var(--sp-3); }
+    .tabs { flex-direction: row; overflow-x: auto; gap: 4px; padding-bottom: 2px; scrollbar-width: none; }
+    .tabs button { width: auto; flex-shrink: 0; padding: 8px 12px; }
+    .tabs button.activa { box-shadow: inset 0 -3px 0 var(--senal); }
+    .sidenav-pie { flex-direction: row; align-items: center; justify-content: space-between; margin-top: 0; padding-top: var(--sp-2); }
+    .sidenav-pie > div { min-width: 0; }
+    header.topbar { position: static; padding: var(--sp-5) var(--sp-4) var(--sp-3); flex-wrap: wrap; }
+    main { padding: var(--sp-2) var(--sp-4) var(--sp-7); }
     .dash-grid-2 { grid-template-columns: 1fr; }
-    #segmentador select { max-width: 60vw; }
+    #segmentador select { max-width: 70vw; }
+    .login { grid-template-columns: 1fr; min-height: 0; }
+    .login-lado { padding: var(--sp-6) var(--sp-4); gap: var(--sp-5); }
+    .login-lado::after { right: 20px; }
+    .login-lado .perfiles { display: none; }
+    .login-lado h2 { font-size: 28px; margin-bottom: 0; padding-right: 40px; }
   }
   @media (max-width: 640px) {
-    main { padding: var(--sp-3); }
-    header.topbar { padding: 0 var(--sp-3); gap: var(--sp-2); }
-    header .quien { display: none; }
-    .brand-name { font-size: var(--fs-md); }
-    .panel { padding: var(--sp-4); border-radius: var(--r-md); }
+    .titulo-vista h1 { font-size: 24px; }
+    .panel { padding: var(--sp-4); }
+    .tabla-scroll { margin: 0 calc(var(--sp-4) * -1); padding: 0 var(--sp-4); }
     .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    .kpi .val { font-size: 28px; }
     .dash-toolbar { flex-direction: column; align-items: stretch; }
-    .cal-day { min-height: 52px; padding: 4px; }
+    .cal-day { min-height: 54px; padding: 4px; }
     .cal-chip { font-size: 9.5px; padding: 1px 3px; }
+    .bar-row { grid-template-columns: minmax(70px, 34%) 1fr 58px; }
   }
 </style>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%23c8102e'/%3E%3C/svg%3E" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%23f2b200%27/%3E%3Cpath d=%27M10.5 27 14.3 5M21.5 27 17.7 5%27 stroke=%27%231b2428%27 stroke-width=%272.4%27 stroke-linecap=%27round%27/%3E%3C/svg%3E" />
 </head>
 <body>
-<header class="topbar">
-  <div class="brand"><span class="brand-mark" aria-hidden="true"></span><h1 class="brand-name">TransGuía</h1></div>
-  <span class="sp"></span>
-  <div id="segmentador" class="solo-super" hidden>
-    <label for="segEmpresa" style="display:inline">Empresa</label>
-    <select id="segEmpresa"><option value="">Todas las empresas</option></select>
-  </div>
-  <div class="userbox">
-    <span class="quien" id="quien"></span>
-    <div class="notif-wrap">
-      <button class="tenue chico notif-btn" id="btnNotif" hidden aria-label="Notificaciones" aria-haspopup="true">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-        <span class="badge-count" id="notifBadge" hidden>0</span>
-      </button>
-      <div class="notif-panel" id="notifPanel" hidden></div>
-    </div>
-    <button class="tenue chico" id="btnSalir" hidden>Cerrar sesión</button>
-  </div>
-</header>
+<div id="zonaAviso" class="avisos" aria-live="polite" role="status"></div>
 
-<main>
-  <div id="zonaAviso" class="avisos" aria-live="polite" role="status"></div>
-
-  <!-- ==================== LOGIN ==================== -->
-  <section class="panel login-card" id="panelLogin">
-    <div class="login-head">
-      <span class="brand-mark" aria-hidden="true"></span>
-      <h2>Ingresar <span class="sub">— usuario creado con <code>node sembrar-datos.js</code> o <code>node crear-empresa.js</code></span></h2>
+<!-- ==================== LOGIN ==================== -->
+<div class="login" id="panelLogin">
+  <aside class="login-lado">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#f2b200"/><path d="M10.5 27 14.3 5M21.5 27 17.7 5" stroke="#1b2428" stroke-width="2.4" stroke-linecap="round"/><path d="M16 25v-3.2M16 17.6v-2.8M16 10.8V8.6" stroke="#1b2428" stroke-width="1.9" stroke-linecap="round"/></svg>
+      <span class="brand-name">TransGuía</span>
     </div>
-    <div class="grid">
-      <div><label for="loginUser">Usuario</label><input id="loginUser" autocomplete="username" value="andina" /></div>
-      <div><label for="loginPass">Contraseña</label><input id="loginPass" type="password" autocomplete="current-password" value="demo2026seguro" /></div>
-    </div>
-    <div class="fila" style="margin-top:12px"><button id="btnLogin" style="width:100%">Ingresar</button></div>
-  </section>
-
-  <!-- ==================== APP ==================== -->
-  <div id="app" hidden class="shell-body">
-    <nav class="sidenav">
-      <div class="tabs" role="tablist">
-        <button data-tab="dashboard" class="solo-gerencia"><span class="nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M12 20V4M20 20v-7"/></svg></span><span>Dashboard</span></button>
-        <button data-tab="empresas" class="solo-super"><span class="nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M9 8h1M14 8h1M9 12h1M14 12h1M9 16h1M14 16h1"/></svg></span><span>Empresas</span></button>
-        <button data-tab="unidades" class="activa"><span class="nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7h11v10H2zM13 10h4l3 3v4h-7z"/><circle cx="6.5" cy="19" r="1.6"/><circle cx="17" cy="19" r="1.6"/></svg></span><span>Unidades</span></button>
-        <button data-tab="choferes"><span class="nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="11" r="2"/><path d="M5.5 16c.6-1.7 1.9-2.5 3-2.5s2.4.8 3 2.5M14 10h5M14 14h5"/></svg></span><span>Choferes</span></button>
-        <button data-tab="tickets"><span class="nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-2.5-1.5L13 21l-1-1.5L11 21l-2.5-1.5L6 21z"/><path d="M9 8h6M9 12h6"/></svg></span><span>Tickets</span></button>
-        <button data-tab="programacion"><span class="nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg></span><span>Programación</span></button>
-        <button data-tab="vencimientos"><span class="nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span>Vencimientos</span></button>
-        <button data-tab="usuarios" class="solo-admin"><span class="nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3.5 19c.7-3 2.8-4.5 5.5-4.5s4.8 1.5 5.5 4.5M16 8.2c1.4.2 2.5 1.3 2.5 2.8M17 14c1.8.4 3 1.7 3.5 3.6"/></svg></span><span>Usuarios</span></button>
+    <div>
+      <h2>Tu flota en regla, cada viaje en su sitio.</h2>
+      <div class="perfiles">
+        <div><strong>Transportistas</strong><span>Registran unidades y choferes, emiten el ticket de traslado con su guía de remisión y siguen cada entrega.</span></div>
+        <div><strong>Proveedores con flota propia</strong><span>Controlan sus volquetes, choferes, documentos por vencer y la agenda de despachos, sin emitir guías.</span></div>
       </div>
+    </div>
+  </aside>
+  <section class="login-form">
+    <div class="login-form-in">
+      <h2>Ingresar</h2>
+      <p class="muted">Usa el usuario que te dio el administrador de tu empresa.</p>
+      <div class="grid">
+        <div><label for="loginUser">Usuario</label><input id="loginUser" autocomplete="username" value="andina" /></div>
+        <div><label for="loginPass">Contraseña</label><input id="loginPass" type="password" autocomplete="current-password" value="demo2026seguro" /></div>
+      </div>
+      <button id="btnLogin">Ingresar</button>
+      <p class="login-ayuda">Demo: <code>andina</code> (transportista), <code>lurin</code> (proveedor) o <code>super</code> (plataforma). Se crean con <code>node sembrar-datos.js</code>.</p>
+    </div>
+  </section>
+</div>
+
+<!-- ==================== APP ==================== -->
+<div id="app" hidden class="shell">
+  <aside class="sidenav">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#f2b200"/><path d="M10.5 27 14.3 5M21.5 27 17.7 5" stroke="#1b2428" stroke-width="2.4" stroke-linecap="round"/><path d="M16 25v-3.2M16 17.6v-2.8M16 10.8V8.6" stroke="#1b2428" stroke-width="1.9" stroke-linecap="round"/></svg>
+      <span class="brand-name">TransGuía</span>
+    </div>
+
+    <div class="empresa-card" id="empresaCard">
+      <span class="e-nombre" id="empresaNombre"></span>
+      <span class="e-tipo" id="empresaTipo"></span>
+    </div>
+
+    <nav class="tabs" role="tablist" aria-label="Secciones">
+      <button data-tab="dashboard" class="solo-gerencia"><span class="nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M12 20V4M20 20v-7"/></svg></span><span>Dashboard</span></button>
+      <button data-tab="empresas" class="solo-super"><span class="nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M9 8h1M14 8h1M9 12h1M14 12h1M9 16h1M14 16h1"/></svg></span><span>Empresas</span></button>
+      <button data-tab="unidades" class="activa"><span class="nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7h11v10H2zM13 10h4l3 3v4h-7z"/><circle cx="6.5" cy="19" r="1.6"/><circle cx="17" cy="19" r="1.6"/></svg></span><span data-nombre-tab="unidades">Unidades</span></button>
+      <button data-tab="choferes"><span class="nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="11" r="2"/><path d="M5.5 16c.6-1.7 1.9-2.5 3-2.5s2.4.8 3 2.5M14 10h5M14 14h5"/></svg></span><span>Choferes</span></button>
+      <button data-tab="tickets" class="solo-transportista"><span class="nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-2.5-1.5L13 21l-1-1.5L11 21l-2.5-1.5L6 21z"/><path d="M9 8h6M9 12h6"/></svg></span><span>Tickets y guías</span></button>
+      <button data-tab="programacion"><span class="nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg></span><span>Programación</span></button>
+      <button data-tab="vencimientos"><span class="nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span>Vencimientos</span></button>
+      <button data-tab="usuarios" class="solo-admin"><span class="nav-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3.5 19c.7-3 2.8-4.5 5.5-4.5s4.8 1.5 5.5 4.5M16 8.2c1.4.2 2.5 1.3 2.5 2.8M17 14c1.8.4 3 1.7 3.5 3.6"/></svg></span><span>Usuarios</span></button>
     </nav>
 
+    <div class="sidenav-pie">
+      <div>
+        <div class="quien" id="quien"></div>
+        <div class="rol" id="rolLbl"></div>
+      </div>
+      <button class="tenue chico" id="btnSalir" hidden>Cerrar sesión</button>
+    </div>
+  </aside>
+
+  <div class="contenido">
+    <header class="topbar">
+      <div class="titulo-vista">
+        <h1 id="tituloVista">Unidades</h1>
+        <p id="subVista"></p>
+      </div>
+      <div class="topbar-acciones">
+        <div id="segmentador" class="solo-super" hidden>
+          <label for="segEmpresa">Empresa</label>
+          <select id="segEmpresa"><option value="">Todas las empresas</option></select>
+        </div>
+        <div class="notif-wrap">
+          <button class="sec chico notif-btn" id="btnNotif" hidden aria-label="Notificaciones" aria-haspopup="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <span class="badge-count" id="notifBadge" hidden>0</span>
+          </button>
+          <div class="notif-panel" id="notifPanel" hidden></div>
+        </div>
+      </div>
+    </header>
+
+    <main>
     <div class="views">
 
     <!-- DASHBOARD -->
-    <section class="panel" data-vista="dashboard" hidden>
+    <section data-vista="dashboard" hidden>
       <div class="dash-toolbar">
-        <h2 style="margin-bottom:0">Dashboard — indicadores de gestión <span class="sub" id="dashAlcance"></span></h2>
+        <div><span class="dash-alcance" id="dashAlcance"></span></div>
         <div class="ventanas">
-          <span class="muted">Período:</span>
-          <button class="sec chico" data-ventana="7d">7 días</button>
-          <button class="sec chico" data-ventana="30d">30 días</button>
-          <button class="sec chico" data-ventana="90d">90 días</button>
-          <button class="sec chico" data-ventana="12m">12 meses</button>
+          <span class="muted">Período</span>
+          <button class="tenue chico" data-ventana="7d">7 días</button>
+          <button class="tenue chico" data-ventana="30d">30 días</button>
+          <button class="tenue chico" data-ventana="90d">90 días</button>
+          <button class="tenue chico" data-ventana="12m">12 meses</button>
           <button class="sec chico" id="btnExportarDashboard">Exportar CSV</button>
         </div>
       </div>
 
-      <div id="kpiRow"></div>
+      <!-- Transportistas: indicadores de traslados y guías -->
+      <div id="dashTransporte">
+        <div id="kpiRow"></div>
 
-      <div class="dash-section">
-        <div class="section-title">Volumen y estado de los viajes <span class="sub">— cuánto se movió y en qué situación quedó</span></div>
-        <div class="dash-grid-2">
-          <div class="card">
-            <h3>Toneladas movidas por <span id="dashPeriodoLbl">día</span></h3>
-            <div id="chToneladas"></div>
+        <div class="dash-section">
+          <div class="section-title">Volumen y estado de los viajes <span class="sub">Cuánto se movió y en qué situación quedó.</span></div>
+          <div class="dash-grid-2">
+            <div class="card">
+              <h3>Toneladas movidas por <span id="dashPeriodoLbl">día</span></h3>
+              <div id="chToneladas"></div>
+            </div>
+            <div class="card">
+              <h3>Viajes por estado</h3>
+              <div id="chEstados"></div>
+            </div>
           </div>
+        </div>
+
+        <div class="dash-section">
+          <div class="section-title">Eficiencia operativa <span class="sub">Dónde se va el tiempo y qué unidades trabajan más.</span></div>
+          <div class="dash-grid-2">
+            <div class="card">
+              <h3>Ciclo del traslado <span class="sub">espera de despacho vs. tránsito</span></h3>
+              <div id="chCiclo"></div>
+            </div>
+            <div class="card">
+              <h3>Unidades más activas</h3>
+              <div id="chUnidades"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dash-section">
+          <div class="section-title">Desempeño de choferes <span class="sub">Quién está haciendo los viajes.</span></div>
           <div class="card">
-            <h3>Viajes por estado <span class="sub">— en el período</span></h3>
-            <div id="chEstados"></div>
+            <h3>Choferes más activos</h3>
+            <div id="chChoferes"></div>
+          </div>
+        </div>
+
+        <div class="dash-section">
+          <div class="section-title">Red de distribución <span class="sub">Por dónde y qué se está moviendo.</span></div>
+          <div class="dash-grid-2">
+            <div class="card">
+              <h3>Corredores <span class="sub">toneladas por ruta, origen → destino</span></h3>
+              <div id="chCorredores"></div>
+            </div>
+            <div class="card">
+              <h3>Toneladas por material</h3>
+              <div id="chMaterial"></div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="dash-section">
-        <div class="section-title">Eficiencia operativa <span class="sub">— dónde se va el tiempo y qué unidades trabajan más</span></div>
-        <div class="dash-grid-2">
-          <div class="card">
-            <h3>Ciclo del traslado <span class="sub">— espera de despacho vs. tránsito</span></h3>
-            <div id="chCiclo"></div>
-          </div>
-          <div class="card">
-            <h3>Unidades más activas <span class="sub">— viajes en el período</span></h3>
-            <div id="chUnidades"></div>
+      <!-- Proveedores con flota propia: control de flota, sin guías -->
+      <div id="dashFlota" hidden>
+        <div id="kpiFlota"></div>
+
+        <div class="dash-section">
+          <div class="section-title">Estado de la flota <span class="sub">Si cada unidad tiene su SOAT y revisión técnica vigentes.</span></div>
+          <div class="dash-grid-2">
+            <div class="card">
+              <h3>Unidades que piden atención</h3>
+              <div id="chfAtencion"></div>
+            </div>
+            <div class="card">
+              <h3>Situación documental</h3>
+              <div id="chfSituacion"></div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="dash-section">
-        <div class="section-title">Desempeño de choferes <span class="sub">— quién está haciendo los viajes</span></div>
-        <div class="card">
-          <h3>Choferes más activos <span class="sub">— viajes en el período</span></h3>
-          <div id="chChoferes"></div>
-        </div>
-      </div>
-
-      <div class="dash-section">
-        <div class="section-title">Red de distribución <span class="sub">— por dónde y qué se está moviendo</span></div>
-        <div class="dash-grid-2">
-          <div class="card">
-            <h3>Corredores <span class="sub">— toneladas por ruta (origen → destino)</span></h3>
-            <div id="chCorredores"></div>
+        <div class="dash-section">
+          <div class="section-title">Uso de la flota <span class="sub">Viajes programados que no se cancelaron.</span></div>
+          <div class="dash-grid-2">
+            <div class="card">
+              <h3>Viajes por <span id="dashFlotaPeriodoLbl">día</span></h3>
+              <div id="chfViajes"></div>
+            </div>
+            <div class="card">
+              <h3>Unidades más usadas</h3>
+              <div id="chfUnidades"></div>
+            </div>
           </div>
-          <div class="card">
-            <h3>Toneladas por material</h3>
-            <div id="chMaterial"></div>
+        </div>
+
+        <div class="dash-section">
+          <div class="dash-grid">
+            <div class="card">
+              <h3>Choferes más activos</h3>
+              <div id="chfChoferes"></div>
+            </div>
+            <div class="card">
+              <h3>Rutas más frecuentes</h3>
+              <div id="chfRutas"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -507,7 +665,7 @@
     </section>
 
     <section class="panel" data-vista="empresas" hidden>
-      <h2>Solicitudes pendientes <span class="sub">— la empresa carga el registro; acá se revisa, corrige, libera o rechaza</span></h2>
+      <h2>Solicitudes pendientes <span class="sub">Los transportistas cargan el registro; aquí se revisa, corrige, libera o rechaza. Los proveedores no pasan por aquí.</span></h2>
       <h3 class="grupo">Unidades <span class="badge-count" id="cntSolUnidades" hidden>0</span></h3>
       <div id="tbSolicitudes"></div>
       <div class="vacio" id="vacioSolicitudes" hidden>No hay solicitudes de unidades pendientes.</div>
@@ -517,67 +675,74 @@
     </section>
 
     <section class="panel" data-vista="empresas" hidden>
-      <h2>Empresas <span class="sub">— clic en una fila para ver su operación</span></h2>
+      <h2>Empresas <span class="sub">Toca una fila para ver su operación.</span></h2>
       <div class="tabla-scroll">
         <table>
           <thead><tr>
-            <th>Empresa</th><th>RUC</th><th>Unidades</th><th>Choferes</th>
-            <th>Tickets</th><th>En tránsito</th><th>Docs vencidos</th><th></th>
+            <th>Empresa</th><th>Tipo</th><th>RUC</th><th>Unidades</th><th>Choferes</th>
+            <th>Tickets</th><th>Viajes agendados</th><th>Docs vencidos</th><th></th>
           </tr></thead>
           <tbody id="tbEmpresas"></tbody>
         </table>
       </div>
-      <div class="vacio" id="vacioEmpresas" hidden>Todavía no hay empresas.</div>
+      <div class="vacio" id="vacioEmpresas" hidden>Todavía no hay empresas. Crea la primera abajo.</div>
     </section>
 
     <section class="panel" data-vista="empresas" hidden>
       <div class="form-toggle-bar">
-        <h2 style="margin-bottom:0">Nueva empresa <span class="sub">— se crea junto con su primer administrador</span></h2>
-        <button type="button" class="sec chico" data-toggle-form="nuevaEmpresaForm">+ Nueva empresa</button>
+        <h2>Nueva empresa <span class="sub">Se crea junto con su primer administrador.</span></h2>
+        <button type="button" class="sec chico" data-toggle-form="nuevaEmpresaForm">Agregar empresa</button>
       </div>
       <div id="nuevaEmpresaForm" data-form-body hidden>
-        <div class="grid">
-          <div><label for="neRuc">RUC (11 dígitos)</label><input id="neRuc" placeholder="20512345678" /></div>
-          <div><label for="neRazon">Razón social</label><input id="neRazon" placeholder="Transportes El Sol S.A.C." /></div>
-          <div><label for="neUser">Usuario admin</label><input id="neUser" /></div>
-          <div><label for="nePass">Contraseña (mín. 8)</label><input id="nePass" type="password" /></div>
-          <div><label for="neNombre">Nombre del admin</label><input id="neNombre" /></div>
+        <div class="tipo-elegir" role="radiogroup" aria-label="Tipo de empresa">
+          <label><input type="radio" name="neTipo" value="TRANSPORTISTA" checked />
+            <div><strong>Transportista</strong><span>Registra flota, emite tickets y guías de remisión.</span></div></label>
+          <label><input type="radio" name="neTipo" value="PROVEEDOR" />
+            <div><strong>Proveedor con flota propia</strong><span>Solo control de flota: unidades, choferes, documentos y programación. Sin guías.</span></div></label>
         </div>
-        <div class="fila" style="margin-top:12px"><button id="btnCrearEmpresa">Crear empresa</button></div>
+        <div class="grid">
+          <div><label for="neRuc">RUC (11 dígitos)</label><input id="neRuc" inputmode="numeric" placeholder="20512345678" /></div>
+          <div><label for="neRazon">Razón social</label><input id="neRazon" placeholder="Transportes El Sol S.A.C." /></div>
+          <div><label for="neUser">Usuario del administrador</label><input id="neUser" /></div>
+          <div><label for="nePass">Contraseña (mín. 8)</label><input id="nePass" type="password" /></div>
+          <div><label for="neNombre">Nombre del administrador</label><input id="neNombre" /></div>
+        </div>
+        <div class="form-acciones"><button id="btnCrearEmpresa">Crear empresa</button></div>
       </div>
     </section>
 
     <!-- Aviso cuando el superadmin no eligió una empresa para el detalle -->
     <section class="panel" id="avisoElegirEmpresa" hidden>
-      <p class="vacio">Elegí una empresa en el selector de arriba para ver este detalle. (Con "Todas las empresas" solo se ve el Dashboard.)</p>
+      <p class="vacio">Elige una empresa en el selector de arriba para ver este detalle. Con "Todas las empresas" solo se ve el Dashboard.</p>
     </section>
 
     <!-- UNIDADES -->
-    <section class="panel" data-vista="unidades">
-      <div class="solo-admin">
-        <div class="form-toggle-bar">
-          <h2 style="margin-bottom:0">Registrar unidad <span class="sub">— Placa, RUC del dueño, DNI del transportista y los 5 documentos marcados con * son obligatorios</span></h2>
-          <button type="button" class="sec chico" data-toggle-form="unidadForm">+ Registrar unidad</button>
-        </div>
-        <div id="unidadForm" data-form-body hidden>
+    <section class="panel solo-admin" data-vista="unidades">
+      <div class="form-toggle-bar">
+        <h2>Registrar unidad <span class="sub" id="unidadFormAyuda">Placa, RUC del dueño, DNI del transportista y los 5 PDF marcados con * son obligatorios. La plataforma revisa la solicitud antes de liberarla.</span></h2>
+        <button type="button" class="chico" data-toggle-form="unidadForm">Registrar unidad</button>
+      </div>
+      <div id="unidadForm" data-form-body hidden>
 
-        <h3 class="grupo">Dueño del vehículo</h3>
-        <div class="grid">
-          <div><label for="uRucProp">RUC del dueño *</label>
-            <div class="conbtn"><input id="uRucProp" inputmode="numeric" placeholder="20512345678" />
-            <button type="button" class="sec chico" id="uBtnRuc">Traer datos</button></div></div>
-          <div><label for="uNombreProp">Nombre del dueño</label><input id="uNombreProp" placeholder="se completa con el RUC" /></div>
-          <div><label for="uDireccionProp">Dirección</label><input id="uDireccionProp" placeholder="se completa con el RUC" /></div>
-        </div>
+        <div class="solo-transportista">
+          <h3 class="grupo">Dueño del vehículo</h3>
+          <div class="grid">
+            <div><label for="uRucProp">RUC del dueño *</label>
+              <div class="conbtn"><input id="uRucProp" inputmode="numeric" placeholder="20512345678" />
+              <button type="button" class="sec chico" id="uBtnRuc">Traer datos</button></div></div>
+            <div><label for="uNombreProp">Nombre del dueño</label><input id="uNombreProp" placeholder="se completa con el RUC" /></div>
+            <div><label for="uDireccionProp">Dirección</label><input id="uDireccionProp" placeholder="se completa con el RUC" /></div>
+          </div>
 
-        <h3 class="grupo">Transportista</h3>
-        <div class="grid">
-          <div><label for="uDni">DNI del transportista *</label>
-            <div class="conbtn"><input id="uDni" inputmode="numeric" placeholder="45678912" />
-            <button type="button" class="sec chico" id="uBtnDni">Traer datos</button></div></div>
-          <div><label for="uDepartamento">Departamento</label><input id="uDepartamento" placeholder="se completa con el DNI" /></div>
-          <div><label for="uProvincia">Provincia</label><input id="uProvincia" placeholder="se completa con el DNI" /></div>
-          <div><label for="uDistrito">Distrito</label><input id="uDistrito" placeholder="se completa con el DNI" /></div>
+          <h3 class="grupo">Transportista</h3>
+          <div class="grid">
+            <div><label for="uDni">DNI del transportista *</label>
+              <div class="conbtn"><input id="uDni" inputmode="numeric" placeholder="45678912" />
+              <button type="button" class="sec chico" id="uBtnDni">Traer datos</button></div></div>
+            <div><label for="uDepartamento">Departamento</label><input id="uDepartamento" placeholder="se completa con el DNI" /></div>
+            <div><label for="uProvincia">Provincia</label><input id="uProvincia" placeholder="se completa con el DNI" /></div>
+            <div><label for="uDistrito">Distrito</label><input id="uDistrito" placeholder="se completa con el DNI" /></div>
+          </div>
         </div>
 
         <h3 class="grupo">Vehículo</h3>
@@ -585,6 +750,7 @@
           <div><label for="uPlaca">Placa *</label><input id="uPlaca" placeholder="ABC-123" /></div>
           <div><label for="uTipoVehiculo">Tipo de vehículo</label><select id="uTipoVehiculo"></select></div>
           <div><label for="uMarca">Marca</label><input id="uMarca" placeholder="Volvo" /></div>
+          <div><label for="uModelo">Modelo</label><input id="uModelo" placeholder="FH 460" /></div>
           <div><label for="uAnio">Año de fabricación</label><input id="uAnio" type="number" placeholder="2021" /></div>
           <div><label for="uNroEjes">N° de ejes</label><input id="uNroEjes" type="number" placeholder="3" /></div>
           <div><label for="uFormaApertura">Forma de apertura</label><select id="uFormaApertura"></select></div>
@@ -609,37 +775,40 @@
           <div><label for="uUnidadGas">Unidad a gas</label><select id="uUnidadGas"><option value="">—</option><option value="SI">Sí</option><option value="NO">No</option></select></div>
         </div>
 
-        <h3 class="grupo">SOAT y CITV <span class="sub">— se registran como documentos con vencimiento</span></h3>
+        <h3 class="grupo">SOAT y revisión técnica (CITV) <span class="sub">Se guardan como documentos con vencimiento.</span></h3>
         <div class="grid">
           <div><label for="uNroSoat">N° SOAT</label><input id="uNroSoat" /></div>
           <div><label for="uVigenciaSoat">Vigencia SOAT *</label><input id="uVigenciaSoat" type="date" /></div>
           <div><label for="uNroCitv">N° CITV</label><input id="uNroCitv" /></div>
           <div><label for="uVigenciaCitv">Vigencia CITV *</label><input id="uVigenciaCitv" type="date" /></div>
-        </div>
-
-        <h3 class="grupo">Documentos obligatorios (PDF) <span class="sub">— hasta 5 MB cada uno</span></h3>
-        <div class="grid">
           <div><label for="uArchivoSoat">PDF del SOAT *</label><input id="uArchivoSoat" type="file" accept="application/pdf" /></div>
           <div><label for="uArchivoCitv">PDF del CITV *</label><input id="uArchivoCitv" type="file" accept="application/pdf" /></div>
-          <div><label for="uArchivoBrevete">PDF del brevete del transportista *</label><input id="uArchivoBrevete" type="file" accept="application/pdf" /></div>
-          <div><label for="uArchivoDni">PDF del DNI del transportista *</label><input id="uArchivoDni" type="file" accept="application/pdf" /></div>
-          <div><label for="uArchivoCategoriaMtc">PDF de constancia de categoría MTC *</label><input id="uArchivoCategoriaMtc" type="file" accept="application/pdf" /></div>
         </div>
 
-        <h3 class="grupo">Opcional (para la GRE)</h3>
-        <div class="grid">
-          <div><label for="uModelo">Modelo</label><input id="uModelo" placeholder="FH 460" /></div>
-          <div><label for="uCategoria">Categoría MTC</label><select id="uCategoria"><option value="">—</option><option>N1</option><option>N2</option><option>N3</option></select></div>
-          <div><label for="uConfig">Config. vehicular</label><select id="uConfig"></select></div>
+        <div class="solo-transportista">
+          <h3 class="grupo">Otros documentos obligatorios (PDF) <span class="sub">Hasta 5 MB cada uno.</span></h3>
+          <div class="grid">
+            <div><label for="uArchivoBrevete">PDF del brevete del transportista *</label><input id="uArchivoBrevete" type="file" accept="application/pdf" /></div>
+            <div><label for="uArchivoDni">PDF del DNI del transportista *</label><input id="uArchivoDni" type="file" accept="application/pdf" /></div>
+            <div><label for="uArchivoCategoriaMtc">PDF de constancia de categoría MTC *</label><input id="uArchivoCategoriaMtc" type="file" accept="application/pdf" /></div>
+          </div>
+
+          <h3 class="grupo">Opcional, para la guía de remisión</h3>
+          <div class="grid">
+            <div><label for="uCategoria">Categoría MTC</label><select id="uCategoria"><option value="">—</option><option>N1</option><option>N2</option><option>N3</option></select></div>
+            <div><label for="uConfig">Config. vehicular</label><select id="uConfig"></select></div>
+          </div>
         </div>
 
-        <div class="fila" style="margin-top:14px"><button id="btnCrearUnidad">Guardar unidad</button></div>
-        </div>
+        <div class="form-acciones"><button id="btnCrearUnidad">Guardar unidad</button></div>
       </div>
-      <h3 class="grupo">Unidades registradas</h3>
+    </section>
+
+    <section class="panel" data-vista="unidades">
+      <h2 id="unidadesListaTitulo">Unidades registradas</h2>
       <div class="buscador">
-        <input type="search" id="qUnidades" placeholder="Buscar por placa, dueño, DNI del transportista…" />
-        <select id="fUnidades">
+        <input type="search" id="qUnidades" placeholder="Buscar por placa, marca, dueño…" aria-label="Buscar unidades" />
+        <select id="fUnidades" class="solo-transportista" aria-label="Filtrar por estado">
           <option value="">Todos los estados</option>
           <option value="PENDIENTE">Pendiente</option>
           <option value="APROBADA">Aprobada</option>
@@ -648,23 +817,21 @@
       </div>
       <div class="tabla-scroll">
         <table>
-          <thead><tr><th>Placa</th><th>Tipo</th><th>Marca / año</th><th>Dueño</th><th>DNI transp.</th><th>Estado</th><th></th></tr></thead>
+          <thead><tr><th>Placa</th><th>Tipo</th><th>Marca / año</th><th class="solo-transportista">Dueño</th><th class="solo-transportista">DNI transp.</th><th>Estado</th><th></th></tr></thead>
           <tbody id="tbUnidades"></tbody>
         </table>
       </div>
       <div id="pagUnidades"></div>
-      <div class="vacio" id="vacioUnidades" hidden>Todavía no hay unidades registradas.</div>
+      <div class="vacio" id="vacioUnidades" hidden>Todavía no hay unidades. Registra la primera con el botón de arriba.</div>
     </section>
 
     <!-- CHOFERES -->
-    <section class="panel" data-vista="choferes" hidden>
-      <div class="solo-admin">
-        <div class="form-toggle-bar">
-          <h2 style="margin-bottom:0">Registrar chofer <span class="sub">— solo Tipo de documento, N° de documento, Primer nombre y Apellido paterno son obligatorios</span></h2>
-          <button type="button" class="sec chico" data-toggle-form="choferForm">+ Registrar chofer</button>
-        </div>
-        <div id="choferForm" data-form-body hidden>
-
+    <section class="panel solo-admin" data-vista="choferes" hidden>
+      <div class="form-toggle-bar">
+        <h2>Registrar chofer <span class="sub" id="choferFormAyuda">Obligatorios: tipo y N° de documento, primer nombre y apellido paterno.</span></h2>
+        <button type="button" class="chico" data-toggle-form="choferForm">Registrar chofer</button>
+      </div>
+      <div id="choferForm" data-form-body hidden>
         <h3 class="grupo">Identidad</h3>
         <div class="grid">
           <div><label for="cTipoDoc">Tipo de documento *</label><select id="cTipoDoc"></select></div>
@@ -686,21 +853,23 @@
           <div><label for="cDireccion">Dirección</label><input id="cDireccion" /></div>
         </div>
 
-        <h3 class="grupo">Brevete <span class="sub">— se registra como documento "Licencia de conducir"</span></h3>
+        <h3 class="grupo">Brevete <span class="sub">Se guarda como documento "Licencia de conducir".</span></h3>
         <div class="grid">
           <div><label for="cBrevete">N° de brevete</label><input id="cBrevete" /></div>
-          <div><label for="cClaseCat">Clase - categoría</label><select id="cClaseCat"></select></div>
+          <div><label for="cClaseCat">Clase y categoría</label><select id="cClaseCat"></select></div>
           <div><label for="cFechaExp">Fecha de expedición</label><input id="cFechaExp" type="date" /></div>
           <div><label for="cFechaReval">Fecha de revalidación</label><input id="cFechaReval" type="date" /></div>
         </div>
 
-        <div class="fila" style="margin-top:14px"><button id="btnCrearChofer">Guardar chofer</button></div>
-        </div>
+        <div class="form-acciones"><button id="btnCrearChofer">Guardar chofer</button></div>
       </div>
-      <h3 class="grupo">Choferes registrados</h3>
+    </section>
+
+    <section class="panel" data-vista="choferes" hidden>
+      <h2>Choferes registrados</h2>
       <div class="buscador">
-        <input type="search" id="qChoferes" placeholder="Buscar por documento, nombre, celular…" />
-        <select id="fChoferes">
+        <input type="search" id="qChoferes" placeholder="Buscar por documento, nombre, celular…" aria-label="Buscar choferes" />
+        <select id="fChoferes" class="solo-transportista" aria-label="Filtrar por estado">
           <option value="">Todos los estados</option>
           <option value="PENDIENTE">Pendiente</option>
           <option value="APROBADA">Aprobada</option>
@@ -714,35 +883,36 @@
         </table>
       </div>
       <div id="pagChoferes"></div>
-      <div class="vacio" id="vacioChoferes" hidden>Todavía no hay choferes registrados.</div>
+      <div class="vacio" id="vacioChoferes" hidden>Todavía no hay choferes. Registra el primero con el botón de arriba.</div>
     </section>
 
-    <!-- TICKETS -->
-    <section class="panel" data-vista="tickets" hidden>
-      <div id="ticketForm">
-        <h2>Nuevo ticket de traslado <span class="sub">— elige una unidad y un chofer ya registrados</span></h2>
-        <div class="grid">
-          <div><label for="tUnidad">Unidad</label><select id="tUnidad"></select></div>
-          <div><label for="tChofer">Chofer</label><select id="tChofer"></select></div>
-          <div><label for="tOrigen">Centro de origen</label><select id="tOrigen"></select></div>
-          <div><label for="tDestino">Destino</label><select id="tDestino"></select></div>
-          <div><label for="tMotivo">Motivo</label><select id="tMotivo">
-            <option value="VENTA">Venta</option>
-            <option value="TRASLADO_ENTRE_ESTABLECIMIENTOS">Traslado entre establecimientos</option>
-            <option value="OTROS">Otros</option>
-          </select></div>
-          <div><label for="tMercancia">Mercancía</label><select id="tMercancia"></select></div>
-          <div><label for="tPeso">Peso bruto (kg)</label><input id="tPeso" type="number" placeholder="8200" /></div>
-        </div>
-        <div class="fila" style="margin-top:12px">
-          <button id="btnCrearTicket">Generar ticket y emitir GRE</button>
-          <span class="muted" id="tEstadoEmision" aria-live="polite"></span>
-        </div>
+    <!-- TICKETS (solo transportistas) -->
+    <section class="panel" data-vista="tickets" hidden id="ticketForm">
+      <h2>Nuevo ticket de traslado <span class="sub">Elige una unidad y un chofer ya liberados; la guía de remisión se emite al generar el ticket.</span></h2>
+      <div class="grid">
+        <div><label for="tUnidad">Unidad</label><select id="tUnidad"></select></div>
+        <div><label for="tChofer">Chofer</label><select id="tChofer"></select></div>
+        <div><label for="tOrigen">Centro de origen</label><select id="tOrigen"></select></div>
+        <div><label for="tDestino">Destino</label><select id="tDestino"></select></div>
+        <div><label for="tMotivo">Motivo</label><select id="tMotivo">
+          <option value="VENTA">Venta</option>
+          <option value="TRASLADO_ENTRE_ESTABLECIMIENTOS">Traslado entre establecimientos</option>
+          <option value="OTROS">Otros</option>
+        </select></div>
+        <div><label for="tMercancia">Mercancía</label><select id="tMercancia"></select></div>
+        <div><label for="tPeso">Peso bruto (kg)</label><input id="tPeso" type="number" placeholder="8200" /></div>
       </div>
-      <h3 class="grupo">Tickets</h3>
+      <div class="form-acciones">
+        <button id="btnCrearTicket">Generar ticket y emitir guía</button>
+        <span class="muted" id="tEstadoEmision" aria-live="polite"></span>
+      </div>
+    </section>
+
+    <section class="panel" data-vista="tickets" hidden>
+      <h2>Tickets</h2>
       <div class="buscador">
-        <input type="search" id="qTickets" placeholder="Buscar por código, ruta, unidad, chofer, mercancía…" />
-        <select id="fTickets">
+        <input type="search" id="qTickets" placeholder="Buscar por código, ruta, placa, chofer, mercancía…" aria-label="Buscar tickets" />
+        <select id="fTickets" aria-label="Filtrar por estado">
           <option value="">Todos los estados</option>
           <option value="GENERADO">Generado</option>
           <option value="EN_TRANSITO">En tránsito</option>
@@ -753,38 +923,41 @@
       </div>
       <div class="tabla-scroll">
         <table>
-          <thead><tr><th>Código</th><th>Ruta</th><th>Unidad</th><th>Chofer</th><th>Peso</th><th>GRE</th><th>Estado oper.</th><th>Acciones</th></tr></thead>
+          <thead><tr><th>Código</th><th>Ruta</th><th>Unidad</th><th>Chofer</th><th>Peso</th><th>Guía</th><th>Estado</th><th></th></tr></thead>
           <tbody id="tbTickets"></tbody>
         </table>
       </div>
       <div id="pagTickets"></div>
-      <div class="vacio" id="vacioTickets" hidden>Todavía no hay tickets.</div>
+      <div class="vacio" id="vacioTickets" hidden>Todavía no hay tickets. Genera el primero arriba.</div>
     </section>
 
     <!-- PROGRAMACIÓN DE VIAJES -->
-    <section class="panel" data-vista="programacion" hidden>
-      <div id="progForm">
-        <h2>Programar un viaje <span class="sub">— agenda una unidad y un chofer para una fecha, antes de emitir el ticket</span></h2>
-        <div class="grid">
-          <div><label for="pFecha">Fecha</label><input id="pFecha" type="date" /></div>
-          <div><label for="pUnidad">Unidad</label><select id="pUnidad"></select></div>
-          <div><label for="pChofer">Chofer</label><select id="pChofer"></select></div>
-          <div><label for="pOrigen">Centro de origen</label><select id="pOrigen"></select></div>
-          <div><label for="pDestino">Destino</label><select id="pDestino"></select></div>
-          <div><label for="pMercancia">Mercancía (opcional)</label><select id="pMercancia"></select></div>
-        </div>
-        <div class="grid" style="margin-top:12px">
-          <div style="grid-column:1/-1"><label for="pObs">Observaciones (opcional)</label><input id="pObs" placeholder="Notas para el despacho" /></div>
-        </div>
-        <div class="fila" style="margin-top:12px">
-          <button id="btnCrearProgramacion">Programar viaje</button>
-          <span class="muted" id="pEstado" aria-live="polite"></span>
-        </div>
+    <section class="panel" data-vista="programacion" hidden id="progForm">
+      <h2>Programar un viaje <span class="sub" id="progAyuda">Agenda una unidad y un chofer para una fecha. Una misma unidad o chofer no puede tener dos viajes el mismo día.</span></h2>
+      <div class="grid">
+        <div><label for="pFecha">Fecha</label><input id="pFecha" type="date" /></div>
+        <div><label for="pUnidad">Unidad</label><select id="pUnidad"></select></div>
+        <div><label for="pChofer">Chofer</label><select id="pChofer"></select></div>
+        <div class="solo-transportista"><label for="pOrigen">Centro de origen</label><select id="pOrigen"></select></div>
+        <div class="solo-transportista"><label for="pDestino">Destino</label><select id="pDestino"></select></div>
+        <div class="solo-transportista"><label for="pMercancia">Mercancía (opcional)</label><select id="pMercancia"></select></div>
+        <div class="solo-proveedor"><label for="pOrigenTxt">Origen</label><input id="pOrigenTxt" list="dlOrigen" placeholder="Cantera Lurín" /></div>
+        <div class="solo-proveedor"><label for="pDestinoTxt">Destino</label><input id="pDestinoTxt" list="dlDestino" placeholder="Planta Atocongo" /></div>
+        <div class="solo-proveedor"><label for="pMercanciaTxt">Material (opcional)</label><input id="pMercanciaTxt" list="dlMercancia" placeholder="Piedra chancada 1/2&quot;" /></div>
+        <div style="grid-column:1/-1"><label for="pObs">Observaciones (opcional)</label><input id="pObs" placeholder="Notas para el despacho" /></div>
       </div>
-      <h3 class="grupo">Viajes programados</h3>
+      <datalist id="dlOrigen"></datalist><datalist id="dlDestino"></datalist><datalist id="dlMercancia"></datalist>
+      <div class="form-acciones">
+        <button id="btnCrearProgramacion">Programar viaje</button>
+        <span class="muted" id="pEstado" aria-live="polite"></span>
+      </div>
+    </section>
+
+    <section class="panel" data-vista="programacion" hidden>
+      <h2>Viajes programados</h2>
       <div class="buscador">
-        <input type="search" id="qProgramacion" placeholder="Buscar por unidad, chofer, ruta…" />
-        <select id="fProgramacion">
+        <input type="search" id="qProgramacion" placeholder="Buscar por placa, chofer, ruta…" aria-label="Buscar viajes" />
+        <select id="fProgramacion" aria-label="Filtrar por estado">
           <option value="">Todos los estados</option>
           <option value="PROGRAMADO">Programado</option>
           <option value="CUMPLIDO">Cumplido</option>
@@ -793,20 +966,19 @@
       </div>
       <div class="tabla-scroll">
         <table>
-          <thead><tr><th>Fecha</th><th>Unidad</th><th>Chofer</th><th>Ruta</th><th>Mercancía</th><th>Estado</th><th>Acciones</th></tr></thead>
+          <thead><tr><th>Fecha</th><th>Unidad</th><th>Chofer</th><th>Ruta</th><th>Mercancía</th><th>Estado</th><th></th></tr></thead>
           <tbody id="tbProgramacion"></tbody>
         </table>
       </div>
       <div id="pagProgramacion"></div>
-      <div class="vacio" id="vacioProgramacion" hidden>Todavía no hay viajes programados.</div>
+      <div class="vacio" id="vacioProgramacion" hidden>Todavía no hay viajes programados. Agenda el primero arriba.</div>
     </section>
 
     <!-- VENCIMIENTOS -->
     <section class="panel" data-vista="vencimientos" hidden>
-      <h2>Documentos por vencer <span class="sub">— SOAT, revisión técnica, licencias, certificados médicos</span></h2>
-      <div class="fila" style="justify-content:space-between;flex-wrap:wrap">
+      <div class="fila" style="justify-content:space-between">
         <div class="fila">
-          <div><label for="vDias">Próximos… días</label><input id="vDias" type="number" value="30" style="width:110px" /></div>
+          <div><label for="vDias">Próximos días</label><input id="vDias" type="number" value="30" style="width:110px" /></div>
           <button class="sec" id="btnVencimientos">Actualizar</button>
         </div>
         <div class="fila">
@@ -823,14 +995,14 @@
             <tbody id="tbVencimientos"></tbody>
           </table>
         </div>
-        <div class="vacio" id="vacioVencimientos" hidden>Nada por vencer en ese rango.</div>
+        <div class="vacio" id="vacioVencimientos" hidden>Nada vence en ese rango. Amplía los días para mirar más adelante.</div>
       </div>
 
       <div id="vencCalWrap" hidden style="margin-top:16px">
-        <div class="fila" style="justify-content:space-between;margin-bottom:10px">
-          <button class="tenue chico" data-calmes="-1">&laquo; Anterior</button>
-          <strong id="calMesLbl"></strong>
-          <button class="tenue chico" data-calmes="1">Siguiente &raquo;</button>
+        <div class="fila" style="justify-content:space-between;align-items:center;margin-bottom:10px">
+          <button class="tenue chico" data-calmes="-1">Mes anterior</button>
+          <strong id="calMesLbl" style="text-transform:capitalize"></strong>
+          <button class="tenue chico" data-calmes="1">Mes siguiente</button>
         </div>
         <div class="cal-grid" id="calGrid"></div>
       </div>
@@ -838,22 +1010,27 @@
 
     <!-- USUARIOS (admin) -->
     <section class="panel solo-admin" data-vista="usuarios" hidden>
-      <h2>Crear usuario <span class="sub">— entra a tu misma empresa</span></h2>
+      <h2>Crear usuario <span class="sub">Entra a tu misma empresa.</span></h2>
       <div class="grid">
         <div><label for="nuUser">Usuario</label><input id="nuUser" /></div>
         <div><label for="nuPass">Contraseña (mín. 8)</label><input id="nuPass" type="password" /></div>
         <div><label for="nuNombre">Nombre completo</label><input id="nuNombre" /></div>
-        <div><label for="nuRol">Rol</label><select id="nuRol"><option value="operador">operador</option><option value="admin_empresa">admin_empresa</option></select></div>
+        <div><label for="nuRol">Rol</label><select id="nuRol"><option value="operador">Operador</option><option value="admin_empresa">Administrador</option></select></div>
       </div>
-      <div class="fila" style="margin-top:12px"><button id="btnCrearUsuario">Crear usuario</button></div>
-      <p class="muted" style="margin-top:12px">
-        <strong>operador</strong>: crea y mueve tickets.<br>
-        <strong>admin_empresa</strong>: además registra unidades, choferes, documentos y usuarios.
+      <div class="form-acciones"><button id="btnCrearUsuario">Crear usuario</button></div>
+      <p class="muted solo-transportista" style="margin-top:16px">
+        <strong>Operador</strong>: genera tickets, mueve su estado y programa viajes.<br>
+        <strong>Administrador</strong>: además registra unidades, choferes, documentos y usuarios, y ve el Dashboard.
+      </p>
+      <p class="muted solo-proveedor" style="margin-top:16px">
+        <strong>Operador</strong>: programa viajes y los marca cumplidos o cancelados.<br>
+        <strong>Administrador</strong>: además registra unidades, choferes, documentos y usuarios, y ve el Dashboard de flota.
       </p>
     </section>
     </div>
+    </main>
   </div>
-</main>
+</div>
 
 <script>
 "use strict";
@@ -888,12 +1065,39 @@ const esAdmin = () => estado.sesion && estado.sesion.rol === "admin_empresa";
 const esSuper = () => estado.sesion && estado.sesion.rol === "superadmin";
 // El superadmin mirando una empresa es de solo lectura.
 const soloLectura = () => esSuper();
+// Proveedor de materiales con flota propia: la empresa de la sesión, o la
+// que está mirando el superadmin. Controla su flota; no emite tickets ni guías.
+const esFlotaPropia = () => esSuper()
+  ? !!(estado.empresaSel && estado.empresaSel.tipoEmpresa === "PROVEEDOR")
+  : !!(estado.sesion && estado.sesion.tipoEmpresa === "PROVEEDOR");
+// La placa se dibuja como una placa peruana (ver .placa en el CSS).
+const placaHTML = (p) => `<span class="placa"><b>${escapar(p || "—")}</b></span>`;
+const NOMBRE_ROL = { admin_empresa: "Administrador", operador: "Operador", superadmin: "Superadministrador" };
+// Título y bajada de cada vista; [transportista, proveedor] cuando difieren.
+const TITULOS = {
+  dashboard: [["Dashboard", "Indicadores de traslados, guías y uso de la flota."],
+              ["Dashboard de flota", "Papeles al día, uso de las unidades y cumplimiento de la agenda."]],
+  empresas: [["Empresas", "Transportistas y proveedores en la plataforma, y las solicitudes por revisar."]],
+  unidades: [["Unidades", "Vehículos de la empresa con su ficha técnica y documentos."],
+             ["Mi flota", "Tus vehículos, con su ficha técnica, SOAT y revisión técnica."]],
+  choferes: [["Choferes", "Conductores habilitados, con su brevete y documentos."]],
+  tickets: [["Tickets y guías", "Cada traslado con su guía de remisión electrónica y su seguimiento."]],
+  programacion: [["Programación", "Agenda de qué unidad y qué chofer salen cada día."]],
+  vencimientos: [["Vencimientos", "SOAT, revisión técnica, licencias y certificados próximos a vencer."]],
+  usuarios: [["Usuarios", "Personas de tu empresa que pueden ingresar."]]
+};
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 const escapar = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
 const fmtFecha = (iso) => {
   if (!iso) return "—";
   const d = new Date(iso);
   return isNaN(d) ? String(iso) : d.toLocaleString("es-PE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+};
+// "2026-10-23" -> "jue., 23/10" (fecha sin hora, sin correr por zona horaria)
+const fmtDia = (iso) => {
+  const [y, m, d] = String(iso || "").slice(0, 10).split("-").map(Number);
+  if (!y) return "—";
+  return new Date(y, m - 1, d).toLocaleDateString("es-PE", { weekday: "short", day: "2-digit", month: "2-digit" });
 };
 
 // ---------- buscar / filtrar / paginar (todo en el navegador) ----------
@@ -1032,11 +1236,13 @@ async function api(ruta, opciones = {}) {
 
 function pillGre(e) {
   const m = { ACEPTADO: "ok", ENVIANDO: "warn", RECHAZADO: "err", OBSERVADO: "warn" };
-  return `<span class="pill ${m[e] || "gris"}">${e || "—"}</span>`;
+  const t = { ACEPTADO: "Aceptada", ENVIANDO: "Enviando", RECHAZADO: "Rechazada", OBSERVADO: "Observada" };
+  return `<span class="pill ${m[e] || "gris"}">${t[e] || e || "—"}</span>`;
 }
 function pillOperativo(e) {
   const m = { GENERADO: "info", EN_TRANSITO: "warn", ENTREGADO: "ok", ANULADO: "gris" };
-  return `<span class="pill ${m[e] || "gris"}">${(e || "").replace("_", " ")}</span>`;
+  const t = { GENERADO: "Generado", EN_TRANSITO: "En tránsito", ENTREGADO: "Entregado", ANULADO: "Anulado" };
+  return `<span class="pill ${m[e] || "gris"}">${t[e] || (e || "").replace("_", " ")}</span>`;
 }
 function pillDias(d) {
   const n = Number(d);
@@ -1051,7 +1257,7 @@ function guardarEmpresaSel(e) {
   else localStorage.removeItem("transguia.empresaSel");
 }
 
-const VISTAS_DETALLE = ["unidades", "choferes", "tickets", "vencimientos"];
+const VISTAS_DETALLE = ["unidades", "choferes", "tickets", "programacion", "vencimientos"];
 // El superadmin sin empresa elegida (= "Todas") no puede ver el detalle.
 const necesitaElegirEmpresa = () => esSuper() && !estado.empresaSel;
 
@@ -1063,16 +1269,38 @@ function render() {
   el("btnSalir").hidden = !dentro;
   el("btnNotif").hidden = !dentro;
 
-  el("quien").textContent = dentro
-    ? `${estado.sesion.nombreCompleto || estado.sesion.username} · ${estado.sesion.rol}`
-    : "";
+  el("quien").textContent = dentro ? (estado.sesion.nombreCompleto || estado.sesion.username) : "";
+  el("rolLbl").textContent = dentro ? (NOMBRE_ROL[estado.sesion.rol] || estado.sesion.rol) : "";
+
+  // Tarjeta de empresa del menú: la propia, o la que mira el superadmin.
+  const flota = esFlotaPropia();
+  const nombreEmpresa = esSuper()
+    ? (estado.empresaSel ? estado.empresaSel.razonSocial : "Todas las empresas")
+    : (estado.sesion && estado.sesion.empresaRazonSocial) || "";
+  el("empresaNombre").textContent = nombreEmpresa;
+  el("empresaTipo").textContent = esSuper() && !estado.empresaSel
+    ? "Vista de plataforma"
+    : flota ? "Proveedor con flota propia" : "Transportista";
+  el("empresaCard").dataset.tipo = flota ? "PROVEEDOR" : "TRANSPORTISTA";
+  el("empresaCard").hidden = !nombreEmpresa;
 
   document.querySelectorAll(".solo-admin").forEach((n) => n.classList.toggle("oculto", !esAdmin()));
   document.querySelectorAll(".solo-super").forEach((n) => n.classList.toggle("oculto", !esSuper()));
   document.querySelectorAll(".solo-gerencia").forEach((n) => n.classList.toggle("oculto", !(esAdmin() || esSuper())));
+  document.querySelectorAll(".solo-transportista").forEach((n) => n.classList.toggle("oculto", flota));
+  document.querySelectorAll(".solo-proveedor").forEach((n) => n.classList.toggle("oculto", !flota));
+  document.querySelector('[data-nombre-tab="unidades"]').textContent = flota ? "Mi flota" : "Unidades";
+  el("unidadFormAyuda").textContent = flota
+    ? "Obligatorios: placa, vigencia y PDF del SOAT y de la revisión técnica. La unidad queda lista para usar al guardarla."
+    : "Placa, RUC del dueño, DNI del transportista y los 5 PDF marcados con * son obligatorios. La plataforma revisa la solicitud antes de liberarla.";
+  el("choferFormAyuda").textContent = flota
+    ? "Obligatorios: tipo y N° de documento, primer nombre y apellido paterno. Queda habilitado al guardarlo."
+    : "Obligatorios: tipo y N° de documento, primer nombre y apellido paterno. La plataforma lo revisa antes de liberarlo.";
+  el("unidadesListaTitulo").textContent = flota ? "Unidades de mi flota" : "Unidades registradas";
   el("segmentador").hidden = !esSuper();
-  if (el("ticketForm")) el("ticketForm").hidden = soloLectura();
-  if (el("progForm")) el("progForm").hidden = soloLectura();
+  // .oculto (no `hidden`): mostrarVista maneja el `hidden` de las secciones.
+  el("ticketForm").classList.toggle("oculto", soloLectura());
+  el("progForm").classList.toggle("oculto", soloLectura());
 
   if (!dentro) return;
 
@@ -1090,8 +1318,15 @@ function render() {
 }
 
 function mostrarVista(nombre) {
+  // Los proveedores no tienen tickets: si quedó guardada esa vista, a la flota.
+  if (nombre === "tickets" && esFlotaPropia()) nombre = "unidades";
   estado.vistaActual = nombre;
   document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("activa", b.dataset.tab === nombre));
+  const variantes = TITULOS[nombre] || [[nombre, ""]];
+  const [titulo, bajada] = (esFlotaPropia() && variantes[1]) || variantes[0];
+  el("tituloVista").textContent = titulo;
+  el("subVista").textContent = bajada;
+  document.title = `${titulo} — TransGuía`;
 
   const esDetalle = VISTAS_DETALLE.includes(nombre);
   const bloqueado = esDetalle && necesitaElegirEmpresa();
@@ -1148,9 +1383,11 @@ function toggleFicha(id) {
 }
 
 function pillEstadoRegistro(u) {
-  if (u.estadoRegistro === "APROBADA") return '<span class="pill ok">aprobada</span>';
-  if (u.estadoRegistro === "RECHAZADA") return '<span class="pill err">rechazada</span>';
-  return '<span class="pill warn">pendiente</span>';
+  // En flota propia no hay revisión: solo importa si está en uso o no.
+  if (esFlotaPropia()) return u.activo ? '<span class="pill ok">Activa</span>' : '<span class="pill gris">Inactiva</span>';
+  if (u.estadoRegistro === "APROBADA") return '<span class="pill ok">Aprobada</span>';
+  if (u.estadoRegistro === "RECHAZADA") return '<span class="pill err">Rechazada</span>';
+  return '<span class="pill warn">Pendiente</span>';
 }
 
 // Definición de los campos editables de la ficha (los usa el formulario de
@@ -1229,13 +1466,13 @@ function toggleEditUnidad(id) {
     el(`edit-${id}`).innerHTML =
       (u.motivoRechazo ? `<div class="aviso">Motivo del rechazo: ${escapar(u.motivoRechazo)}</div>` : "") +
       camposUnidadHTML(`ed-${id}`, u) +
-      `<div class="fila" style="margin-top:10px"><button class="chico" data-reenviar-unidad="${id}">Corregir y reenviar</button></div>`;
+      `<div class="form-acciones"><button class="chico" data-reenviar-unidad="${id}">${esFlotaPropia() ? "Guardar cambios" : "Corregir y reenviar"}</button></div>`;
   }
 }
 async function reenviarUnidad(id) {
   try {
     await api(`/api/unidades/${id}`, { method: "PUT", body: JSON.stringify(leerCamposUnidad(`ed-${id}`)) });
-    aviso("Solicitud corregida y reenviada. Queda pendiente de aprobación.", "ok");
+    aviso(esFlotaPropia() ? "Cambios guardados." : "Solicitud corregida y reenviada. Queda pendiente de aprobación.", "ok");
     await cargarUnidades();
   } catch (e) { aviso(e.message); }
 }
@@ -1254,38 +1491,41 @@ async function cargarUnidades() {
 function renderUnidades() {
   const f = estado.filtros.unidades;
   const { pagina, total, totalPaginas } = filtrarYPaginar(
-    estado.unidades, f, ["placa", "nombrePropietario", "rucPropietario", "dniTransportista", "tipoVehiculo"], "estadoRegistro"
+    estado.unidades, f, ["placa", "marca", "modelo", "nombrePropietario", "rucPropietario", "dniTransportista", "tipoVehiculo"], "estadoRegistro"
   );
   const tb = el("tbUnidades"); tb.innerHTML = "";
   el("vacioUnidades").hidden = estado.unidades.length > 0;
+  const flota = esFlotaPropia();
+  const cols = flota ? 5 : 7;
   for (const u of pagina) {
     const aprobada = u.estadoRegistro === "APROBADA";
+    const puedeEditar = esAdmin() && (flota || u.estadoRegistro === "RECHAZADA");
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td><strong>${escapar(u.placa)}</strong></td>
+      <td>${placaHTML(u.placa)}</td>
       <td>${escapar(u.tipoVehiculo || "—")}</td>
-      <td>${escapar([u.marca, u.anioFabricacion].filter(Boolean).join(" · ") || "—")}</td>
-      <td>${escapar(u.nombrePropietario || u.rucPropietario || "—")}</td>
-      <td>${escapar(u.dniTransportista || "—")}</td>
+      <td>${escapar([u.marca, u.modelo, u.anioFabricacion].filter(Boolean).join(" ") || "—")}</td>
+      ${flota ? "" : `<td>${escapar(u.nombrePropietario || u.rucPropietario || "—")}</td>
+      <td class="num">${escapar(u.dniTransportista || "—")}</td>`}
       <td>${pillEstadoRegistro(u)}
-          ${aprobada && !u.activo ? ' <span class="pill gris">inactiva</span>' : ""}
-          ${aprobada && u.activo && esAdmin() ? `<button class="tenue chico" data-desactivar="unidades:${u.id}">Desactivar</button>` : ""}</td>
-      <td class="fila" style="gap:6px">
+          ${!flota && aprobada && !u.activo ? ' <span class="pill gris">Inactiva</span>' : ""}</td>
+      <td class="acciones">
         <button class="tenue chico" data-ficha="${u.id}">Ficha</button>
-        ${u.estadoRegistro === "RECHAZADA" && esAdmin() ? `<button class="sec chico" data-editar-unidad="${u.id}">Corregir</button>` : ""}
-        <button class="tenue chico" data-docs="unidad:${u.id}">Documentos</button></td>`;
+        <button class="tenue chico" data-docs="unidad:${u.id}">Documentos</button>
+        ${puedeEditar ? `<button class="sec chico" data-editar-unidad="${u.id}">${flota ? "Editar" : "Corregir"}</button>` : ""}
+        ${aprobada && u.activo && esAdmin() ? `<button class="peligro chico" data-desactivar="unidades:${u.id}">Desactivar</button>` : ""}</td>`;
     tb.appendChild(tr);
     const trFicha = document.createElement("tr");
     trFicha.hidden = true; trFicha.dataset.fichaRow = u.id;
-    trFicha.innerHTML = `<td colspan="7"><div class="sub-panel" id="ficha-${u.id}">…</div></td>`;
+    trFicha.innerHTML = `<td colspan="${cols}"><div class="sub-panel" id="ficha-${u.id}">…</div></td>`;
     tb.appendChild(trFicha);
     const trEdit = document.createElement("tr");
     trEdit.hidden = true; trEdit.dataset.editRow = u.id;
-    trEdit.innerHTML = `<td colspan="7"><div class="sub-panel" id="edit-${u.id}">…</div></td>`;
+    trEdit.innerHTML = `<td colspan="${cols}"><div class="sub-panel" id="edit-${u.id}">…</div></td>`;
     tb.appendChild(trEdit);
     const trDoc = document.createElement("tr");
     trDoc.hidden = true; trDoc.dataset.docsRow = "unidad:" + u.id;
-    trDoc.innerHTML = `<td colspan="7"><div class="sub-panel" id="docs-unidad-${u.id}">…</div></td>`;
+    trDoc.innerHTML = `<td colspan="${cols}"><div class="sub-panel" id="docs-unidad-${u.id}">…</div></td>`;
     tb.appendChild(trDoc);
   }
   el("pagUnidades").innerHTML = controlesPaginacionHTML("unidades", f.pag, totalPaginas, total);
@@ -1305,15 +1545,15 @@ async function cargarSolicitudes() {
     <tbody>${pend.map((u) => `
       <tr>
         <td>${escapar(u.empresaRazonSocial || "—")}</td>
-        <td><strong>${escapar(u.placa)}</strong></td>
+        <td>${placaHTML(u.placa)}</td>
         <td>${escapar(u.tipoVehiculo || "—")}</td>
         <td>${escapar(u.rucPropietario || "—")}</td>
         <td>${escapar(u.dniTransportista || "—")}</td>
-        <td class="fila" style="gap:6px">
-          <button class="sec chico" data-revisar-sol="${u.id}">Revisar / editar</button>
+        <td class="acciones">
+          <button class="sec chico" data-revisar-sol="${u.id}">Revisar</button>
           <button class="tenue chico" data-docsol="${u.id}">Documentos</button>
           <button class="chico" data-aprobar-sol="${u.id}">Liberar</button>
-          <button class="tenue chico" data-rechazar-sol="${u.id}">Rechazar</button></td>
+          <button class="peligro chico" data-rechazar-sol="${u.id}">Rechazar</button></td>
       </tr>
       <tr hidden data-sol-row="${u.id}"><td colspan="6"><div class="sub-panel" id="sol-${u.id}">…</div></td></tr>
       <tr hidden data-docsol-row="${u.id}"><td colspan="6"><div class="sub-panel" id="docsol-${u.id}">…</div></td></tr>`).join("")}
@@ -1449,13 +1689,13 @@ function toggleEditChofer(id) {
     el(`editC-${id}`).innerHTML =
       (c.motivoRechazo ? `<div class="aviso">Motivo del rechazo: ${escapar(c.motivoRechazo)}</div>` : "") +
       camposChoferHTML(`edc-${id}`, c) +
-      `<div class="fila" style="margin-top:10px"><button class="chico" data-reenviar-chofer="${id}">Corregir y reenviar</button></div>`;
+      `<div class="form-acciones"><button class="chico" data-reenviar-chofer="${id}">${esFlotaPropia() ? "Guardar cambios" : "Corregir y reenviar"}</button></div>`;
   }
 }
 async function reenviarChofer(id) {
   try {
     await api(`/api/choferes/${id}`, { method: "PUT", body: JSON.stringify(leerCamposChofer(`edc-${id}`)) });
-    aviso("Solicitud corregida y reenviada. Queda pendiente de aprobación.", "ok");
+    aviso(esFlotaPropia() ? "Cambios guardados." : "Solicitud corregida y reenviada. Queda pendiente de aprobación.", "ok");
     await cargarChoferes();
   } catch (e) { aviso(e.message); }
 }
@@ -1478,20 +1718,24 @@ function renderChoferes() {
   );
   const tb = el("tbChoferes"); tb.innerHTML = "";
   el("vacioChoferes").hidden = estado.choferes.length > 0;
+  const flota = esFlotaPropia();
   for (const c of pagina) {
     const aprobado = c.estadoRegistro === "APROBADA";
+    const puedeEditar = esAdmin() && (flota || c.estadoRegistro === "RECHAZADA");
+    const estadoTxt = flota
+      ? (c.activo ? '<span class="pill ok">Activo</span>' : '<span class="pill gris">Inactivo</span>')
+      : pillEstadoRegistro(c) + (aprobado && !c.activo ? ' <span class="pill gris">Inactivo</span>' : "");
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td><strong>${escapar([c.tipoDocIdentidad, c.dni].filter(Boolean).join(" "))}</strong></td>
+      <td class="num"><strong>${escapar([c.tipoDocIdentidad, c.dni].filter(Boolean).join(" "))}</strong></td>
       <td>${escapar(nombreChofer(c))}</td>
-      <td>${escapar(c.celular || "—")}</td>
-      <td>${pillEstadoRegistro(c)}
-          ${aprobado && !c.activo ? ' <span class="pill gris">inactivo</span>' : ""}
-          ${aprobado && c.activo && esAdmin() ? `<button class="tenue chico" data-desactivar="choferes:${c.id}">Desactivar</button>` : ""}</td>
-      <td class="fila" style="gap:6px">
+      <td class="num">${escapar(c.celular || "—")}</td>
+      <td>${estadoTxt}</td>
+      <td class="acciones">
         <button class="tenue chico" data-ficha-chofer="${c.id}">Ficha</button>
-        ${c.estadoRegistro === "RECHAZADA" && esAdmin() ? `<button class="sec chico" data-editar-chofer="${c.id}">Corregir</button>` : ""}
-        <button class="tenue chico" data-docs="chofer:${c.id}">Documentos</button></td>`;
+        <button class="tenue chico" data-docs="chofer:${c.id}">Documentos</button>
+        ${puedeEditar ? `<button class="sec chico" data-editar-chofer="${c.id}">${flota ? "Editar" : "Corregir"}</button>` : ""}
+        ${aprobado && c.activo && esAdmin() ? `<button class="peligro chico" data-desactivar="choferes:${c.id}">Desactivar</button>` : ""}</td>`;
     tb.appendChild(tr);
     const trFicha = document.createElement("tr");
     trFicha.hidden = true; trFicha.dataset.fichaChofer = c.id;
@@ -1526,10 +1770,10 @@ async function cargarSolicitudesChoferes() {
         <td><strong>${escapar([c.tipoDocIdentidad, c.dni].filter(Boolean).join(" "))}</strong></td>
         <td>${escapar(nombreChofer(c))}</td>
         <td>${escapar(c.celular || "—")}</td>
-        <td class="fila" style="gap:6px">
-          <button class="sec chico" data-revisar-solc="${c.id}">Revisar / editar</button>
+        <td class="acciones">
+          <button class="sec chico" data-revisar-solc="${c.id}">Revisar</button>
           <button class="chico" data-aprobar-solc="${c.id}">Liberar</button>
-          <button class="tenue chico" data-rechazar-solc="${c.id}">Rechazar</button></td>
+          <button class="peligro chico" data-rechazar-solc="${c.id}">Rechazar</button></td>
       </tr>
       <tr hidden data-solc-row="${c.id}"><td colspan="5"><div class="sub-panel" id="solc-${c.id}">…</div></td></tr>`).join("")}
     </tbody></table></div>` : "";
@@ -1713,19 +1957,19 @@ function renderTickets() {
     if (!soloLectura()) {
       if (puede && t.estadoOperativo === "GENERADO") acc.push(`<button class="chico" data-avanzar="${t.id}:EN_TRANSITO">Despachar</button>`);
       if (puede && t.estadoOperativo === "EN_TRANSITO") acc.push(`<button class="chico" data-avanzar="${t.id}:ENTREGADO">Entregado</button>`);
-      if (t.estadoOperativo !== "ANULADO" && t.estadoOperativo !== "ENTREGADO") acc.push(`<button class="tenue chico" data-avanzar="${t.id}:ANULADO">Anular</button>`);
+      if (t.estadoOperativo !== "ANULADO" && t.estadoOperativo !== "ENTREGADO") acc.push(`<button class="peligro chico" data-avanzar="${t.id}:ANULADO">Anular</button>`);
     }
-    acc.push(`<button class="tenue chico" data-detalle-ticket="${t.id}">Detalle</button>`);
+    acc.unshift(`<button class="tenue chico" data-detalle-ticket="${t.id}">Detalle</button>`);
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td><strong>${t.codigoInterno}</strong></td>
+      <td class="num"><strong>${t.codigoInterno}</strong></td>
       <td>${escapar(t.origen)} → ${escapar(t.destino)}</td>
-      <td>${escapar(t.placa)}</td>
+      <td>${placaHTML(t.placa)}</td>
       <td>${escapar(t.choferNombres)}</td>
-      <td>${Number(t.pesoBrutoKg).toLocaleString("es-PE")} kg</td>
-      <td>${pillGre(t.estadoSunat)}${t.serieCorrelativoGre ? `<div class="muted">${t.serieCorrelativoGre}</div>` : ""}${t.motivoRechazo ? `<div class="muted">${escapar(t.motivoRechazo)}</div>` : ""}</td>
+      <td class="num">${Number(t.pesoBrutoKg).toLocaleString("es-PE")} kg</td>
+      <td>${pillGre(t.estadoSunat)}${t.serieCorrelativoGre ? `<div class="muted num">${t.serieCorrelativoGre}</div>` : ""}${t.motivoRechazo ? `<div class="muted">${escapar(t.motivoRechazo)}</div>` : ""}</td>
       <td>${pillOperativo(t.estadoOperativo)}</td>
-      <td class="fila" style="gap:6px">${acc.join(" ")}</td>`;
+      <td class="acciones">${acc.join("")}</td>`;
     tb.appendChild(tr);
     const trDet = document.createElement("tr");
     trDet.hidden = true; trDet.dataset.detalleRow = t.id;
@@ -1818,35 +2062,42 @@ function exportarTickets() {
 // ---------- programación de viajes ----------
 function pillProgramacion(e) {
   const m = { PROGRAMADO: "info", CUMPLIDO: "ok", CANCELADO: "gris" };
-  const t = { PROGRAMADO: "programado", CUMPLIDO: "cumplido", CANCELADO: "cancelado" };
+  const t = { PROGRAMADO: "Programado", CUMPLIDO: "Cumplido", CANCELADO: "Cancelado" };
   return `<span class="pill ${m[e] || "gris"}">${t[e] || e}</span>`;
 }
 async function cargarProgramacion() {
   await Promise.all([cargarUnidades(), cargarChoferes()]);
   estado.viajesProgramados = await api("/api/viajes-programados");
+  // Sugerencias para los campos libres del proveedor: lo que ya usó antes.
+  const sugerir = (id, campo) => {
+    const vals = [...new Set(estado.viajesProgramados.map((v) => v[campo]).filter(Boolean))].sort();
+    el(id).innerHTML = vals.map((v) => `<option value="${escapar(v)}"></option>`).join("");
+  };
+  sugerir("dlOrigen", "origen"); sugerir("dlDestino", "destino"); sugerir("dlMercancia", "descripcionMercancia");
   renderProgramacion();
 }
 function renderProgramacion() {
   const f = estado.filtros.programacion;
+  // Lo más reciente / próximo arriba (la API los trae del más antiguo al más nuevo).
+  const ordenados = [...estado.viajesProgramados].sort((a, b) => String(b.fechaProgramada).localeCompare(String(a.fechaProgramada)));
   const { pagina, total, totalPaginas } = filtrarYPaginar(
-    estado.viajesProgramados, f, ["placa", "choferNombre", "choferDni", "origen", "destino", "descripcionMercancia"], "estado"
+    ordenados, f, ["placa", "choferNombre", "choferDni", "origen", "destino", "descripcionMercancia"], "estado"
   );
   const tb = el("tbProgramacion"); tb.innerHTML = "";
   el("vacioProgramacion").hidden = estado.viajesProgramados.length > 0;
   for (const v of pagina) {
     const tr = document.createElement("tr");
     const acciones = v.estado === "PROGRAMADO" && !soloLectura()
-      ? `<button class="tenue chico" data-progcumplir="${v.id}">Cumplir</button>
-         <button class="tenue chico" data-progcancelar="${v.id}">Cancelar</button>`
-      : (v.motivoCancelacion ? `<span class="muted" title="${escapar(v.motivoCancelacion)}">motivo: ${escapar(v.motivoCancelacion)}</span>` : "—");
+      ? `<button class="sec chico" data-progcumplir="${v.id}">Marcar cumplido</button><button class="peligro chico" data-progcancelar="${v.id}">Cancelar</button>`
+      : (v.motivoCancelacion ? `<span class="muted" title="${escapar(v.motivoCancelacion)}">Motivo: ${escapar(v.motivoCancelacion)}</span>` : "");
     tr.innerHTML = `
-      <td>${String(v.fechaProgramada).slice(0, 10)}</td>
-      <td><strong>${escapar(v.placa)}</strong></td>
-      <td>${escapar(v.choferNombre)} <span class="muted">— ${escapar(v.choferDni)}</span></td>
+      <td class="num">${fmtDia(v.fechaProgramada)}</td>
+      <td>${placaHTML(v.placa)}</td>
+      <td>${escapar(v.choferNombre)}<div class="muted num">${escapar(v.choferDni)}</div></td>
       <td>${escapar(v.origen)} → ${escapar(v.destino)}</td>
       <td>${escapar(v.descripcionMercancia || "—")}</td>
       <td>${pillProgramacion(v.estado)}</td>
-      <td>${acciones}</td>`;
+      <td class="acciones">${acciones}</td>`;
     tb.appendChild(tr);
   }
   el("pagProgramacion").innerHTML = controlesPaginacionHTML("programacion", f.pag, totalPaginas, total);
@@ -1854,12 +2105,16 @@ function renderProgramacion() {
 async function crearProgramacion() {
   const btn = el("btnCrearProgramacion"), info = el("pEstado");
   btn.disabled = true; info.textContent = "Programando…";
+  // Proveedor: origen/destino/material son texto libre (sus canteras y
+  // clientes); transportista: los catálogos de los tickets.
+  const flota = esFlotaPropia();
   try {
     await api("/api/viajes-programados", { method: "POST", body: JSON.stringify({
       fechaProgramada: el("pFecha").value,
       unidadId: el("pUnidad").value, choferId: el("pChofer").value,
-      origen: el("pOrigen").value, destino: el("pDestino").value,
-      descripcionMercancia: el("pMercancia").value || undefined,
+      origen: el(flota ? "pOrigenTxt" : "pOrigen").value.trim(),
+      destino: el(flota ? "pDestinoTxt" : "pDestino").value.trim(),
+      descripcionMercancia: el(flota ? "pMercanciaTxt" : "pMercancia").value.trim() || undefined,
       observaciones: el("pObs").value || undefined
     }) });
     el("pFecha").value = ""; el("pObs").value = "";
@@ -1968,10 +2223,13 @@ async function crearUnidad() {
   const txt = (id) => el(id).value.trim() || undefined;
   const nro = (id) => (el(id).value === "" ? undefined : Number(el(id).value));
   b.disabled = true;
+  // Flota propia (proveedor): solo SOAT y CITV son obligatorios.
+  const flota = esFlotaPropia();
   try {
     const archivos = {};
     for (const [inputId, campo, etiqueta] of ARCHIVOS_UNIDAD) {
       const leido = await leerArchivoComoBase64(el(inputId));
+      if (!leido && flota && !["archivoSoat", "archivoCitv"].includes(campo)) continue;
       if (!leido) throw new Error(`Falta adjuntar el PDF de ${etiqueta}`);
       archivos[campo] = leido.base64;
       archivos[campo + "Nombre"] = leido.nombre;
@@ -1995,7 +2253,9 @@ async function crearUnidad() {
     };
     const r = await api("/api/unidades", { method: "POST", body: JSON.stringify(cuerpo) });
     CAMPOS_UNIDAD.forEach((id) => { if (el(id)) el(id).value = ""; });
-    const base = "Solicitud enviada. La unidad queda pendiente de que la plataforma la libere.";
+    const base = flota
+      ? `Unidad ${r.placa} registrada y lista para usar.`
+      : "Solicitud enviada. La unidad queda pendiente de que la plataforma la libere.";
     aviso(r.avisos && r.avisos.length ? base + " Además: " + r.avisos.join(" · ") : base, "ok");
     await cargarUnidades();
   } catch (e) { aviso(e.message); }
@@ -2044,7 +2304,9 @@ async function crearChofer() {
       fechaExpedicion: txt("cFechaExp"), fechaRevalidacion: txt("cFechaReval")
     }) });
     CAMPOS_CHOFER.forEach((id) => { if (el(id)) el(id).value = ""; });
-    const base = "Solicitud enviada. El chofer queda pendiente de que la plataforma lo libere.";
+    const base = esFlotaPropia()
+      ? "Chofer registrado y habilitado."
+      : "Solicitud enviada. El chofer queda pendiente de que la plataforma lo libere.";
     aviso(r.avisos && r.avisos.length ? base + " Además: " + r.avisos.join(" · ") : base, "ok");
     await cargarChoferes();
   } catch (e) { aviso(e.message); }
@@ -2092,15 +2354,25 @@ async function cargarSegmentador() {
   } catch (e) { return; }
   const sel = el("segEmpresa");
   const actual = estado.empresaSel ? estado.empresaSel.id : "";
+  const grupo = (tipo, titulo) => {
+    const lista = estado.empresas.filter((e) => (e.tipoEmpresa || "TRANSPORTISTA") === tipo);
+    return lista.length ? `<optgroup label="${titulo}">${
+      lista.map((e) => `<option value="${e.id}">${escapar(e.razonSocial)}</option>`).join("")}</optgroup>` : "";
+  };
   sel.innerHTML = `<option value="">Todas las empresas (acumulado)</option>` +
-    estado.empresas.map((e) => `<option value="${e.id}">${escapar(e.razonSocial)}</option>`).join("");
+    grupo("TRANSPORTISTA", "Transportistas") + grupo("PROVEEDOR", "Proveedores con flota propia");
   sel.value = actual;
+  // Una selección guardada de antes no traía el tipo: completarlo.
+  if (estado.empresaSel && !estado.empresaSel.tipoEmpresa) {
+    const e = estado.empresas.find((x) => x.id === estado.empresaSel.id);
+    if (e) { guardarEmpresaSel({ id: e.id, razonSocial: e.razonSocial, tipoEmpresa: e.tipoEmpresa }); render(); }
+  }
 }
 function cambiarEmpresaSegmento(id) {
   if (!id) guardarEmpresaSel(null);
   else {
     const e = (estado.empresas || []).find((x) => x.id === id);
-    guardarEmpresaSel(e ? { id: e.id, razonSocial: e.razonSocial } : { id });
+    guardarEmpresaSel(e ? { id: e.id, razonSocial: e.razonSocial, tipoEmpresa: e.tipoEmpresa } : { id });
   }
   render();
 }
@@ -2113,7 +2385,7 @@ function chartVertical(cont, datos, fmt) {
   cont.innerHTML = datos.map((d) => `
     <div class="bar-col" title="${escapar(d.titulo || d.label)}: ${fmt ? fmt(d.valor) : d.valor}">
       <div class="bar-val">${fmt ? fmt(d.valor) : d.valor}</div>
-      <div class="bar" style="height:${(d.valor / max * 100).toFixed(1)}%;${d.alerta ? "background:var(--primario)" : ""}"></div>
+      <div class="bar" style="height:${(d.valor / max * 100).toFixed(1)}%;${d.alerta ? "background:var(--err-tx)" : ""}"></div>
       <div class="bar-lbl">${escapar(d.label)}</div>
     </div>`).join("");
 }
@@ -2234,7 +2506,7 @@ function chartHeatmap(cont, celdas, filas, cols, fmt) {
       const op = v ? (0.12 + 0.88 * v / max) : 0;
       const claro = op < 0.55;
       html += `<div title="${escapar(f)} → ${escapar(c)}: ${fmt(v)}"
-        style="background:${v ? `color-mix(in srgb, var(--primario) ${(op * 100).toFixed(0)}%, var(--panel-2))` : "var(--panel-2)"};
+        style="background:${v ? `color-mix(in srgb, var(--dato) ${(op * 100).toFixed(0)}%, var(--panel-2))` : "var(--panel-2)"};
         color:${v ? (claro ? "var(--texto)" : "#fff") : "var(--texto-suave)"}">${v ? fmt(v) : "·"}</div>`;
     }
   }
@@ -2245,12 +2517,16 @@ function chartHeatmap(cont, celdas, filas, cols, fmt) {
 async function cargarDashboard() {
   const v = estado.dashVentana || "30d";
   document.querySelectorAll("[data-ventana]").forEach((b) => b.classList.toggle("activa", b.dataset.ventana === v));
-  el("dashAlcance").textContent = "cargando…";
+  const flota = esFlotaPropia();
+  el("dashTransporte").hidden = flota;
+  el("dashFlota").hidden = !flota;
+  if (flota) return cargarDashboardFlota(v);
+  el("dashAlcance").textContent = "Cargando…";
   let d;
   try { d = await api(`/api/dashboard?ventana=${v}`); }
   catch (e) { aviso(e.message); el("dashAlcance").textContent = ""; return; }
   estado.dashboardData = d;
-  el("dashAlcance").textContent = `— ${d.alcance} · ${d.ventanaLabel}`;
+  el("dashAlcance").textContent = `${d.alcance}, ${d.ventanaLabel}`;
   el("dashPeriodoLbl").textContent = d.mensual ? "mes" : "día";
 
   const K = d.kpis;
@@ -2328,10 +2604,99 @@ async function cargarDashboard() {
     d.toneladasPorMaterial.map((r) => ({ label: r.material, valor: r.toneladas })),
     (v) => nf(v, 1) + " t");
 }
+// ---------- dashboard de flota (proveedores) ----------
+const SITUACION = {
+  AL_DIA: { txt: "Al día", pill: "ok", color: "var(--ok-tx)" },
+  POR_VENCER: { txt: "Por vencer", pill: "warn", color: "var(--senal)" },
+  VENCIDA: { txt: "Vencida", pill: "err", color: "var(--err-tx)" },
+  SIN_DOCUMENTOS: { txt: "Sin SOAT o CITV", pill: "gris", color: "var(--borde-fuerte)" }
+};
+async function cargarDashboardFlota(v) {
+  el("dashAlcance").textContent = "Cargando…";
+  let d;
+  try { d = await api(`/api/dashboard/flota?ventana=${v}`); }
+  catch (e) { aviso(e.message); el("dashAlcance").textContent = ""; return; }
+  estado.dashboardData = d;
+  el("dashAlcance").textContent = `${d.alcance}, ${d.ventanaLabel}`;
+  el("dashFlotaPeriodoLbl").textContent = d.mensual ? "mes" : "día";
+
+  const K = d.kpis;
+  const palabra = { bien: "En meta", atencion: "Atención", critico: "Fuera de meta" };
+  const fh = K.flotaHabilitada, lic = K.choferesConLicencia, dv = K.documentosVencidos, cu = K.cumplimiento;
+  const miniFlota = fh.total ? `<div class="kpi-mini" title="${d.situacionFlota.AL_DIA} al día, ${d.situacionFlota.POR_VENCER} por vencer">
+      ${["AL_DIA", "POR_VENCER", "VENCIDA", "SIN_DOCUMENTOS"].map((s) =>
+        `<i style="width:${(d.situacionFlota[s] / fh.total * 100).toFixed(1)}%;background:${SITUACION[s].color}"></i>`).join("")}</div>` : "";
+  const kpisFlota = [
+    kpiTile("Flota con papeles en regla", { ...fh, decimales: 0, mini: miniFlota,
+      estado: fh.total ? palabra[fh.semaforo] : "",
+      nota: fh.total ? `${fh.habilitadas} de ${fh.total} unidades con SOAT y CITV vigentes` : "todavía no hay unidades" }),
+    kpiTile("Documentos vencidos", { valor: dv.valor, semaforo: dv.semaforo,
+      estado: dv.valor ? "Regularizar" : "", nota: `${dv.porVencer} vence${dv.porVencer === 1 ? "" : "n"} en los próximos 30 días` }),
+    kpiTile("Choferes con licencia vigente", { ...lic, decimales: 0,
+      estado: lic.activos ? palabra[lic.semaforo] : "",
+      nota: lic.activos ? `${lic.conLicencia} de ${lic.activos} choferes` : "todavía no hay choferes" })
+  ].join("");
+  const kpisUso = [
+    kpiTile("Viajes realizados", { ...K.viajes, nota: `${K.viajes.proximos7d} agendado${K.viajes.proximos7d === 1 ? "" : "s"} para los próximos 7 días` }),
+    kpiTile("Utilización de flota", { ...K.utilizacionFlota, decimales: 0,
+      estado: palabra[K.utilizacionFlota.semaforo],
+      nota: `${K.utilizacionFlota.unidadesConViaje} de ${K.utilizacionFlota.flotaHabilitada} unidades con viaje` }),
+    kpiTile("Cumplimiento de la agenda", { ...cu, decimales: 1,
+      estado: cu.programados ? palabra[cu.semaforo] : "",
+      nota: cu.programados ? `${cu.cumplidos} cumplidos de ${cu.programados}${cu.sinCerrar ? `, ${cu.sinCerrar} sin cerrar` : ""}` : "sin viajes en el período" })
+  ].join("");
+  el("kpiFlota").innerHTML =
+    `<div class="kpi-group"><div class="kpi-group-title">Papeles al día</div><div class="kpi-row">${kpisFlota}</div></div>` +
+    `<div class="kpi-group"><div class="kpi-group-title">Uso de la flota</div><div class="kpi-row">${kpisUso}</div></div>`;
+
+  el("chfAtencion").innerHTML = d.unidadesConAtencion.length
+    ? `<div class="atencion-lista">${d.unidadesConAtencion.map((u) => {
+        const s = SITUACION[u.situacion];
+        const det = u.situacion === "SIN_DOCUMENTOS"
+          ? `Falta ${!u.soat && !u.rt ? "SOAT y CITV" : !u.soat ? "el SOAT" : "el CITV"}`
+          : `SOAT ${fmtDia(u.soat)}, CITV ${fmtDia(u.rt)}`;
+        const cuando = u.diasRestantes == null ? "" : u.diasRestantes < 0
+          ? `vencido hace ${Math.abs(u.diasRestantes)} d` : `vence en ${u.diasRestantes} d`;
+        return `<div class="atencion-item">${placaHTML(u.placa)}
+          <div class="det"><strong>${escapar([u.tipoVehiculo, u.marca].filter(Boolean).join(" ") || "Unidad")}</strong>${escapar(det)}</div>
+          <div style="text-align:right"><span class="pill ${s.pill}">${s.txt}</span>${cuando ? `<div class="muted">${cuando}</div>` : ""}</div></div>`;
+      }).join("")}</div>`
+    : `<p class="muted">Todas las unidades tienen su SOAT y revisión técnica al día.</p>`;
+
+  chartApilada(el("chfSituacion"), ["AL_DIA", "POR_VENCER", "VENCIDA", "SIN_DOCUMENTOS"]
+    .map((s) => ({ label: SITUACION[s].txt, valor: d.situacionFlota[s], color: SITUACION[s].color })),
+    (n) => `${n} ${n === 1 ? "unidad" : "unidades"}`);
+
+  chartLinea(el("chfViajes"), d.viajesPorPeriodo.map((r) => {
+    const [y, m, dd] = r.periodo.split("-").map(Number);
+    if (d.mensual) return { t: y * 12 + (m - 1), label: MESES_ABREV[m - 1],
+      titulo: `${r.periodo.slice(5, 7)}/${y}: ${r.viajes} viajes (${r.cumplidos} cumplidos)`, valor: r.viajes };
+    return { t: Date.UTC(y, m - 1, dd), label: `${dd}/${m}`,
+      titulo: `${dd}/${m}/${y}: ${r.viajes} viajes (${r.cumplidos} cumplidos)`, valor: r.viajes };
+  }), (n) => nf(n, 0) + " viajes");
+
+  const fmtViajes = (n) => n + (n === 1 ? " viaje" : " viajes");
+  chartHorizontal(el("chfUnidades"), d.viajesPorUnidad.map((r) => ({ label: r.etiqueta, valor: r.viajes })), fmtViajes);
+  chartHorizontal(el("chfChoferes"), d.viajesPorChofer.map((r) => ({ label: r.etiqueta, valor: r.viajes })), fmtViajes);
+  chartHorizontal(el("chfRutas"), d.viajesPorRuta.map((r) => ({ label: r.etiqueta, valor: r.viajes })), fmtViajes);
+}
+
 function exportarDashboard() {
   const d = estado.dashboardData;
   if (!d) return;
   const K = d.kpis;
+  if (d.situacionFlota) {
+    descargarCSV(`dashboard-flota-${d.ventana}.csv`, [
+      { nombre: "Flota con papeles en regla", valor: K.flotaHabilitada.valor, unidad: "%" },
+      { nombre: "Documentos vencidos", valor: K.documentosVencidos.valor, unidad: "" },
+      { nombre: "Documentos por vencer (30 días)", valor: K.documentosVencidos.porVencer, unidad: "" },
+      { nombre: "Choferes con licencia vigente", valor: K.choferesConLicencia.valor, unidad: "%" },
+      { nombre: "Viajes realizados", valor: K.viajes.valor, unidad: "" },
+      { nombre: "Utilización de flota", valor: K.utilizacionFlota.valor, unidad: "%" },
+      { nombre: "Cumplimiento de la agenda", valor: K.cumplimiento.valor, unidad: "%" }
+    ], [["Indicador", "nombre"], ["Valor", "valor"], ["Unidad", "unidad"]]);
+    return;
+  }
   const filas = [
     { nombre: "Toneladas movidas", valor: K.toneladas.valor, unidad: K.toneladas.unidad || "" },
     { nombre: "Viajes realizados", valor: K.viajes.valor, unidad: "" },
@@ -2353,7 +2718,8 @@ async function cargarPlataforma() {
   try {
     const [resumen, empresas] = await Promise.all([api("/api/resumen"), api("/api/empresas")]);
     el("statsGlobal").innerHTML =
-      stat(resumen.empresas, "Empresas") +
+      stat(resumen.transportistas ?? resumen.empresas, "Transportistas") +
+      stat(resumen.proveedores ?? 0, "Proveedores con flota") +
       stat(resumen.unidadesActivas, "Unidades activas") +
       stat(resumen.choferesActivos, "Choferes activos") +
       stat((resumen.unidadesPendientes ?? 0) + (resumen.choferesPendientes ?? 0), "Solicitudes pend.", true) +
@@ -2366,15 +2732,17 @@ async function cargarPlataforma() {
     for (const e of empresas) {
       const tr = document.createElement("tr");
       tr.className = "clic";
-      tr.dataset.verEmpresa = JSON.stringify({ id: e.id, razonSocial: e.razonSocial });
+      const prov = e.tipoEmpresa === "PROVEEDOR";
+      tr.dataset.verEmpresa = JSON.stringify({ id: e.id, razonSocial: e.razonSocial, tipoEmpresa: e.tipoEmpresa });
       tr.innerHTML = `
         <td><strong>${escapar(e.razonSocial)}</strong></td>
-        <td>${escapar(e.ruc)}</td>
-        <td>${e.unidadesActivas}${e.unidadesPendientes > 0 ? ` <span class="pill warn">${e.unidadesPendientes} pend.</span>` : ""}</td>
-        <td>${e.choferesActivos}${e.choferesPendientes > 0 ? ` <span class="pill warn">${e.choferesPendientes} pend.</span>` : ""}</td>
-        <td>${e.tickets}</td>
-        <td>${e.ticketsEnTransito}</td>
-        <td>${e.documentosVencidos > 0 ? `<span class="pill err">${e.documentosVencidos}</span>` : "0"}</td>
+        <td>${prov ? '<span class="pill tipo-prov">Proveedor</span>' : '<span class="pill gris">Transportista</span>'}</td>
+        <td class="num">${escapar(e.ruc)}</td>
+        <td class="num">${e.unidadesActivas}${e.unidadesPendientes > 0 ? ` <span class="pill warn">${e.unidadesPendientes} pend.</span>` : ""}</td>
+        <td class="num">${e.choferesActivos}${e.choferesPendientes > 0 ? ` <span class="pill warn">${e.choferesPendientes} pend.</span>` : ""}</td>
+        <td class="num">${prov ? '<span class="muted">no aplica</span>' : `${e.tickets}${e.ticketsEnTransito ? ` <span class="muted">(${e.ticketsEnTransito} en tránsito)</span>` : ""}`}</td>
+        <td class="num">${e.viajesProgramados ?? 0}</td>
+        <td class="num">${e.documentosVencidos > 0 ? `<span class="pill err">${e.documentosVencidos}</span>` : "0"}</td>
         <td><button class="tenue chico">Ver dashboard</button></td>`;
       tb.appendChild(tr);
     }
@@ -2382,14 +2750,16 @@ async function cargarPlataforma() {
 }
 function verEmpresa(empresa) {
   guardarEmpresaSel(empresa);
-  el("segEmpresa").value = empresa.id;
-  mostrarVista("dashboard");
+  estado.vistaActual = "dashboard";
+  render(); // la tarjeta, el menú y el dashboard cambian según el tipo
 }
 async function crearEmpresa() {
   try {
+    const tipo = document.querySelector('input[name="neTipo"]:checked');
     const r = await api("/api/empresas", { method: "POST", body: JSON.stringify({
       ruc: el("neRuc").value.trim(),
       razonSocial: el("neRazon").value.trim(),
+      tipoEmpresa: tipo ? tipo.value : "TRANSPORTISTA",
       admin: {
         username: el("neUser").value.trim(),
         password: el("nePass").value,

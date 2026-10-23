@@ -187,6 +187,37 @@ paths:
             application/json: { schema: { $ref: "#/components/schemas/Dashboard" } }
         "403": { $ref: "#/components/responses/SinPermiso" }
 
+  /api/dashboard/flota:
+    get:
+      tags: [Dashboard]
+      summary: Dashboard de flota para proveedores con flota propia *(admin_empresa o superadmin)*
+      description: >
+        Sin tickets ni GRE: papeles al día (SOAT y revisión técnica de cada
+        unidad), licencias vigentes, documentos vencidos/por vencer, y uso
+        de la flota medido con los viajes programados. `superadmin` sin
+        `?empresaId` = todas las empresas PROVEEDOR.
+      parameters:
+        - name: ventana
+          in: query
+          required: false
+          schema: { type: string, enum: [7d, 30d, 90d, 12m], default: 30d }
+        - name: empresaId
+          in: query
+          required: false
+          schema: { type: string }
+          description: "Solo superadmin: uuid de una empresa, o 'todas'."
+      responses:
+        "200":
+          description: >
+            `{ alcance, ventana, ventanaLabel, mensual, kpis: { flotaHabilitada,
+            choferesConLicencia, documentosVencidos, viajes, utilizacionFlota,
+            cumplimiento }, situacionFlota: { AL_DIA, POR_VENCER, VENCIDA,
+            SIN_DOCUMENTOS }, unidadesConAtencion, viajesPorPeriodo,
+            viajesPorUnidad, viajesPorChofer, viajesPorRuta }`
+          content:
+            application/json: { schema: { type: object } }
+        "403": { $ref: "#/components/responses/SinPermiso" }
+
   /api/unidades:
     get:
       tags: [Unidades]
@@ -955,12 +986,24 @@ components:
         id: { type: string, format: uuid }
         ruc: { type: string }
         razonSocial: { type: string }
+        tipoEmpresa: { $ref: "#/components/schemas/TipoEmpresa" }
         creadoEn: { type: string, format: date-time }
         unidadesActivas: { type: integer }
         choferesActivos: { type: integer }
         tickets: { type: integer }
         ticketsEnTransito: { type: integer }
+        viajesProgramados: { type: integer, description: Viajes PROGRAMADOS de hoy en adelante }
         documentosVencidos: { type: integer }
+
+    TipoEmpresa:
+      type: string
+      enum: [TRANSPORTISTA, PROVEEDOR]
+      description: >
+        TRANSPORTISTA emite tickets y GRE; su flota pasa por la revisión de
+        la plataforma. PROVEEDOR (proveedor de materiales con flota propia)
+        solo controla su flota: sin tickets (403), unidades y choferes
+        aprobados al registrarlos, unidad con solo SOAT y CITV obligatorios,
+        y programación con origen/destino/mercancía de texto libre.
 
     NuevaEmpresa:
       type: object
@@ -968,6 +1011,7 @@ components:
       properties:
         ruc: { type: string, pattern: "^[0-9]{11}$", example: "20512345678" }
         razonSocial: { type: string, example: "Transportes El Sol S.A.C." }
+        tipoEmpresa: { $ref: "#/components/schemas/TipoEmpresa" }
         admin:
           type: object
           required: [username, password, nombreCompleto]
