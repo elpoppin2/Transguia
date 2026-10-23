@@ -84,7 +84,13 @@ Abrir **http://localhost:3001** en el navegador. Usuarios de demo:
 | `andina` | `demo2026seguro` | admin de "Transportes Andina S.A.C." |
 | `delsur` | `delsur2026seguro` | admin de "Logística del Sur E.I.R.L." |
 | `lurin` | `lurin2026seguro` | admin de "Agregados y Canteras Lurín S.A.C." (**proveedor** con flota propia) |
-| `super` | `superdemo2026` | superadmin (ve las tres) |
+| `lurinop` | `operador2026` | operador del proveedor Lurín (programa viajes) |
+| `chilca` | `chilca2026seguro` | admin de "Concretos y Agregados Chilca S.A.C." (**proveedor**) |
+| `chilcaop` | `operador2026` | operador del proveedor Chilca |
+| `super` | `superdemo2026` | superadmin (ve las cuatro) |
+
+Datos de proveedores y solicitudes pendientes: `node sembrar-proveedores.js`
+(después de `sembrar-datos.js`).
 
 Otros comandos:
 ```bash

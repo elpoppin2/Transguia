@@ -297,6 +297,15 @@ o certificado digital; punto 9: piloto con transportistas reales).
    favicon. Botón "Modo oscuro / Modo claro" en la barra y en el login:
    `<html data-theme>`, elección guardada en `localStorage`
    (`transguia.tema`); sin elección, sigue al sistema operativo.
+6m. [x] **Más datos ficticios** (2026-10-23). `sembrar-proveedores.js`
+   (`npm run sembrar-proveedores`, después de `sembrar-datos.js`):
+   completa el proveedor Lurín (8 unidades, 6 choferes, operador
+   `lurinop`), crea un 2º proveedor "Concretos y Agregados Chilca S.A.C."
+   (`chilca` / `chilca2026seguro`, operador `chilcaop` / `operador2026`),
+   agenda ~90 días de viajes, y deja 3 unidades y 2 choferes PENDIENTES +
+   1 unidad RECHAZADA en los transportistas para el superadmin. Ojo:
+   volver a correr `sembrar-datos.js` aprueba todo lo pendiente de los
+   transportistas de demo; correr este script al final.
 7. [x] **Deploy a Vercel** — https://transguias.vercel.app, despliegue
    automático en cada push a `main` (verificado 2026-10-23).
 8. **(pendiente — externo)** Conseguir un PSE (Nubefact, EFACT…) o

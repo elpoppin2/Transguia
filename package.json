@@ -11,6 +11,7 @@
     "start": "node server.js",
     "demo": "node demo.js",
     "sembrar": "node sembrar-datos.js",
+    "sembrar-proveedores": "node sembrar-proveedores.js",
     "borrar-demo": "node borrar-datos-demo.js",
     "probar": "node probar-todo.js"
   },

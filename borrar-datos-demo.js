@@ -1,7 +1,8 @@
 // Ejecutar con:  node borrar-datos-demo.js
 //
-// Borra TODO lo que siembra sembrar-datos.js / sembrar-volumen.js: las tres
-// empresas de demo (dos transportistas y un proveedor, con sus tickets,
+// Borra TODO lo que siembran sembrar-datos.js / sembrar-volumen.js /
+// sembrar-proveedores.js: las cuatro empresas de demo (dos transportistas
+// y dos proveedores, con sus tickets,
 // documentos, viajes programados, unidades, choferes y usuarios) y el
 // usuario superadmin "super".
 //
@@ -11,7 +12,7 @@
 require('dotenv').config();
 const { pool } = require('./src/db/pool');
 
-const RUCS_DEMO = ['20548712369', '20600123456', '20611888001'];
+const RUCS_DEMO = ['20548712369', '20600123456', '20611888001', '20611888002'];
 const SUPERADMIN = 'super';
 const BORRAR_EMPRESA = process.argv.includes('--empresa');
 
