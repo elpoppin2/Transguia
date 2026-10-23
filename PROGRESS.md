@@ -289,6 +289,14 @@ o certificado digital; punto 9: piloto con transportistas reales).
    (Entre 6i y 6j también se habían hecho, sin anotarlos aquí:
    programación de viajes, métricas por chofer, notificaciones,
    calendario de vencimientos, exportar CSV y KPI de cumplimiento.)
+6l. [x] **Rojo y blanco UNACEM + modo claro/oscuro** (2026-10-23,
+   decisión del usuario). Se volvió a la paleta roja/blanca de antes
+   (`#c8102e`) sobre la estructura de 6k; el ámbar marca "por vencer" y el
+   verde "al día". Logo oficial de UNACEM (SVG tomado de unacem.pe,
+   incrustado con `currentColor`) en el menú y el login, y su símbolo como
+   favicon. Botón "Modo oscuro / Modo claro" en la barra y en el login:
+   `<html data-theme>`, elección guardada en `localStorage`
+   (`transguia.tema`); sin elección, sigue al sistema operativo.
 7. [x] **Deploy a Vercel** — https://transguias.vercel.app, despliegue
    automático en cada push a `main` (verificado 2026-10-23).
 8. **(pendiente — externo)** Conseguir un PSE (Nubefact, EFACT…) o
